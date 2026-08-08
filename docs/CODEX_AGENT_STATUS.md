@@ -4,10 +4,13 @@
 
 ## Current Phase
 
-Phase 3 — First RL Sanity（Gate 3 已完成，等待复核）
+Phase 3 — First RL Sanity（Gate 3 corrections 已完成，等待复核）
 
 ## Last completed task
 
+- 2026-08-08：Gate 3 corrections 完成 → `docs/review_packets/GATE_3_CORRECTIONS.md`
+  （action [-1,1]、ActionTransform、RiskOverlayV0、obs 归一化、时序 holdout、check_env、
+  重跑 sanity 集中现象消失；58 测试全过）+ `GATE_4_DATA_HORIZON_PLAN.md`
 - 2026-08-08：Gate 3 完成 → `docs/review_packets/GATE_3_RL_SANITY.md`
   （Preflight P1–P5 + C3 全过；TD3/SAC/PPO + EW 单 seed sanity；44 测试全过）
 - 2026-08-08：Gate 2 APPROVED（Reviewer: `APPROVED_WITH_GATE3_PREFLIGHT_CONDITIONS`，Gate 3 AUTHORIZED）
@@ -44,11 +47,11 @@ Gate 1 — **APPROVED**（`GATE_1_CORRECTIONS_REVIEWER_RESPONSE.md`）
 
 Gate 2 — **APPROVED**（`GATE_2_CORRECTIONS_REVIEWER_RESPONSE.md`）
 
-Gate 3 — First RL Sanity（COMPLETED，等待 Reviewer 复核）
+Gate 3 — CORRECTIONS_COMPLETE（`GATE_3_CORRECTIONS.md`），等待 Reviewer 确认后才可进入 Gate 4
 
 ## Blockers
 
-等待 Reviewer 对 `GATE_3_RL_SANITY.md` 复核。
+等待 Reviewer 对 `GATE_3_CORRECTIONS.md` 复核。
 
 ## Deviations
 
@@ -61,7 +64,8 @@ Carry-Forward 条件（详见 DECISIONS.md）：
 
 ## Next intended step
 
-Reviewer 批准后进入 Gate 4 — Core Walk-Forward（≥10 seeds、baselines、1x/2x/3x 成本压力）。
+Reviewer 确认后进入 Gate 4 — Core Walk-Forward（需先按 `GATE_4_DATA_HORIZON_PLAN.md`
+确定数据轨；≥10 seeds、baselines、1x/2x/3x 成本压力；F1/H1 前置）。
 
 ## Reviewer approval
 

@@ -10,6 +10,7 @@ from china_etf.environment.portfolio_env import ChinaETFPortfolioEnv
 from china_etf.execution.broker.mock import MockBroker
 from china_etf.execution.order_generator import OrderGenerator
 from china_etf.execution.premium import PremiumGuard
+from china_etf.risk.risk_overlay import RiskOverlayV0
 
 
 def _rule_mask(buy_disabled=()):
@@ -30,7 +31,7 @@ def _rule_mask(buy_disabled=()):
     return _M()
 
 
-def _env(n=300, slots=("A", "B"), seed=5):
+def _env(n=300, slots=("A", "B"), seed=5, overlay_max=0.5):
     rng = np.random.default_rng(seed)
     dates = pd.bdate_range("2025-01-02", periods=n)
     adj = pd.DataFrame(
@@ -48,6 +49,7 @@ def _env(n=300, slots=("A", "B"), seed=5):
         slots=list(slots), adj_close=adj, open_prices=opens, close_prices=closes,
         initial_cash=1_000_000.0, broker=broker, order_generator=OrderGenerator(),
         slot_to_instrument={s: s for s in slots},
+        risk_overlay=RiskOverlayV0(list(slots), single_core_max=overlay_max),
     )
 
 
@@ -65,12 +67,12 @@ def test_no_negative_cash_after_max_investment() -> None:
 
 def test_rebalance_sells_before_buys() -> None:
     """Case B：100% A → target 100% B：先卖 A 得现金，再买 B；中间现金不为负、无拒单。"""
-    env = _env()
+    env = _env(slots=("A", "B", "C", "D"))
     env.reset()
-    _, _, _, i1 = env.step(np.array([100.0, -100.0]))  # 买 A
+    _, _, _, i1 = env.step(np.array([100.0, -100.0, -100.0, -100.0]))  # A 高权重
     n_rejects_1 = len(env.broker.rejects)
-    cash_after_buy = env.accounting.cash
-    _, _, _, i2 = env.step(np.array([-100.0, 100.0]))  # 换仓 B
+    qty_a_before = env.accounting.positions["A"].quantity
+    _, _, _, i2 = env.step(np.array([-100.0, 100.0, -100.0, -100.0]))  # 换仓 B
     assert len(env.broker.rejects) == n_rejects_1  # 无新拒单
     # broker 按 先卖后买 排序成交
     fills = i2["step"].fills
@@ -78,9 +80,8 @@ def test_rebalance_sells_before_buys() -> None:
     first_sell = sides.index("sell") if "sell" in sides else None
     assert first_sell is not None and sides[first_sell:] == sorted(sides, key=lambda s: 0 if s == "sell" else 1)
     assert env.accounting.cash >= 0.0
-    assert "A" not in env.accounting.positions
+    assert "A" not in env.accounting.positions or env.accounting.positions["A"].quantity < qty_a_before
     assert "B" in env.accounting.positions
-    assert cash_after_buy >= 0.0
 
 
 def test_buy_sizing_reserves_transaction_cost() -> None:

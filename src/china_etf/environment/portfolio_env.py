@@ -17,8 +17,9 @@ from ..contracts import (
     EnvironmentMode,
     TargetAssetWeights,
     TargetInstrumentWeights,
-    softmax_weights,
 )
+from ..risk.risk_overlay import RiskOverlayV0
+from .action_transform import ActionTransform
 from ..execution.broker.mock import MockBroker
 from ..execution.order_generator import OrderGenerator
 
@@ -49,6 +50,8 @@ class ChinaETFPortfolioEnv:
         slot_to_instrument: dict[str, str],
         mode: str = EnvironmentMode.METHOD_RESEARCH,
         min_history: int = 252,
+        action_transform: ActionTransform | None = None,
+        risk_overlay: RiskOverlayV0 | None = None,
     ) -> None:
         self.slots = list(slots)
         self.action_dim = len(self.slots)
@@ -60,6 +63,8 @@ class ChinaETFPortfolioEnv:
         self.slot_to_instrument = slot_to_instrument
         self.mode = mode
         self.min_history = min_history
+        self.action_transform = action_transform or ActionTransform(list(slots))
+        self.risk_overlay = risk_overlay or RiskOverlayV0(list(slots))
         # 研究模式不启用实时 PremiumGuard（历史无 IOPV）；PAPER/LIVE fail-closed
         self.broker.premium_enforced = mode in (EnvironmentMode.PAPER, EnvironmentMode.LIVE)
         self.accounting = PortfolioAccounting(initial_cash=initial_cash)
@@ -124,13 +129,16 @@ class ChinaETFPortfolioEnv:
             return self._observe(self.calendar[-1]), 0.0, True, {}
         t = self.calendar[self._i]
         t_next = self.calendar[self._i + 1]
-        weights = softmax_weights(raw_action, self.slots)
-        self._weights = weights
         v_before = self.accounting.snapshot(t, self._close_marks(t), self._fx()).portfolio_value
 
-        target_asset = TargetAssetWeights(decision_time=t, weights=weights)
+        # raw policy weights（ActionTransform，clip[-1,1]→softmax）
+        raw_weights = self.action_transform.transform(raw_action, t).weights
+        # RiskOverlayV0 → post-risk target weights（hard constraints）
+        post_risk = self.risk_overlay.apply(raw_weights)
+        self._weights = post_risk
+        target_asset = TargetAssetWeights(decision_time=t, weights=post_risk)
         inst_w = pd.Series(
-            {self.slot_to_instrument[s]: w for s, w in weights.items()},
+            {self.slot_to_instrument[s]: w for s, w in post_risk.items()},
         )
         target_inst = TargetInstrumentWeights(decision_time=t, weights=inst_w)
         close_marks = self._close_marks(t)
@@ -143,6 +151,7 @@ class ChinaETFPortfolioEnv:
         v_after = self.accounting.snapshot(t_next, self._close_marks(t_next), self._fx()).portfolio_value
         net_return = v_after / v_before - 1.0
         reward = float(np.log(v_after / v_before))
+        actual_w = self._actual_weights(t_next)
         step = EnvStep(
             t=t,
             t_next=t_next,
@@ -153,8 +162,16 @@ class ChinaETFPortfolioEnv:
             fees_paid=self.accounting.fees_paid,
             fills=fills,
         )
+        info = {
+            "step": step,
+            "weights": {
+                "raw_policy": raw_weights,
+                "post_risk": post_risk,
+                "actual": actual_w,
+            },
+        }
         self._i += 1
-        return self._observe(t_next), reward, self._i >= len(self.calendar) - 1, {"step": step}
+        return self._observe(t_next), reward, self._i >= len(self.calendar) - 1, info
 
     def _close_marks(self, t: pd.Timestamp) -> dict[str, float]:
         out: dict[str, float] = {}

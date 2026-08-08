@@ -168,3 +168,15 @@ class TargetAssetWeights:
   CURRENT_FEE_SCENARIO_2026（非 PIT 历史费率，manifest 标注）。
 - 延续：F1（历史费率规则，Gate 4 前）、F2（港股通券商佣金，Gate 4/6 前）、
   C1（Gate 6 前）、C2（用 proxy 前）、C3（真实数据接入后）。
+
+### D-020 Gate 3 修正（Reviewer 2026-08-08）
+
+- Action space 冻结 `Box(-1,1)^11`；`ActionTransform` 显式模块（clip→stable softmax），
+  三算法算法中立（禁止各自 temperature）。
+- `RiskOverlayV0` 接入环境 transition：raw_policy → post_risk → actual 三层权重分离记录；
+  single_core≤0.25、ChinaGrowth(CHINEXT+STAR)≤0.50、long_only、Σw=1；
+  bounded-simplex water-filling 投影；不可行 → raise；cap 语义 = rebalance target。
+- observation 归一化：train-only fit，冻结后 train/eval 共用，随模型保存/加载。
+- 时序纪律：Train 早期 / Eval 最后 200 交易日 held-out，no shuffle。
+- Gym 语义：数据末尾 = truncated（terminated=False）。
+- 新延续项 H1：03110 sina qfq total-return 需与 Global X/HKEX 官方派息交叉验证（Gate 4 正式结论前）。

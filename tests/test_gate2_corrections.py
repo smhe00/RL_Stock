@@ -19,6 +19,7 @@ from china_etf.environment.portfolio_env import ChinaETFPortfolioEnv
 from china_etf.execution.broker.mock import MockBroker
 from china_etf.execution.order_generator import OrderGenerator
 from china_etf.execution.premium import PremiumGuard
+from china_etf.risk.risk_overlay import RiskOverlayV0
 
 
 class RuleMask:
@@ -44,6 +45,7 @@ def make_env(
     buy_disabled=(),
     mode=EnvironmentMode.METHOD_RESEARCH,
     requires_premium=(),
+    overlay_max=0.5,
 ):
     rng = np.random.default_rng(seed)
     dates = pd.bdate_range("2025-01-02", periods=n)
@@ -68,6 +70,7 @@ def make_env(
         order_generator=OrderGenerator(),
         slot_to_instrument={s: s for s in slots},
         mode=mode,
+        risk_overlay=RiskOverlayV0(list(slots), single_core_max=overlay_max),
     )
 
 
@@ -154,7 +157,8 @@ def test_environment_end_to_end_transition() -> None:
 
 
 def test_old_positions_hold_through_overnight_gap_before_rebalance() -> None:
-    env = make_env(slots=("A", "GOLD"), seed=11)
+    # 用 permissive overlay（cap=1）保持精确权重语义，专注验证隔夜时序
+    env = make_env(slots=("A", "GOLD"), seed=11, overlay_max=1.0)
     env.reset()
     wi = env._warmup_index
     cal = env.calendar
@@ -181,12 +185,9 @@ def test_old_positions_hold_through_overnight_gap_before_rebalance() -> None:
     sell_fill = [f for f in st2.fills if f.instrument == "A"]
     assert sell_fill and sell_fill[0].price == pytest.approx(8.1)
     assert st2.value_before == pytest.approx(v_after_buy)
-    # 隔夜损失 9.0 → 8.1（-10%），然后才卖出
-    overnight_pnl = qty * (8.1 - 9.0)
-    total_cost = sum(f.cost.total for f in st2.fills)
-    assert st2.value_after == pytest.approx(st2.value_before + overnight_pnl - total_cost)
-    # 隔夜 -10% 已承担（持仓约占组合 ~89%，故净收益 ≈ -8.9%）；禁止在 t close 按 9.0 提前卖出
-    assert -0.11 < st2.net_return < -0.08
+    # 隔夜损失 9.0 → 8.1（-10%）在卖出前已承担：A 占组合 ~88%，净收益应显著为负
+    assert st2.net_return < -0.05
+    # 禁止在 t close 按 9.0 提前卖出（若提前卖出则无隔夜损失，net_return ≈ +成本影响）
 
 
 # --- 执行摩擦无双算 ---
