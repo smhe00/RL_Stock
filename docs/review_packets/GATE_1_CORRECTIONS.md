@@ -267,7 +267,7 @@ python scripts/gate1_corrections.py
 
 ## 13. Commit SHA
 
-（提交后填写）
+`c48e9a5`
 
 ---
 
