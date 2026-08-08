@@ -8,8 +8,10 @@
 finrl_x:
   repository: AI4Finance-Foundation/FinRL-Trading
   name: FinRL-X
-  github_latest_release: v1.0.0            # "FinRL-X: Initial Public Release" (2026-03-25)
+  github_latest_release: v1.0.0            # "FinRL-X: Initial Public Release" (2026-03-25, 已核实)
   github_release_commit: 0b5b4235640e74cd6e59f374bb13b3779e898e57
+  github_release_commit_date: 2026-03-25 10:13:15 +0800
+  head_ahead_of_release_commits: 1         # HEAD 仅领先 v1.0.0 一个提交
   branch: master
   head_commit: e65d6f0483ead7d2ef4a5fc940cdf960392a25c1
   head_date: 2026-05-02 23:12:36 +0800
