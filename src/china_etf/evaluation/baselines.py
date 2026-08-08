@@ -197,7 +197,11 @@ def _erc_solve(sigma: np.ndarray, n: int, max_iter: int = 500, tol: float = 1e-8
 
 
 def erc_policy(env, lookback: int = 120, shrinkage: float = 0.5):
-    """ERC：等边际风险贡献（N2/F3 canonical，牛顿法，policy 同一收缩协方差；F4 投影 project 可行集）。"""
+    """ERC_ProjectProjected（F4A 如实标注）：先解未约束等风险贡献（牛顿法，≤1e-3），再 `_proj_constrained` 投影。
+
+    注意：投影后非"约束 ERC 最优"，仅 post-projection 执行变体（overlay=0 证明 pre-overlay 可行，
+    非 constrained optimum）。
+    """
     r = _log_returns(env.adj)
     n = len(env.slots)
 
@@ -285,8 +289,11 @@ def _hrp_weights(corr: np.ndarray, cov: np.ndarray, vol: np.ndarray, n: int,
 
 
 def hrp_policy(env, lookback: int = 120):
-    """HRP（N3/F1 canonical）：完整层级聚类 + quasi-diagonal + cluster-variance recursive bisection
-    （低方差簇更多权重）；投影到 project 可行集（F4）。"""
+    """HRP_ProjectProjected（F4A 如实标注）：完整层级聚类 + quasi-diagonal + cluster-variance
+    recursive bisection（低方差簇更多权重），再 `_proj_constrained` 投影。
+
+    投影后非"约束 HRP 最优"，仅 post-projection 执行变体。
+    """
     r = _log_returns(env.adj)
     n = len(env.slots)
 

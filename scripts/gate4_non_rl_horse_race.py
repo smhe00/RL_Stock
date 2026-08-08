@@ -49,10 +49,12 @@ TIER_A = [
 ]
 
 METRICS = ["oos_cum_return", "cagr", "annualized_vol", "sharpe", "sortino",
-           "max_drawdown", "calmar", "mean_turnover", "total_cost",
+           "max_drawdown", "calmar", "mean_turnover", "total_turnover",
+           "total_cost", "actual_traded_notional", "total_cost_over_traded_notional",
            "cost_over_initial_value", "mean_hhi", "mean_active_assets",
            "max_single_asset_weight", "risk_overlay_intervention_rate",
-           "nan_obs_or_reward", "negative_cash_count", "n_eval_steps"]
+           "risk_overlay_mean_l1_raw_to_post", "nan_obs_or_reward",
+           "negative_cash_count", "n_eval_steps"]
 
 
 def main() -> None:
@@ -82,9 +84,24 @@ def main() -> None:
         "timing": {},
         "exact_test_mask": {k: v for k, v in mask.items() if k != "test_dates"},
     }
+    # F6：可审计 fallback 计数——统计 _cov_window 返回 None（=EW fallback），非硬编码 0
+    import china_etf.evaluation.baselines as bl
+    fallback_counts: dict[str, int] = {}
+    _orig_cov = bl._cov_window
+
+    _fb_counter = {"n": 0}
+
+    def _counting_cov(r, t, lookback, shrinkage, n):
+        res = _orig_cov(r, t, lookback, shrinkage, n)
+        if res is None:
+            _fb_counter["n"] += 1  # fallback（EW）
+        return res
+
+    bl._cov_window = _counting_cov
 
     for name, fac in TIER_A:
         t0 = time.time()
+        _fb_counter["n"] = 0  # 每方法重置
         per_fold = {}
         all_ret = []
         actual_exec_dates = []  # F5：真实 rollout 执行日期（st.t_next）
@@ -106,6 +123,7 @@ def main() -> None:
             "mask_parity": {"n_eval_steps": len(all_ret), "exact_test_date_count": mask_count,
                             "actual_execution_dates_equal_mask": True},
         }
+        fallback_counts[name] = _fb_counter["n"]  # F6：可审计 fallback（EW fallback 决策数）
         # stitched（F6 完整诊断）
         nr = np.asarray(all_ret, float)
         cum = float(np.exp(np.log1p(nr).sum()) - 1.0)
@@ -118,41 +136,55 @@ def main() -> None:
         eq = np.exp(np.log1p(nr).cumsum())
         mdd = float((eq / np.maximum.accumulate(eq) - 1.0).min())
         calmar = float(active_ann / abs(mdd)) if np.isfinite(active_ann) and abs(mdd) > 1e-12 else float("nan")
-        # 聚合 turnover/cost/HHI/active/maxweight/overlay（跨 fold 平均）
-        def agg(key):
-            vals = [per_fold[f][key] for f in per_fold if np.isfinite(per_fold[f][key])]
-            return float(np.mean(vals)) if vals else float("nan")
+        # F6：精确求和 + 加权均值（按 n_eval_steps 加权，fold 长度不同）
+        def wmean(key):
+            """按 n_eval_steps 加权的跨 fold 均值。"""
+            tot_w = sum(per_fold[f]["n_eval_steps"] for f in per_fold)
+            vals = [(per_fold[f][key], per_fold[f]["n_eval_steps"])
+                    for f in per_fold if np.isfinite(per_fold[f][key])]
+            return float(sum(v * w for v, w in vals) / tot_w) if tot_w and vals else float("nan")
+        total_turnover = sum(per_fold[f]["total_turnover"] for f in per_fold)
+        total_cost = sum(per_fold[f]["total_cost"] for f in per_fold)
+        traded = sum(per_fold[f]["actual_traded_notional"] for f in per_fold)
         stitched = {
             "n_steps": len(nr), "cum_return": round(cum, 6),
             "active_day_annualized_return": round(active_ann, 6),  # 明确标注
             "annualized_vol": round(vol, 6), "sharpe": round(sharpe, 6),
             "sortino": round(sortino, 6), "max_drawdown": round(mdd, 6), "calmar": round(calmar, 6),
-            "mean_turnover": round(agg("mean_turnover"), 6),
-            "total_turnover": round(sum(per_fold[f]["mean_turnover"] * per_fold[f]["n_eval_steps"] for f in per_fold), 6),
-            "total_cost": round(agg("total_cost") * 4, 2),
-            "cost_over_initial_value": round(agg("cost_over_initial_value"), 6),
-            "mean_hhi": round(agg("mean_hhi"), 6),
-            "mean_active_assets": round(agg("mean_active_assets"), 6),
-            "max_single_asset_weight": round(agg("max_single_asset_weight"), 6),
-            "risk_overlay_intervention_rate": round(agg("risk_overlay_intervention_rate"), 6),
+            "mean_turnover": round(wmean("mean_turnover"), 6),
+            "total_turnover": round(total_turnover, 6),  # 精确求和（实际 rollout）
+            "actual_traded_notional": round(traded, 2),
+            "total_cost": round(total_cost, 2),  # 精确求和
+            "total_cost_over_traded_notional": round(total_cost / traded, 6) if traded > 0 else float("nan"),
+            "cost_over_initial_value": round(wmean("cost_over_initial_value"), 6),
+            "mean_hhi": round(wmean("mean_hhi"), 6),
+            "mean_active_assets": round(wmean("mean_active_assets"), 6),
+            "max_single_asset_weight": round(wmean("max_single_asset_weight"), 6),
+            "risk_overlay_intervention_rate": round(wmean("risk_overlay_intervention_rate"), 6),
+            "risk_overlay_mean_l1_raw_to_post": round(wmean("risk_overlay_mean_l1_raw_to_post"), 8),
             "nan_obs_or_reward": int(sum(per_fold[f]["nan_obs_or_reward"] for f in per_fold)),
             "negative_cash_count": int(sum(per_fold[f]["negative_cash_count"] for f in per_fold)),
+            "fallback_count": fallback_counts.get(name, 0),  # 可审计：见下方统计
         }
         results["methods"][name]["stitched"] = stitched
         results["horse_race_table"][name] = {
             "cum_return": round(cum, 5), "active_day_annualized_return": round(active_ann, 5),
             "sharpe": round(sharpe, 5), "sortino": round(sortino, 5),
             "max_drawdown": round(mdd, 5), "calmar": round(calmar, 5),
-            "mean_turnover": round(agg("mean_turnover"), 5),
-            "total_cost": round(agg("total_cost") * 4, 2),
-            "mean_hhi": round(agg("mean_hhi"), 5),
-            "mean_active_assets": round(agg("mean_active_assets"), 5),
-            "max_single_asset_weight": round(agg("max_single_asset_weight"), 5),
-            "overlay_intervention_rate": round(agg("risk_overlay_intervention_rate"), 5),
-            "fallback_count": 0,
+            "mean_turnover": round(wmean("mean_turnover"), 5),
+            "total_turnover": round(total_turnover, 5),
+            "actual_traded_notional": round(traded, 2),
+            "total_cost": round(total_cost, 2),
+            "total_cost_over_traded_notional": round(total_cost / traded, 6) if traded > 0 else float("nan"),
+            "mean_hhi": round(wmean("mean_hhi"), 5),
+            "mean_active_assets": round(wmean("mean_active_assets"), 5),
+            "max_single_asset_weight": round(wmean("max_single_asset_weight"), 5),
+            "overlay_intervention_rate": round(wmean("risk_overlay_intervention_rate"), 5),
+            "overlay_mean_l1_raw_to_post": round(wmean("risk_overlay_mean_l1_raw_to_post"), 8),
+            "fallback_count": fallback_counts.get(name, 0),
         }
         print(f"{name:32s} cum={cum:+.4f} active_ann={active_ann:+.4f} sharpe={sharpe:.3f} "
-              f"mdd={mdd:.3f} overlay={agg('risk_overlay_intervention_rate'):.2f}")
+              f"mdd={mdd:.3f} fallback={fallback_counts.get(name,0)}")
 
     # RL 历史参考（pre-correction caveat）
     rl_path = ROOT / "runs" / "gate4_3seed_pilot_results.json"

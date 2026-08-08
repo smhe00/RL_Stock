@@ -165,7 +165,12 @@ def qp_projected(grad_lin: np.ndarray, Q: np.ndarray, *,
 
 def waterfill_proj(w: np.ndarray, n: int, caps: np.ndarray | None = None,
                    growth_max: float = 0.50, growth_slots: tuple[int, ...] = ()) -> np.ndarray:
-    """long-only + sum=1 + single-slot caps + ChinaGrowth group cap（F4：project 可行集投影）。"""
+    """Frozen project **feasibility projection contract**（F4B 如实描述）：
+    long-only + sum=1 + single-slot caps + ChinaGrowth group cap。
+
+    实现：single-slot waterfill + ChinaGrowth 缩放/再分配。这是确定性可行域投影，
+    **不声称是约束交集的精确 Euclidean 投影**（除非另行证明）。
+    """
     caps = np.full(n, 1.0) if caps is None else np.asarray(caps, dtype=float)
     if caps.sum() < 1.0 - 1e-9:
         raise ValueError(f"caps sum {caps.sum():.3f} < 1 (infeasible)")
