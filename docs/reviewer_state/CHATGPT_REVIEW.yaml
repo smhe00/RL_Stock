@@ -1,31 +1,35 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_NON_RL_HORSE_RACE_001
+handoff_id: G4_NON_RL_HORSE_RACE_CORRECTIONS_001
 state: REVISIONS_REQUIRED
 
 reviewed_packet:
-  path: docs/review_packets/GATE_4_NON_RL_HORSE_RACE.md
-  commit: 882827c691fa224d57c3836a624e792396c70bf0
+  path: docs/review_packets/GATE_4_NON_RL_HORSE_RACE_CORRECTIONS.md
+  commit: 7b597b7c8170625f207be7f3ae23a582eda27ef1
 
-code_commit: 6ded3acacb17b629e00acf8af96c42ebed46e2cb
+code_commit: a0844141a8c545dc76657d1d3ab7487766d137f3
 
-decision: TARGETED_CORRECTIONS_REQUIRED
+decision: TARGETED_FINAL_CORRECTIONS_REQUIRED
 
 response:
-  path: docs/reviewer_responses/GATE_4_NON_RL_HORSE_RACE_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/GATE_4_NON_RL_HORSE_RACE_CORRECTIONS_REVIEWER_RESPONSE.md
+
+passed:
+  - N4_TREND_RP_CASH_TRANSFER
+  - N8_ARTIFACT_FILES_TRACKED
+  - TEST_STEP_COUNT_475
+  - NO_RL_RETRAINING
 
 blocked:
-  - N1_MIN_CVAR_IMPLEMENTATION_INVALID
-  - N2_ERC_SOLVER_VALIDATION
-  - N3_HRP_NOT_CANONICAL
-  - N4_TREND_RP_CASH_TRANSFER
-  - N5_MAXDIV_CONSTRAINED_OBJECTIVE
-  - N6_SHRINKAGE_MV_OBJECTIVE
-  - N7_EXACT_TEST_MASK_PARITY
-  - N8_RESULT_ARTIFACTS_NOT_TRACKED
+  - F1_HRP_CLUSTER_VARIANCE_ALLOCATION_REVERSED
+  - F2_MIN_CVAR_OBJECTIVE_AND_CONVERGENCE_INVALID
+  - F3_ERC_TOLERANCE_WEAKENED
+  - F4_PROJECT_CONSTRAINTS_NOT_IN_OPTIMIZER
+  - F5_ACTUAL_EXECUTION_DATE_PARITY_NOT_PROVEN
+  - F6_STITCHED_DIAGNOSTICS_INCOMPLETE
 
 authorized_next:
-  - GATE_4_NON_RL_HORSE_RACE_CORRECTIONS
+  - GATE_4_NON_RL_HORSE_RACE_FINAL_CORRECTIONS
 
 forbidden_next:
   - RL_RETRAINING
@@ -40,14 +44,14 @@ forbidden_next:
   - SOUTHBOUND_EXECUTION
 
 notes:
-  - Current horse-race ranking is not accepted because several new methods do not implement their frozen canonical objectives.
-  - MinimumCVaR_95 is directionally invalid: alpha=0.95 selection captures roughly 95% of samples and the weighting favors larger negative tail losses.
-  - ERC must use a robust solver and tight equal-risk-contribution tests on the same shrunk covariance used by policy.
-  - HRP must implement full hierarchy, quasi-diagonalization, and cluster-variance recursive bisection.
-  - TrendRiskParity must transfer removed non-trending risky-asset budget to CASH_LIKE exactly.
-  - MaximumDiversification and ShrinkageMeanVariance must solve explicitly frozen constrained objectives or be renamed/excluded from canonical claims.
-  - Reconcile reported 474 steps against the frozen exact Test mask/benchmark parity contract and assert exact execution-date equality for every method.
-  - Result JSON artifacts claimed in the packet are not tracked in the reviewed commit; commit auditable outputs before resubmission.
-  - Rerun deterministic non-RL only. Existing TD3/SAC/PPO remain historical reference; no RL retraining.
+  - HRP recursive bisection currently gives more weight to the higher-variance cluster; invert the cluster-variance allocation ratio and add an unequal-variance cluster test.
+  - MinimumCVaR still uses an incorrect CVaR value formula and a tautological convergence condition; current MinCVaR result is not accepted.
+  - ERC requirement was <=1e-3 relative contribution deviation, but the test was weakened to <=5e-3. Tighten solver/test instead of weakening the gate.
+  - MaximumDiversification / ShrinkageMV / MinCVaR do not solve within the actual project constraint set before RiskOverlay; current artifacts show 100% overlay intervention for several methods. Enforce the frozen constraints in optimization or explicitly relabel plus-overlay variants.
+  - MaxDiv still lacks the required feasible local-optimality test; ShrinkMV needs meaningful convergence/KKT or known-optimum evidence.
+  - Actual execution-date parity is not proven because exec_dates are rebuilt from mask_dates. Record st.t_next in rollout and assert actual dates exactly equal the 475-date mask.
+  - Tracked artifacts exist, but stitched horse-race aggregate must include Sortino, Calmar, total turnover, traded notional, cost/traded notional, HHI, active assets, max weight, overlay intervention/L1, and fallback count.
+  - Stitched annualization must be labeled active-day annualized return, not ordinary calendar CAGR.
+  - Rerun only deterministic non-RL methods affected by final corrections; do not retrain TD3/SAC/PPO.
 
-updated_at: 2026-08-09T05:32:00+08:00
+updated_at: 2026-08-09T06:14:00+08:00
