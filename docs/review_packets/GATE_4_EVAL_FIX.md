@@ -174,7 +174,7 @@ net_return 序列变化：每段多 1 个 transition（test_start 执行日）�
 
 # 13. Git Commit
 
-`GATE_4_EVAL_FIX` 提交 SHA：**（commit 后填写）**
+`GATE_4_EVAL_FIX` 提交 SHA：**`dcb1287`**
 
 ```text
 src/china_etf/environment/portfolio_env.py   ← E1 reset(at_date)
