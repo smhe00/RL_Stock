@@ -94,7 +94,7 @@ collected 146 items  →  146 passed（新增 8 个：P1 native×2、P2 因果×
 
 # 10. Git Commit
 
-`GATE_4_FEATURE_ABLATION_PREP_CORRECTIONS` 提交 SHA：**（commit 后填写）**
+`GATE_4_FEATURE_ABLATION_PREP_CORRECTIONS` 提交 SHA：**`a273b63`**
 
 ```text
 src/china_etf/features/ablation_features.py  ← native-first F2 + align_derived_to_china + VIX 分位
