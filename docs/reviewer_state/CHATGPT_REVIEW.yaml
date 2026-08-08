@@ -1,54 +1,53 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_FEATURE_ABLATION_PREP_CORRECTIONS_001
-state: REVIEW_COMPLETE
+handoff_id: G4_NON_RL_HORSE_RACE_001
+state: REVISIONS_REQUIRED
 
 reviewed_packet:
-  path: docs/review_packets/GATE_4_FEATURE_ABLATION_PREP_CORRECTIONS.md
-  commit: 9a345b83d509a73450f1ae0725ff27c582054337
+  path: docs/review_packets/GATE_4_NON_RL_HORSE_RACE.md
+  commit: 882827c691fa224d57c3836a624e792396c70bf0
 
-code_commit: a273b63a9e8752a077bef1b446aacf6dcc1dc9cd
-reviewed_main_commit: d64fe91953681580626a5c120f309e13c77dc12e
+code_commit: 6ded3acacb17b629e00acf8af96c42ebed46e2cb
 
-decision: APPROVED
+decision: TARGETED_CORRECTIONS_REQUIRED
 
 response:
-  path: docs/reviewer_responses/GATE_4_FEATURE_ABLATION_PREP_CORRECTIONS_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/GATE_4_NON_RL_HORSE_RACE_REVIEWER_RESPONSE.md
 
-roadmap_directive:
-  path: docs/reviewer_responses/ROADMAP_NON_RL_BASELINE_COMPARISON_DIRECTIVE.md
-  user_decision: DEFER_10_SEED_AND_PRIORITIZE_NON_RL_COMPARISON
-  ten_seed_status: REMOVED_FROM_ACTIVE_ROADMAP
-  rl_retraining: FORBIDDEN
-  feature_ablation_runs_priority: DEFERRED_BEHIND_NON_RL_HORSE_RACE
-
-passed:
-  - P1_F2_NATIVE_CALENDAR_FIRST
-  - P2_VIX_DATE_ONLY_PREVIOUS_COMPLETED_SESSION
-  - P3_VIX_PERCENTILE_EXACT_FORMULA
-  - P4_FEATURE_SPEC_CODE_SYNC
-  - P5_F0_PREPROCESSING_PARITY
-
-carry_forward_before_real_f2_ablation:
-  - TIMEZONE_AWARE_AVAILABLE_AT_AND_DECISION_AT
+blocked:
+  - N1_MIN_CVAR_IMPLEMENTATION_INVALID
+  - N2_ERC_SOLVER_VALIDATION
+  - N3_HRP_NOT_CANONICAL
+  - N4_TREND_RP_CASH_TRANSFER
+  - N5_MAXDIV_CONSTRAINED_OBJECTIVE
+  - N6_SHRINKAGE_MV_OBJECTIVE
+  - N7_EXACT_TEST_MASK_PARITY
+  - N8_RESULT_ARTIFACTS_NOT_TRACKED
 
 authorized_next:
-  - GATE_4_NON_RL_HORSE_RACE
+  - GATE_4_NON_RL_HORSE_RACE_CORRECTIONS
 
 forbidden_next:
   - RL_RETRAINING
   - GATE_4_10_SEED_FORMAL
   - FEATURE_ABLATION_RUNS
+  - FEATURE_DATA_READY_EXPANSION
   - OPTUNA
-  - TEST_INFORMED_FEATURE_SELECTION
+  - HYPERPARAMETER_SWEEP
+  - TEST_INFORMED_SELECTION
   - THEME_SLEEVE
   - QMT_LIVE
   - SOUTHBOUND_EXECUTION
 
 notes:
-  - P1-P5 corrections are approved; 146 tests reported pass and no RL/ablation training was run.
-  - Date-only VIX strict previous-session causality is sufficient for this gate; before real F2 macro feature experiments, implement timezone-aware available_at and China decision_at in a single normalized timezone.
-  - User explicitly removed 10-seed formal from the active exploration roadmap.
-  - Next authorized phase is the corrected-path non-RL portfolio horse race. Existing TD3/SAC/PPO must not be retrained.
+  - Current horse-race ranking is not accepted because several new methods do not implement their frozen canonical objectives.
+  - MinimumCVaR_95 is directionally invalid: alpha=0.95 selection captures roughly 95% of samples and the weighting favors larger negative tail losses.
+  - ERC must use a robust solver and tight equal-risk-contribution tests on the same shrunk covariance used by policy.
+  - HRP must implement full hierarchy, quasi-diagonalization, and cluster-variance recursive bisection.
+  - TrendRiskParity must transfer removed non-trending risky-asset budget to CASH_LIKE exactly.
+  - MaximumDiversification and ShrinkageMeanVariance must solve explicitly frozen constrained objectives or be renamed/excluded from canonical claims.
+  - Reconcile reported 474 steps against the frozen exact Test mask/benchmark parity contract and assert exact execution-date equality for every method.
+  - Result JSON artifacts claimed in the packet are not tracked in the reviewed commit; commit auditable outputs before resubmission.
+  - Rerun deterministic non-RL only. Existing TD3/SAC/PPO remain historical reference; no RL retraining.
 
-updated_at: 2026-08-09T04:18:00+08:00
+updated_at: 2026-08-09T05:32:00+08:00
