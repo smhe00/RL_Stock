@@ -36,8 +36,9 @@ test_action_transform_no_nan / _is_monotonic / _algorithm_neutral  PASS
 
 ## 4. Observation normalization V2（BLOCKER-B 关闭）
 
-- obs 布局 `[8N per-asset][N weights][5 global]`；**只归一化 93 维外生特征**（88+5），
-  末 N 维 actual weights 保持 **[0,1]** 原始含义（掩码见 `gym_wrapper._market_positions`）。
+- obs 布局 `[8N per-asset][N weights][5 global]`；**只归一化 93 维外生特征**
+  = `[0:88] ∪ [99:104]`（88 per-asset + 5 global，位于两端），
+  **中间 N 维 actual weights `[88:99]` 保持 [0,1] 原始含义**（掩码见 `gym_wrapper._market_positions`）。
 - **policy-independent**：scaler 直接从 train 有效外生特征矩阵 fit（`market_feature_frame`，
   warmup 之后行），不再用 EW trajectory（消除 Equal-Weight normalization prior）。
 
