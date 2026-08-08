@@ -113,7 +113,7 @@ collected 159 items  →  159 passed（+13 horse-race 测试含 N1-N7 语义）
 
 # 11. Git Commit
 
-`GATE_4_NON_RL_HORSE_RACE_CORRECTIONS` 提交 SHA：**（commit 后填写）**
+`GATE_4_NON_RL_HORSE_RACE_CORRECTIONS` 提交 SHA：**`a084414`**
 
 ```text
 src/china_etf/evaluation/optimizers.py      ← simplex_lp / qp_projected（新）
