@@ -4,11 +4,16 @@
 
 ## Current Phase
 
-Phase 4 — GATE_4_PILOT_READY_FINAL_FIX 已提交（P1/P2/P3 修复 + P4 术语），
-等待 Reviewer 批准 → 之后按评审 §33 直接授权 `GATE_4_3_SEED_PILOT`（不再新增 pre-pilot 方法学工作）
+Phase 4 — GATE_4_3_SEED_PILOT 完成（36/36 runs 通过）→ `GATE_4_3_SEED_PILOT.md` 已提交，
+等待 Reviewer 批准 → 之后按评审 §33 授权 `GATE_4_10_SEED_FORMAL`（120 runs，10-seed）
 
 ## Last completed task
 
+- 2026-08-09：GATE_4_3_SEED_PILOT 完成 → `docs/review_packets/GATE_4_3_SEED_PILOT.md`
+  （4 folds × TD3/SAC/PPO × seeds 42/2026/7 × 20 passes × 1x cost = 36 RL runs + 4 baselines；
+  36/36 全 pass、0 fail、无 stop-condition 违规；stitched OOS CAGR median TD3 24.9%/SAC 25.5%/
+  PPO 27.5% vs 同期沪深300 24.1%；Sharpe 1.49-1.61 vs 基准 1.16；MaxDD -8.9%~-12.3% vs -13.7%；
+  seed 分散度低；runtime ~2h42m；109 测试全过）
 - 2026-08-08：GATE_4_PILOT_READY_FINAL_FIX 完成 → `docs/review_packets/GATE_4_PILOT_READY_FINAL_FIX.md`
   （P1 wrapper audit 指标分离：03110 HKD since-2013 +179.8% vs Global X 官方 +181.7% PASS；
   CNY 归一化 FX 无 double count；P2 官方派息日 513690 12-20/12-22 + 未知 ex+5T 保守不提前；
@@ -53,7 +58,7 @@ Phase 4 — GATE_4_PILOT_READY_FINAL_FIX 已提交（P1/P2/P3 修复 + P4 术语
 
 ## Current branch / commit
 
-`main` @ `9bf9024`（GATE_4_PILOT_READY_FINAL_FIX；此前 `5392fd4`）
+`main` @ `GATE_4_3_SEED_PILOT commit SHA（待 commit 后回填）`（此前 `78eb297`；remote: origin → GitHub smhe00/RL_Stock）
 
 ## Tests
 
@@ -69,11 +74,11 @@ Gate 2 — **APPROVED**（`GATE_2_CORRECTIONS_REVIEWER_RESPONSE.md`）
 
 Gate 3 — **APPROVED_WITH_PRE_GATE4_CONDITIONS**（`GATE_3_FINAL_REVIEWER_RESPONSE.md`）
 
-Gate 4 — PILOT_READY_FINAL_FIX_SUBMITTED（`GATE_4_PILOT_READY_FINAL_FIX.md`），等待 Reviewer 按评审 §33 授权 3-seed pilot
+Gate 4 — 3_SEED_PILOT_SUBMITTED（`GATE_4_3_SEED_PILOT.md`，36/36 pass），等待 Reviewer 批准后授权 10-seed formal
 
 ## Blockers
 
-等待 Reviewer 对 `GATE_4_PILOT_READY_FINAL_FIX.md` 批准（评审 §33：P1/P2/P3 修复 + tests + smoke 通过 → `GATE_4_3_SEED_PILOT = AUTHORIZED`）。
+等待 Reviewer 对 `GATE_4_3_SEED_PILOT.md` 批准（评审 §33：pilot 通过 → `GATE_4_10_SEED_FORMAL = AUTHORIZED`）。
 
 ## Deviations
 
@@ -86,12 +91,14 @@ Carry-Forward 条件（详见 DECISIONS.md）：
 - M1/M2: HK_DIVIDEND→513690 迁移 + wrapper audit — ✅ CLOSED（corr 0.832 + 收益量级验证）
 - CA1: 境内 ETF 公司行为记账 — ✅ CLOSED（FINAL_FIX P2/P3：官方派息日 + 512100 显式折算）
 - WF1/WF2/TB1: Train→Val→Test + 边界 + 训练预算 — ✅ CLOSED
+- P1-P4 final fixes — ✅ CLOSED（wrapper audit / 官方派息日 / 512100 折算 / rows 术语）
+- Pilot 附注：22 个保守 fallback 派息事件中 7 个落入 OOS test 窗口（见 packet §14）——10-seed 前建议补官方或做 settlement sensitivity（评审 §30）
 
 ## Next intended step
 
-Reviewer 批准 `GATE_4_PILOT_READY_FINAL_FIX.md` 后 → `GATE_4_3_SEED_PILOT`（评审 §34）：
-4 folds × TD3/SAC/PPO × seeds 42/2026/7 × 1x cost（36 RL trainings，≈3h）+ 4 baselines；
-目标只评估 runner stability / seed+fold dispersion / accounting integrity / runtime，非算法排名。
+Reviewer 批准 `GATE_4_3_SEED_PILOT.md` 后 → `GATE_4_10_SEED_FORMAL`（评审 §33）：
+10 seeds × 4 folds × TD3/SAC/PPO（120 runs）+ 6 baselines（补 Mean-Variance / Trend+RiskParity）+ 1x/2x/3x cost sensitivity；
+建议双进程并行（SAC 独占 GPU + TD3/PPO/baseline，~5h）。目标：统计可靠的 OOS 表现估计 + 成本鲁棒性。
 
 ## Reviewer approval
 
