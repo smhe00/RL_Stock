@@ -1,54 +1,44 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_FEATURE_ABLATION_PREP_001
+handoff_id: G4_FEATURE_ABLATION_PREP_CORRECTIONS_001
 state: REVIEW_COMPLETE
 
 reviewed_packet:
-  path: docs/review_packets/GATE_4_FEATURE_ABLATION_PREP.md
-  commit: 59250d630bf3f66c63a23267cb3ffec77b413012
+  path: docs/review_packets/GATE_4_FEATURE_ABLATION_PREP_CORRECTIONS.md
+  commit: 9a345b83d509a73450f1ae0725ff27c582054337
 
-code_commit: 7267cb797891685cb2d113cd16a1db66d6616d15
-reviewed_main_commit: 84152724e0b1bbee650184acfd8c812a801833eb
+code_commit: a273b63a9e8752a077bef1b446aacf6dcc1dc9cd
+reviewed_main_commit: d64fe91953681580626a5c120f309e13c77dc12e
 
-decision: TARGETED_CORRECTIONS_REQUIRED
+decision: APPROVED
 
 response:
-  path: docs/reviewer_responses/GATE_4_FEATURE_ABLATION_PREP_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/GATE_4_FEATURE_ABLATION_PREP_CORRECTIONS_REVIEWER_RESPONSE.md
 
 roadmap_directive:
   path: docs/reviewer_responses/ROADMAP_NON_RL_BASELINE_COMPARISON_DIRECTIVE.md
   user_decision: DEFER_10_SEED_AND_PRIORITIZE_NON_RL_COMPARISON
   ten_seed_status: REMOVED_FROM_ACTIVE_ROADMAP
   rl_retraining: FORBIDDEN
-  after_current_corrections_priority: GATE_4_NON_RL_HORSE_RACE
   feature_ablation_runs_priority: DEFERRED_BEHIND_NON_RL_HORSE_RACE
 
 passed:
-  - F1_INTERNAL_FEATURE_FORMULAS
-  - F_A1_LPM2_CODE
-  - F_A2_TRAIN_ONLY_IMPUTATION_CORE
-  - FEATURE_DIMENSIONS
-  - BENCHMARK_MASK_CLEANUP
-  - BENCHMARK_SETTLE_DATE
+  - P1_F2_NATIVE_CALENDAR_FIRST
+  - P2_VIX_DATE_ONLY_PREVIOUS_COMPLETED_SESSION
+  - P3_VIX_PERCENTILE_EXACT_FORMULA
+  - P4_FEATURE_SPEC_CODE_SYNC
+  - P5_F0_PREPROCESSING_PARITY
 
-blocked:
-  - F2_NATIVE_CALENDAR_WINDOW_SEMANTICS
-  - VIX_PREVIOUS_COMPLETED_US_SESSION_CAUSALITY
-  - VIX_PERCENTILE_EXACT_FORMULA
-  - FEATURE_SPEC_CODE_SYNC
-  - F0_PREPROCESSING_PARITY
+carry_forward_before_real_f2_ablation:
+  - TIMEZONE_AWARE_AVAILABLE_AT_AND_DECISION_AT
 
 authorized_next:
-  - GATE_4_FEATURE_ABLATION_PREP_CORRECTIONS
-
-planned_after_next_review:
   - GATE_4_NON_RL_HORSE_RACE
 
 forbidden_next:
-  - FEATURE_ABLATION_RUNS
-  - GATE_4_FEATURE_DATA_READY
-  - GATE_4_10_SEED_FORMAL
   - RL_RETRAINING
+  - GATE_4_10_SEED_FORMAL
+  - FEATURE_ABLATION_RUNS
   - OPTUNA
   - TEST_INFORMED_FEATURE_SELECTION
   - THEME_SLEEVE
@@ -56,12 +46,9 @@ forbidden_next:
   - SOUTHBOUND_EXECUTION
 
 notes:
-  - Compute F2 rolling/shift statistics on each source native observation calendar before PIT as-of alignment to China decisions.
-  - VIX must use the previous completed US session, not same-calendar-date US close; availability timestamps are preferred.
-  - Implement frozen VIX percentile as (rank-1)/(N-1) with explicit tie convention.
-  - Synchronize FEATURE_ABLATION_SPEC.md with the already-approved F-A1/F-A2 code contracts.
-  - Preserve legacy F0 normalization semantics; add parity test because legacy pandas std uses ddof=1 while new NumPy preprocessor currently uses ddof=0.
-  - User explicitly removed 10-seed formal from the active exploration roadmap due low marginal value versus compute cost.
-  - After the current correctness corrections pass review, prioritize deterministic/classical non-RL portfolio comparison. Existing RL must not be retrained.
+  - P1-P5 corrections are approved; 146 tests reported pass and no RL/ablation training was run.
+  - Date-only VIX strict previous-session causality is sufficient for this gate; before real F2 macro feature experiments, implement timezone-aware available_at and China decision_at in a single normalized timezone.
+  - User explicitly removed 10-seed formal from the active exploration roadmap.
+  - Next authorized phase is the corrected-path non-RL portfolio horse race. Existing TD3/SAC/PPO must not be retrained.
 
-updated_at: 2026-08-09T04:05:00+08:00
+updated_at: 2026-08-09T04:18:00+08:00
