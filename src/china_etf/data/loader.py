@@ -33,7 +33,7 @@ SLOT_MAP: dict[str, dict] = {
     "CHINEXT": {"instrument": "159915.SZ", "source": "QMT raw (=front, no events)", "currency": "CNY"},
     "STAR": {"instrument": "588000.SH", "source": "QMT raw (=front, no events)", "currency": "CNY"},
     "HK_TECH": {"instrument": "513180.SH", "source": "QMT raw (=front, no events)", "currency": "CNY"},
-    "HK_DIVIDEND": {"instrument": "03110.HK", "source": "sina raw + official events TR × HKD/CNY", "currency": "HKD→CNY"},
+    "HK_DIVIDEND": {"instrument": "513690.SH", "source": "QMT raw + official events TR (Track A mainland wrapper; 03110 deferred)", "currency": "CNY"},
     "US_BROAD": {"instrument": "513500.SH", "source": "QMT raw + official events TR", "currency": "CNY"},
     "GOLD": {"instrument": "518880.SH", "source": "QMT raw (=front, no events)", "currency": "CNY"},
     "CN_DURATION": {"instrument": "511260.SH", "source": "QMT raw + official events TR", "currency": "CNY"},
@@ -55,6 +55,12 @@ def _read_csv(pattern: str) -> pd.DataFrame:
         else pd.to_datetime(raw)
     )
     return df.sort_values("date").set_index("date")
+
+
+def _slot_raw_file(slot: str, suffix: str = "raw") -> str:
+    """按 instrument 构造精确文件名，避免 glob 命中同一 slot 的历史 instrument（如 03110 vs 513690）。"""
+    inst = SLOT_MAP[slot]["instrument"]
+    return f"{slot}_{inst.replace('.', '_')}_{suffix}.csv"
 
 
 def load_fx_hkd_cny() -> pd.Series:
@@ -94,12 +100,13 @@ def total_return_index(raw_close: pd.Series, events: pd.DataFrame | None) -> pd.
 
 
 def _hk_cny_series() -> pd.DataFrame:
-    hk = _read_csv("HK_DIVIDEND_*_sina_qfq.csv")  # 03110 sina 收盘（qfq==raw，H1 已验证）
+    """03110 保留研究序列（H1 成果；Gate 4 已 defer，供 wrapper-equivalence audit 用）。"""
+    hk = _read_csv("HK_DIVIDEND_03110_HK_sina_qfq.csv")  # 03110 sina 收盘（qfq==raw，H1 已验证）
     fx = load_fx_hkd_cny()
     fx = fx.reindex(hk.index).ffill()
     out = pd.DataFrame(index=hk.index)
     # H1 修正：raw + 官方派息 → 总收益水平指数（HKD），再 × FX → CNY
-    events = _load_events(SLOT_MAP["HK_DIVIDEND"]["instrument"])
+    events = _load_events("03110.HK")
     tr_idx_hkd = total_return_index(hk["close"], events)
     # 执行价必须用 raw 成交价（×FX）；研究序列用总收益指数
     out["open"] = hk["open"] * fx
@@ -112,16 +119,13 @@ def _hk_cny_series() -> pd.DataFrame:
 def load_research_adj() -> pd.DataFrame:
     """11 slots 研究复权收盘（CNY）。
 
-    C3 修正后：大陆槽位 = QMT raw + 官方事件 total-return 指数（不用 QMT front）；
-    HK_DIVIDEND = sina qfq × HKD/CNY。
+    C3 修正后：全部 = QMT raw + 官方事件 total-return 指数（不用 QMT front）；
+    HK_DIVIDEND = 513690.SH（境内 Track A wrapper；03110 已 defer）。
     """
     px = {}
     for slot, meta in SLOT_MAP.items():
-        if slot == "HK_DIVIDEND":
-            px[slot] = _hk_cny_series()["close_tr_cny"]
-        else:
-            raw_close = _read_csv(f"{slot}_*_raw.csv")["close"].astype(float)
-            px[slot] = total_return_index(raw_close, _load_events(meta["instrument"]))
+        raw_close = _read_csv(_slot_raw_file(slot))["close"].astype(float)
+        px[slot] = total_return_index(raw_close, _load_events(meta["instrument"]))
     adj = pd.DataFrame(px).sort_index()
     return _fill_gaps_after_listing(adj)
 
@@ -140,14 +144,9 @@ def load_execution_prices() -> tuple[dict[str, pd.Series], dict[str, pd.Series]]
     opens, closes = {}, {}
     for slot, meta in SLOT_MAP.items():
         inst = meta["instrument"]
-        if slot == "HK_DIVIDEND":
-            hk = _hk_cny_series()
-            opens[inst] = hk["open"]
-            closes[inst] = hk["close"]
-        else:
-            df = _read_csv(f"{slot}_*_raw.csv")
-            opens[inst] = df["open"].astype(float)
-            closes[inst] = df["close"].astype(float)
+        df = _read_csv(_slot_raw_file(slot))
+        opens[inst] = df["open"].astype(float)
+        closes[inst] = df["close"].astype(float)
     opens = {k: _fill_series_gaps(v) for k, v in opens.items()}
     closes = {k: _fill_series_gaps(v) for k, v in closes.items()}
     return opens, closes

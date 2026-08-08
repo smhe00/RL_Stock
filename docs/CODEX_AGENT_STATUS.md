@@ -4,11 +4,16 @@
 
 ## Current Phase
 
-Phase 4 — GATE_4_PRECHECK 已提交（C3/F1/F2/H1 闭环 + WalkForwardRunner/baselines + 机制冒烟），
-等待 Reviewer 批准 → 之后才可进入 G4.3 3-seed pilot（正式 one-fold TD3/SAC/PPO smoke）
+Phase 4 — GATE_4_PILOT_READY 已提交（Track A 迁 513690 + 公司行为记账 + Train/Val/Test +
+边界 + 预算 + 冒烟），等待 Reviewer 批准 → 之后才可进入 G4.3 3-seed pilot（评审 §34）
 
 ## Last completed task
 
+- 2026-08-08：GATE_4_PILOT_READY 完成 → `docs/review_packets/GATE_4_PILOT_READY.md`
+  （M1 HK_DIVIDEND→513690.SH 迁移 + loader 精确选文件 + 03110 研究保留；M2 wrapper audit
+  日相关 0.83；重算 horizon 2022-06-06/1015；CA1 公司行为记账（应收款/折算/双价 contract）；
+  WF1 Train→Val→Test 4 folds + WF2 t+1 边界测试 + TB1 TRAIN_PASSES×steps；冒烟 F4 EW+TD3
+  无 NaN、CA 513690 派息计提 True、boundary rows-1；102 测试全过）
 - 2026-08-08：GATE_4_PRECHECK 完成 → `docs/review_packets/GATE_4_PRECHECK.md`
   （obs index proof 闭环；C3 累计 split+raw+events TR；H1 03110 官方派息；
   F1 南向分段费率修复 `_rate_on`；F2 conservative 万3 NOT ACCOUNT-VERIFIED；
@@ -43,11 +48,11 @@ Phase 4 — GATE_4_PRECHECK 已提交（C3/F1/F2/H1 闭环 + WalkForwardRunner/b
 
 ## Current branch / commit
 
-`main` @ `fefb1c7`（GATE_4_PRECHECK；此前 Gate 3 final `0e5ae7f` 等）
+`main` @ `GATE_4_PILOT_READY commit SHA（待 commit 后回填）`（此前 `fefb1c7` GATE_4_PRECHECK）
 
 ## Tests
 
-88 全过（`python -m pytest tests/ -q`）。
+102 全过（`python -m pytest tests/ -q`）。
 
 ## Current Gate
 
@@ -59,25 +64,29 @@ Gate 2 — **APPROVED**（`GATE_2_CORRECTIONS_REVIEWER_RESPONSE.md`）
 
 Gate 3 — **APPROVED_WITH_PRE_GATE4_CONDITIONS**（`GATE_3_FINAL_REVIEWER_RESPONSE.md`）
 
-Gate 4 — PRECHECK_SUBMITTED（`GATE_4_PRECHECK.md`，commit `fefb1c7`），等待 Reviewer 批准后进入 G4.3
+Gate 4 — PILOT_READY_SUBMITTED（`GATE_4_PILOT_READY.md`），等待 Reviewer 批准后进入 G4.3 3-seed pilot
 
 ## Blockers
 
-等待 Reviewer 对 `GATE_4_PRECHECK.md` 批准（决定 3-seed pilot 是否可启动）。
+等待 Reviewer 对 `GATE_4_PILOT_READY.md` 批准（评审 §34：4 folds × TD3/SAC/PPO × seeds 42/2026/7 × 1x cost）。
 
 ## Deviations
 
 Carry-Forward 条件（详见 DECISIONS.md）：
-- C1: 03110 same-day trading rule — Gate 6 前验证（当前 UNKNOWN）
+- C1: 03110 same-day trading rule — Gate 6 前验证（当前 UNKNOWN；03110 Track A 已 defer）
 - C2: proxy launch/backfill 审计 — 未验证的 proxy 禁入严格 PIT 管线（Track B 使用前关闭）
-- C3: adjusted price PIT 语义 — ✅ CLOSED（`GATE_4_PRECHECK` §2；累计 split + raw+events TR）
-- F1: 历史费率规则 PIT — ✅ CLOSED（`GATE_4_PRECHECK` §4；南向分段 + 大陆保守假设）
-- F2: 港股通券商佣金 — ✅ CLOSED（conservative 万3 + min 5 HKD，NOT ACCOUNT-VERIFIED）
+- C3: adjusted price PIT 语义 — ✅ CLOSED（`GATE_4_PRECHECK` §2）
+- F1: 历史费率规则 PIT — ✅ CLOSED（`GATE_4_PRECHECK` §4；南向已 defer，大陆假设保留）
+- F2: 港股通券商佣金 — ✅ CLOSED（conservative 万3；Southbound 已 defer Gate 6）
+- M1/M2: HK_DIVIDEND→513690 迁移 + wrapper audit — ✅ CLOSED（`GATE_4_PILOT_READY` §A/B）
+- CA1: 境内 ETF 公司行为记账 — ✅ CLOSED（`GATE_4_PILOT_READY` §E）
+- WF1/WF2/TB1: Train→Val→Test + 边界 + 训练预算 — ✅ CLOSED（`GATE_4_PILOT_READY` §F-H）
 
 ## Next intended step
 
-Reviewer 批准 `GATE_4_PRECHECK.md` 后 → G4.3 3-seed pilot（先正式 one-fold TD3/SAC/PPO seed=42
-冒烟 runner，再 3 seeds × 4 folds × baselines；Track A 主证据，10 seeds 后续）。
+Reviewer 批准 `GATE_4_PILOT_READY.md` 后 → G4.3 3-seed pilot：
+4 folds × TD3/SAC/PPO × seeds 42/2026/7 × 1x cost（36 RL trainings，≈3h）+ 4 baselines；
+目标只评估 runner stability / seed+fold dispersion / accounting integrity / runtime，非算法排名。
 
 ## Reviewer approval
 

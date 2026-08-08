@@ -117,20 +117,35 @@ def test_loader_cn_large_full_history_matches_official_tr() -> None:
     assert 1.25 < cum < 1.36, f"CN_LARGE 全周期累计={cum:.4f}（官方 TR ≈ 1.309）"
 
 
-def test_loader_hk_dividend_includes_official_distributions() -> None:
-    """GATE_4_PRECHECK H1：03110 研究序列必须包含官方派息。
+def test_loader_03110_preserved_research_includes_official_distributions() -> None:
+    """GATE_4_PRECHECK H1：03110 保留研究序列（_hk_cny_series）必须包含官方派息。
 
-    sina qfq==raw（无分红调整），2025-09-24 除息日原序列收益 -5.05%；
-    修正后（raw + Global X 官方派息 1.60 HKD）该日研究收益应 ≈ +0.3%。
+    03110 Gate 4 已 defer，但研究保留。sina qfq==raw（无分红调整），2025-09-24
+    除息日原序列收益 -5.05%；修正后（raw + Global X 官方派息 1.60 HKD）应 ≈ +0.3%。
     """
-    from china_etf.data.loader import load_research_adj
+    from china_etf.data.loader import _hk_cny_series
 
-    adj = load_research_adj()
-    hk = adj["HK_DIVIDEND"].dropna()
+    hk = _hk_cny_series()["close_tr_cny"].dropna()
     d = pd.Timestamp("2025-09-24")
     prev = hk.index[hk.index < d][-1]
     ret = hk.loc[d] / hk.loc[prev] - 1.0
-    assert ret > -0.02, f"2025-09-24 HK_DIVIDEND return={ret:.4f}（应包含 1.60 派息，≈+0.3%）"
+    assert ret > -0.02, f"2025-09-24 03110 return={ret:.4f}（应包含 1.60 派息，≈+0.3%）"
     # 累计收益合理性：2013-06 以来总收益明显高于 raw 价（含 19 次派息）
     cum = hk.iloc[-1] / hk.iloc[0] - 1.0
-    assert cum > 1.0, f"HK_DIVIDEND 全周期累计={cum:.4f}"
+    assert cum > 1.0, f"03110 全周期累计={cum:.4f}"
+
+
+def test_loader_track_a_hk_dividend_513690_includes_dividends() -> None:
+    """GATE_4_PILOT_READY M1：Track A HK_DIVIDEND（513690.SH）研究序列包含官方派息。
+
+    2025-12-17 除息（0.0113/份）当日研究收益应 ≈ +0.5%+（含派息，非纯价格下跌）。
+    """
+    from china_etf.data.loader import load_research_adj
+
+    hk = load_research_adj()["HK_DIVIDEND"].dropna()
+    d = pd.Timestamp("2025-12-17")
+    prev = hk.index[hk.index < d][-1]
+    ret = hk.loc[d] / hk.loc[prev] - 1.0
+    assert ret > -0.01, f"2025-12-17 513690 research return={ret:.4f}（应含 0.0113 派息）"
+    # 上市（2021-05-20）以来累计为正，且明显高于 raw 价格（含 4 次派息）
+    assert hk.iloc[-1] / hk.iloc[0] - 1.0 > 0.10, "513690 Track A 研究累计应显著为正"
