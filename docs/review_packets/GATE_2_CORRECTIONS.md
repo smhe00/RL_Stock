@@ -133,7 +133,7 @@ docs/DECISIONS.md（D-017/D-018）、docs/CODEX_AGENT_STATUS.md
 
 ## 13. Git commit
 
-（提交后填写）
+`4d23cf4`
 
 ---
 
