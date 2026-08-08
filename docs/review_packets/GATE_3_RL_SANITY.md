@@ -155,7 +155,7 @@ F2 港股通券商佣金             : OPEN（Gate 4/6 前；Gate 3 用 placehol
 
 ## 13. Git commit
 
-（提交后填写）
+`d2f3700`
 
 ---
 
