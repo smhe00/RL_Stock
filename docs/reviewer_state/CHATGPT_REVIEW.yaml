@@ -1,27 +1,36 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_EVAL_FIX_001
+handoff_id: G4_EVAL_FIX_CORRECTIONS_001
 state: REVIEW_COMPLETE
 
 reviewed_packet:
-  path: docs/review_packets/GATE_4_EVAL_FIX.md
-  commit: e1b25c7975410f9241967dbff028f79b4fe4e318
+  path: docs/review_packets/GATE_4_EVAL_FIX_CORRECTIONS.md
+  commit: 848466dfa621b244f4048db86e772682ecd2ab96
 
-code_commit: dcb1287b10b1267c38f5f0678e2039b3139aeeec
+code_commit: f2b7b4d4a7dcaadcc3174296521993b0366353c5
 
-decision: TARGETED_CORRECTIONS_REQUIRED
+decision: APPROVED
 
 response:
-  path: docs/reviewer_responses/GATE_4_EVAL_FIX_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/GATE_4_EVAL_FIX_CORRECTIONS_REVIEWER_RESPONSE.md
 
 passed:
-  - E1_SEGMENT_ACCOUNTING_RESET
-  - E2_SEGMENT_COST_RECONCILIATION
-  - E3_RISKOVERLAY_DIAGNOSTICS
-  - FALLBACK_PAYDATE_SENSITIVITY
+  - B1_FOLD_LOCAL_BENCHMARK_RESET
+  - B2_FIRST_DAY_TRANSITION_PARITY
+  - B3_BENCHMARK_CA_ORDERING
+  - EXACT_TEST_DATE_PARITY
+  - NO_VALIDATION_GAP_EXPOSURE
+  - FEATURE_PC1_CORRELATION_MATRIX
+  - FEATURE_CORR_CHANGE_SIGN
+
+pre_ablation_conditions:
+  - F_A1_DOWNSIDE_SEMIVOL_LPM2
+  - F_A2_TRAIN_ONLY_IMPUTATION_FOR_ALL_MODEL_OBSERVATIONS
+  - CLEANUP_EXACT_TEST_MASK_REDUNDANT_BENCHMARK_COUNT
+  - BENCHMARK_SETTLEMENT_USE_SETTLE_DATE
 
 authorized_next:
-  - GATE_4_EVAL_FIX_CORRECTIONS
+  - GATE_4_FEATURE_ABLATION_PREP
 
 forbidden_next:
   - FEATURE_ABLATION_RUNS
@@ -33,10 +42,9 @@ forbidden_next:
   - SOUTHBOUND_EXECUTION
 
 notes:
-  - Fix 510300 executable benchmark to reset per fold and produce exactly the same 475 stitched Test transitions/dates as strategy evaluation.
-  - Do not carry benchmark exposure through Validation gaps.
-  - Fix first-test-day benchmark return and ex-date corporate-action ordering.
-  - Finalize FEATURE_ABLATION_SPEC: corr_pc1_share_60 uses correlation matrix; corr_change_20_60 = corr20 - corr60; freeze exact formulas/as-of/missing-data rules for all 12 features.
-  - Do not rerun the 36-run pilot for this correction.
+  - Gate 4 eval-fix corrections pass; benchmark is now fold-local and Test-mask equivalent.
+  - Before feature-ablation runs, freeze downside semivol as lower partial second moment around zero and make train-only imputation apply to every model observation.
+  - Remove or rename the redundant benchmark count in exact_test_mask; benchmark dividend settlement should use settle_date to match the main environment.
+  - Next work is implementation/prep only; no multi-fold ablation training and no 10-seed formal yet.
 
-updated_at: 2026-08-09T02:10:00+08:00
+updated_at: 2026-08-09T02:31:00+08:00
