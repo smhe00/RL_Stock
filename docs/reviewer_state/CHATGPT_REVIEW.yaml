@@ -1,35 +1,33 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_NON_RL_HORSE_RACE_CORRECTIONS_001
+handoff_id: G4_NON_RL_HORSE_RACE_FINAL_CORRECTIONS_001
 state: REVISIONS_REQUIRED
 
 reviewed_packet:
-  path: docs/review_packets/GATE_4_NON_RL_HORSE_RACE_CORRECTIONS.md
-  commit: 7b597b7c8170625f207be7f3ae23a582eda27ef1
+  path: docs/review_packets/GATE_4_NON_RL_HORSE_RACE_FINAL_CORRECTIONS.md
+  commit: 59ea96240a165a5e2cb9f73455f790a2ff070aff
 
-code_commit: a0844141a8c545dc76657d1d3ab7487766d137f3
+code_commit: 4ace12fb3ff3633dfa961a8eb69c8c6ae4629b71
 
-decision: TARGETED_FINAL_CORRECTIONS_REQUIRED
+decision: TARGETED_FINALIZATION_REQUIRED
 
 response:
-  path: docs/reviewer_responses/GATE_4_NON_RL_HORSE_RACE_CORRECTIONS_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/GATE_4_NON_RL_HORSE_RACE_FINAL_CORRECTIONS_REVIEWER_RESPONSE.md
 
 passed:
-  - N4_TREND_RP_CASH_TRANSFER
-  - N8_ARTIFACT_FILES_TRACKED
-  - TEST_STEP_COUNT_475
+  - F1_HRP_CLUSTER_VARIANCE_DIRECTION
+  - F2_MIN_CVAR_RU_OBJECTIVE
+  - F3_ERC_RAW_TOLERANCE_1E3
+  - F5_ACTUAL_EXECUTION_DATE_PARITY
   - NO_RL_RETRAINING
 
 blocked:
-  - F1_HRP_CLUSTER_VARIANCE_ALLOCATION_REVERSED
-  - F2_MIN_CVAR_OBJECTIVE_AND_CONVERGENCE_INVALID
-  - F3_ERC_TOLERANCE_WEAKENED
-  - F4_PROJECT_CONSTRAINTS_NOT_IN_OPTIMIZER
-  - F5_ACTUAL_EXECUTION_DATE_PARITY_NOT_PROVEN
-  - F6_STITCHED_DIAGNOSTICS_INCOMPLETE
+  - F4_ERC_HRP_CONSTRAINED_LABELING
+  - F6_EXACT_STITCHED_DIAGNOSTICS
+  - PACKET_ARTIFACT_CONSISTENCY
 
 authorized_next:
-  - GATE_4_NON_RL_HORSE_RACE_FINAL_CORRECTIONS
+  - GATE_4_NON_RL_HORSE_RACE_FINALIZATION
 
 forbidden_next:
   - RL_RETRAINING
@@ -44,14 +42,16 @@ forbidden_next:
   - SOUTHBOUND_EXECUTION
 
 notes:
-  - HRP recursive bisection currently gives more weight to the higher-variance cluster; invert the cluster-variance allocation ratio and add an unequal-variance cluster test.
-  - MinimumCVaR still uses an incorrect CVaR value formula and a tautological convergence condition; current MinCVaR result is not accepted.
-  - ERC requirement was <=1e-3 relative contribution deviation, but the test was weakened to <=5e-3. Tighten solver/test instead of weakening the gate.
-  - MaximumDiversification / ShrinkageMV / MinCVaR do not solve within the actual project constraint set before RiskOverlay; current artifacts show 100% overlay intervention for several methods. Enforce the frozen constraints in optimization or explicitly relabel plus-overlay variants.
-  - MaxDiv still lacks the required feasible local-optimality test; ShrinkMV needs meaningful convergence/KKT or known-optimum evidence.
-  - Actual execution-date parity is not proven because exec_dates are rebuilt from mask_dates. Record st.t_next in rollout and assert actual dates exactly equal the 475-date mask.
-  - Tracked artifacts exist, but stitched horse-race aggregate must include Sortino, Calmar, total turnover, traded notional, cost/traded notional, HHI, active assets, max weight, overlay intervention/L1, and fallback count.
-  - Stitched annualization must be labeled active-day annualized return, not ordinary calendar CAGR.
-  - Rerun only deterministic non-RL methods affected by final corrections; do not retrain TD3/SAC/PPO.
+  - HRP cluster-variance allocation direction is corrected; the previous false high-return HRP result disappears after the fix.
+  - MinimumCVaR now uses the Rockafellar-Uryasev empirical objective and independent ES validation; the old result is superseded.
+  - ERC raw solver again meets the <=1e-3 contribution-deviation target.
+  - Actual rollout execution dates are now recorded from st.t_next and compared directly with the frozen 475-date Test mask.
+  - ERC and HRP are still solved canonically first and only then passed through _proj_constrained; overlay=0 proves pre-overlay feasibility, not a genuinely constrained ERC/HRP optimum. Relabel as project-projected variants or implement true constrained formulations.
+  - waterfill_proj should be described as the frozen project feasibility projection contract, not an exact Euclidean projection unless proven.
+  - Stitched diagnostics still omit actual_traded_notional, total_cost_over_traded_notional and risk_overlay_mean_l1_raw_to_post even though rollout provides them.
+  - Stitched total_turnover is currently approximated as mean_turnover*n_eval rather than summed from exact per-fold total_turnover; totals and weighted means must be aggregated from the actual rollout fields.
+  - fallback_count must be auditable rather than a hard-coded unexplained zero.
+  - Packet table has an EqualWeight overlay inconsistency versus the tracked artifact; regenerate packet summary from the final artifact.
+  - Only deterministic non-RL cleanup/rerun is authorized. Existing TD3/SAC/PPO remain historical pre-correction references.
 
-updated_at: 2026-08-09T06:14:00+08:00
+updated_at: 2026-08-09T06:28:43+08:00
