@@ -1,23 +1,30 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_3SEED_001
+handoff_id: G4_EVAL_FIX_001
 state: REVIEW_COMPLETE
 
 reviewed_packet:
-  path: docs/review_packets/GATE_4_3_SEED_PILOT.md
-  commit: 24562834b5e0d2d65c773fcfd5b16517314ce622
+  path: docs/review_packets/GATE_4_EVAL_FIX.md
+  commit: e1b25c7975410f9241967dbff028f79b4fe4e318
 
-results_commit: 8081d01bdbef742186d56f5fa44ad6e4e17b0c6b
+code_commit: dcb1287b10b1267c38f5f0678e2039b3139aeeec
 
-decision: PILOT_MECHANICS_PASS_FORMAL_NOT_AUTHORIZED
+decision: TARGETED_CORRECTIONS_REQUIRED
 
 response:
-  path: docs/reviewer_responses/GATE_4_3_SEED_PILOT_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/GATE_4_EVAL_FIX_REVIEWER_RESPONSE.md
+
+passed:
+  - E1_SEGMENT_ACCOUNTING_RESET
+  - E2_SEGMENT_COST_RECONCILIATION
+  - E3_RISKOVERLAY_DIAGNOSTICS
+  - FALLBACK_PAYDATE_SENSITIVITY
 
 authorized_next:
-  - GATE_4_EVAL_FIX
+  - GATE_4_EVAL_FIX_CORRECTIONS
 
 forbidden_next:
+  - FEATURE_ABLATION_RUNS
   - GATE_4_10_SEED_FORMAL
   - OPTUNA
   - TEST_INFORMED_FEATURE_SELECTION
@@ -26,9 +33,10 @@ forbidden_next:
   - SOUTHBOUND_EXECUTION
 
 notes:
-  - Fix E1 segment accounting reset / no retroactive policy replay.
-  - Fix E2 segment cost reconciliation.
-  - Fix E3 RiskOverlay diagnostic inconsistency.
-  - Feature ablation spec prep is allowed; ablation runs are not yet authorized.
+  - Fix 510300 executable benchmark to reset per fold and produce exactly the same 475 stitched Test transitions/dates as strategy evaluation.
+  - Do not carry benchmark exposure through Validation gaps.
+  - Fix first-test-day benchmark return and ex-date corporate-action ordering.
+  - Finalize FEATURE_ABLATION_SPEC: corr_pc1_share_60 uses correlation matrix; corr_change_20_60 = corr20 - corr60; freeze exact formulas/as-of/missing-data rules for all 12 features.
+  - Do not rerun the 36-run pilot for this correction.
 
-updated_at: 2026-08-09T01:31:00+08:00
+updated_at: 2026-08-09T02:10:00+08:00
