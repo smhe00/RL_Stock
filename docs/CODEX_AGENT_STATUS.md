@@ -8,6 +8,9 @@ Phase 2 — Environment & Accounting（Gate 2 已完成，等待复核）
 
 ## Last completed task
 
+- 2026-08-08：Gate 3 依赖预装完成（只装不训练）：
+  torch 2.7.1+cu118（GPU/1060 验证通过）、SB3 2.8.0、gymnasium 1.2.3、
+  finrl 0.3.8@2334a5f、finrl-trading 2.0.2@e65d6f0；锁定文件 `requirements-gate3.txt`
 - 2026-08-08：Gate 1 APPROVED（Reviewer: `APPROVED_WITH_CARRY_FORWARD_CONDITIONS`，Gate 2 AUTHORIZED）
 - 2026-08-08：Gate 2 完成 → `docs/review_packets/GATE_2_ENVIRONMENT.md`
   （contracts / accounting / mock broker / cost / tradability / premium / fx / env(11) + 29 测试全过）
@@ -48,7 +51,8 @@ Carry-Forward 条件（详见 DECISIONS.md）：
 
 ## Next intended step
 
-Reviewer 批准后进入 Gate 3 — First RL Sanity（单 fold / 单 seed，TD3/SAC/PPO）。
+Gate 2 复核通过后进入 Gate 3 — First RL Sanity（单 fold / 单 seed，TD3/SAC/PPO）；
+依赖已就绪（GPU CUDA 可用）。
 
 ## Reviewer approval
 

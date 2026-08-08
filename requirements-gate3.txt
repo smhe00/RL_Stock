@@ -1,0 +1,27 @@
+# Gate 3（RL Sanity）依赖锁定 — 2026-08-08 安装并验证于 RL_Stock/.venv
+#
+# GPU 约束（D-016）：GTX 1060 = Pascal sm_61；PyTorch 2.8+ 已放弃 Pascal，
+# 因此 torch 锁 2.7.1+cu118；SB3 2.9.0 要求 torch>=2.8（不兼容），锁 2.8.0。
+#
+# 安装要点：
+#   torch 必须从 PyTorch 官方源（国内镜像无 cu118 轮子）：
+#     pip install torch==2.7.1+cu118 --index-url https://download.pytorch.org/whl/cu118
+#   其余包走国内镜像（.venv/pip.ini 已配阿里源）。
+
+torch==2.7.1+cu118
+stable-baselines3==2.8.0
+gymnasium==1.2.3
+numpy==2.5.1
+pandas==3.0.5
+pyyaml==6.0.3
+scipy>=1.11.0
+
+# 上游包（锁定 commit；--no-deps 安装，不扰动 venv）
+# finrl（经典，GitHub master 2334a5fe6d30629157f13c3b0319e1637e15e123）：
+#   pip install "git+https://github.com/AI4Finance-Foundation/FinRL@2334a5fe6d30629157f13c3b0319e1637e15e123#egg=finrl" --no-deps
+#   注：经典 finrl 完整运行时（alpaca_trade_api 等）未安装——本项目 allocator 直接使用
+#   SB3 + 自建 ChinaETFPortfolioEnv，不经经典 finrl 的 legacy DRL 路径（Gate 0 已标记）。
+# finrl-trading（FinRL-X，audited commit e65d6f0）：
+#   pip install "git+https://github.com/AI4Finance-Foundation/FinRL-Trading@e65d6f0483ead7d2ef4a5fc940cdf960392a25c1#egg=finrl_trading" --no-deps --no-build-isolation
+#   注：中文 Windows 上需 PYTHONUTF8=1（setup.py 读 README 的编码 bug）；
+#   顶层模块为 strategies/trading/...（weight contract 在 strategies.base_strategy）。

@@ -117,3 +117,19 @@ class TargetAssetWeights:
 - Gate 2 禁止：TD3/SAC/PPO 性能比较、Optuna、多种子研究、Theme Sleeve、真实 QMT 下单、
   动态 Instrument 排序、未验证 proxy 进严格 PIT。
 - Gate 2 报告要求：任何 correlation/stress 数字必须附带 overlap N 与日期区间（不依赖本地 CSV）。
+
+### D-016 Gate 3 依赖与 GPU 决策（2026-08-08）
+
+- GPU：NVIDIA GTX 1060 6GB（Pascal，sm_61），驱动 581.80（CUDA 13.0 驱动级，向后兼容）。
+- torch 锁 **2.7.1+cu118**：PyTorch 2.8+ 已放弃 Pascal/sm_61；cu118 轮子明确含 sm_61
+  （`torch.cuda.get_arch_list()` 实测含 sm_61，GPU matmul 验证通过）。
+- stable-baselines3 锁 **2.8.0**：SB3 2.9.0 要求 torch>=2.8（与 Pascal 约束冲突）。
+- gymnasium 1.2.3（随 SB3 2.8.0 解析）。
+- 镜像策略：普通 PyPI 包走阿里源（`.venv/pip.ini`）；cu118 torch 只能从
+  `download.pytorch.org/whl/cu118`（国内镜像不提供 cu118 轮子）。
+- 上游包：`finrl-trading`（FinRL-X）@ e65d6f0（`--no-deps --no-build-isolation`，需 `PYTHONUTF8=1`，
+  中文 Windows 上 setup.py 读 README 有编码 bug）；`finrl`（经典）@ 2334a5f。
+- 经典 finrl 的完整运行时依赖（alpaca_trade_api/websockets 等）**不安装**：
+  本项目 allocator 直接使用 SB3 + 自建 `ChinaETFPortfolioEnv`，不经经典 finrl legacy DRL 路径。
+- 上游 `strategies.base_strategy`（weight contract）可导入；`ml_strategy` 等需上游可选依赖，本项目不需要。
+- 锁定文件：`requirements-gate3.txt`。
