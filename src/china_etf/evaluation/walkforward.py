@@ -142,15 +142,32 @@ class WalkForwardRunner:
         return int(len(train_env.calendar) - 1 - train_env._warmup_index)
 
     def _rollout_segment(self, fold: Fold, kind: str, mean, std, policy) -> dict:
-        last = fold.val_end if kind == "validation" else fold.test_end
-        start = fold.val_start if kind == "validation" else fold.test_start
+        """段 rollout（GATE_4_EVAL_FIX E1）：在段边界重置记账（现金+零持仓），保留特征历史。
+
+        Validation: 决策于 train_end close → 首执行 val_start open → 首记录 transition val_start
+        Test      : 决策于 val_end close  → 首执行 test_start open → 首记录 transition test_start
+        """
+        if kind == "validation":
+            last = fold.val_end
+            reset_at = fold.train_end
+            start = fold.val_start
+        else:
+            last = fold.test_end
+            reset_at = fold.val_end
+            start = fold.test_start
         env = self._build_env_upto(last)
         gym = ChinaETFGymEnv(env)
         gym.set_market_scaler(
             np.asarray(mean, dtype=np.float32), np.asarray(std, dtype=np.float32)
         )
-        m = roll_out(env, gym, policy, start, self.slots)
+        m = roll_out(env, gym, policy, start, self.slots, reset_at=reset_at)
         m["segment"] = kind
+        # E1 manifest 字段：段边界时间线 + 初始组合
+        m["segment_predecision_date"] = str(reset_at.date())
+        m["segment_first_execution_date"] = str(start.date())
+        m["segment_first_metric_date"] = str(start.date())
+        m["initial_cash"] = env._initial_cash
+        m["initial_positions"] = {}
         return m
 
     def run_fold_rl(
@@ -199,6 +216,7 @@ class WalkForwardRunner:
         """baseline 权重由 target(t) 决定（PIT，无需模型），走同一 fold-isolation 路径。
 
         baseline 无模型选型 → 仅记录 test 段诊断；policy 绑定 test env 构造。
+        E1：test 段在 val_end 重置记账（现金+零持仓，保留特征历史），首执行 test_start open。
         """
         train_env = self._train_env_for(fold)
         mean, std = self.fit_scaler(train_env, fold)
@@ -207,8 +225,14 @@ class WalkForwardRunner:
         gym.set_market_scaler(
             np.asarray(mean, dtype=np.float32), np.asarray(std, dtype=np.float32)
         )
-        m = roll_out(env, gym, policy_factory(env), fold.test_start, self.slots)
+        m = roll_out(env, gym, policy_factory(env), fold.test_start, self.slots,
+                     reset_at=fold.val_end)
         m["segment"] = "test"
+        m["segment_predecision_date"] = str(fold.val_end.date())
+        m["segment_first_execution_date"] = str(fold.test_start.date())
+        m["segment_first_metric_date"] = str(fold.test_start.date())
+        m["initial_cash"] = env._initial_cash
+        m["initial_positions"] = {}
         return {
             "fold": fold.name,
             "kind": "baseline",

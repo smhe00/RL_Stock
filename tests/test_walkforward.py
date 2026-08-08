@@ -277,19 +277,22 @@ def test_validation_last_decision_does_not_use_test_price() -> None:
 
 
 def test_test_decision_count_equals_calendar_rows_minus_one() -> None:
-    """test 段决策数 = 日历行数 - 1（末行 = terminal mark，非决策）。"""
+    """test 段评估 transition 数 = 测试区执行日行数（E1：含段首 test_start 执行日）。
+
+    决策于 val_end close → 首执行 test_start open → first evaluated transition = test_start。
+    最后一行 test_end 为 terminal mark（无后续 transition）。
+    """
     runner = _runner()
     folds = runner.make_folds(n_folds=2, min_train_days=200, val_days=40)
     f1 = folds[0]
     test_env = runner._build_env_upto(f1.test_end)
     cal = pd.DatetimeIndex(test_env.calendar)
-    decision_rows = cal[cal >= f1.test_start]
-    # 决策步数 = 测试区行数 - 1（最后一行为 mark）
+    exec_rows = cal[(cal >= f1.test_start) & (cal <= f1.test_end)]
     m = runner._rollout_segment(
         f1, "test", np.zeros(MARKET_DIM), np.ones(MARKET_DIM),
         equal_weight_policy(test_env),
     )
-    assert m["n_eval_steps"] == len(decision_rows) - 1
+    assert m["n_eval_steps"] == len(exec_rows)
 
 
 def test_fold_segment_terminal_mark_semantics() -> None:

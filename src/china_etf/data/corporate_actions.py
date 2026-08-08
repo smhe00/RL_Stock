@@ -34,24 +34,26 @@ class CorporateActionEvent:
     source: str  # official_fund_announcement | CONSERVATIVE_FALLBACK
 
 
-def _settle_for(action_type: str, ex_date: pd.Timestamp, pay_date: pd.Timestamp | None) -> tuple[pd.Timestamp, str]:
+def _settle_for(action_type: str, ex_date: pd.Timestamp, pay_date: pd.Timestamp | None, lag_bdays: int) -> tuple[pd.Timestamp, str]:
     """结算日与来源。
 
     - UNIT_SPLIT / UNIT_CONSOLIDATION：无现金结算，settle_date=ex_date，来源=官方公告。
-    - CASH_DIVIDEND：官方 pay_date 优先；未知 → ex+5T 保守 fallback（source=CONSERVATIVE_FALLBACK）。
+    - CASH_DIVIDEND：官方 pay_date 优先；未知 → ex+lag 保守 fallback（source=CONSERVATIVE_FALLBACK）。
+    lag_bdays 供 settlement-delay sensitivity（评审：+3T/+5T/+7T）参数化。
     """
     if action_type != "CASH_DIVIDEND":
         return ex_date, "official_fund_announcement"
     if pay_date is not None:
         return pay_date, "official_fund_announcement"
-    return ex_date + pd.offsets.BDay(CONSERVATIVE_PAY_LAG_BD), "CONSERVATIVE_FALLBACK"
+    return ex_date + pd.offsets.BDay(lag_bdays), "CONSERVATIVE_FALLBACK"
 
 
-def load_corporate_actions() -> dict[str, list[CorporateActionEvent]]:
+def load_corporate_actions(pay_lag_bdays: int = CONSERVATIVE_PAY_LAG_BD) -> dict[str, list[CorporateActionEvent]]:
     """读 data/qmt/meta/divid_events/{code}.csv → 按 instrument 索引的事件列表。
 
     CSV 列：date, action_type, unit_factor, interest, stockBonus, stockGift, pay_date(可选)。
     只加载 SLOT_MAP 当前 instrument（Track A = mainland 路径；03110 已 defer）。
+    `pay_lag_bdays`：未知派息日的保守结算滞后（默认 5；sensitivity 用 3/5/7）。
     """
     out: dict[str, list[CorporateActionEvent]] = {}
     for slot, meta in SLOT_MAP.items():
@@ -71,7 +73,7 @@ def load_corporate_actions() -> dict[str, list[CorporateActionEvent]]:
             cash = float(r.get("interest", 0.0)) if pd.notna(r.get("interest")) else 0.0
             pay_raw = r.get("pay_date") if "pay_date" in df.columns else None
             pay = pd.Timestamp(pay_raw) if pay_raw is not None and pd.notna(pay_raw) and str(pay_raw).strip() else None
-            settle, source = _settle_for(action, ex, pay)
+            settle, source = _settle_for(action, ex, pay, pay_lag_bdays)
             events.append(
                 CorporateActionEvent(
                     instrument=inst, action_type=action, ex_date=ex,

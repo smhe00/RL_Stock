@@ -74,6 +74,7 @@ class ChinaETFPortfolioEnv:
         # 预计算特征（一次性；warm-up 与 step 均使用预计算帧，避免重复滚动）
         from ..features.etf_features import global_features, per_asset_features
 
+        self._initial_cash = float(initial_cash)
         self._per_features = {
             s: per_asset_features(self.adj[s]) for s in self.slots
         }
@@ -91,9 +92,22 @@ class ChinaETFPortfolioEnv:
                     self._ca_by_settle_date.setdefault(ev.settle_date, []).append(ev)
         self._active_instruments = set(self.slot_to_instrument.values())
 
-    def reset(self) -> np.ndarray:
-        self._i = int(self._warmup_index)
-        self.accounting = PortfolioAccounting(initial_cash=self.accounting.cash)
+    def reset(self, at_date: pd.Timestamp | None = None) -> np.ndarray:
+        """重置环境到现金+零持仓。
+
+        GATE_4_EVAL_FIX E1：`at_date` 提供时从该决策日（段边界前一交易日收盘）开始，
+        保留完整特征历史（前 252D 特征滚动可用），但组合/记账从初始现金重新开始。
+        这是严格 walk-forward 段语义：decision at at_date close → first exec next open。
+        """
+        if at_date is not None:
+            self._i = self.calendar.index(at_date)
+            if self._i < self._warmup_index:
+                raise ValueError(
+                    f"reset at_date {at_date.date()} before warmup {self.calendar[self._warmup_index].date()}"
+                )
+        else:
+            self._i = int(self._warmup_index)
+        self.accounting = PortfolioAccounting(initial_cash=self._initial_cash)
         self._weights = pd.Series(np.zeros(len(self.slots)), index=self.slots)
         return self._observe(self.calendar[self._i])
 
