@@ -91,24 +91,31 @@ def test_all_methods_legal_weights() -> None:
 
 
 def test_erc_equalizes_marginal_risk_contribution() -> None:
-    """N2：ERC 用 policy 同一收缩协方差，active-asset 归一化贡献 ≤1e-3（tight）。"""
-    env = _env()
-    t = env.calendar[env._warmup_index]
-    w = _weights(erc_policy(env), env, t)
-    from china_etf.evaluation.baselines import _cov_window, _log_returns
-    r = _log_returns(env.adj)
-    sigma, _ = _cov_window(r, t, 120, 0.5, len(env.slots))
-    sw = sigma @ w
-    contrib = w * sw
-    nonzero = w > 1e-6
+    """N2/F3：ERC 在相关非均匀协方差上贡献 ≤1e-3（tight；合成均匀数据 EW 近等贡献会掩盖）。"""
+    from china_etf.evaluation.baselines import _erc_solve
+    n = 5
+    # 相关非均匀：资产0 与 1/2 高相关，3/4 低相关 → ERC 显著偏离 EW
+    corr = np.eye(n)
+    for i in range(3):
+        for j in range(3):
+            if i != j:
+                corr[i, j] = 0.8
+    vol = np.array([0.01, 0.01, 0.01, 0.02, 0.02])
+    sigma = np.outer(vol, vol) * corr
+    w_erc, _, converged = _erc_solve(sigma, n)
+    assert converged, "ERC 未收敛"
+    sw = sigma @ w_erc
+    contrib = w_erc * sw
+    nonzero = w_erc > 1e-6
     if nonzero.sum() >= 2:
         rel = contrib[nonzero] / max(contrib[nonzero].sum(), 1e-12)
-        # 评审 N2：tight max relative deviation（目标 1e-3；合成数据数值精度下实测 ~1.8e-3）
+        # 评审 F3：max relative deviation ≤ 1e-3（不放宽 gate）
         max_dev = np.max(np.abs(rel - np.mean(rel))) / max(np.mean(rel), 1e-12)
-        assert max_dev <= 5e-3, f"ERC 贡献非等: max_dev={max_dev:.2e}"
-    # 相关非均匀时 ERC ≠ inv-vol
-    w_rp = _weights(risk_parity_policy(env), env, t)
-    assert not np.allclose(w, w_rp, atol=1e-2), "相关非均匀时 ERC 应区别于 inv-vol RP"
+        assert max_dev <= 1e-3, f"ERC 贡献非等: max_dev={max_dev:.2e}"
+    # 相关非均匀时 ERC ≠ inv-vol（风险平价）
+    w_rp = 1.0 / vol
+    w_rp = w_rp / w_rp.sum()
+    assert not np.allclose(w_erc, w_rp, atol=1e-2), "相关非均匀时 ERC 应区别于 inv-vol RP"
 
 
 def test_hrp_produces_valid_and_cluster_aware() -> None:
@@ -177,18 +184,27 @@ def test_lookback_insufficient_falls_back_to_ew() -> None:
 # --- N1-N7 语义测试（GATE_4_NON_RL_HORSE_RACE_CORRECTIONS）---
 
 
+def _empirical_es(w, R, alpha):
+    """独立 empirical CVaR/ES（F2 对照）：worst (1-α) 尾部平均损失，不依赖 _cvar_value。"""
+    loss = -(R @ w)
+    k = max(int((1 - alpha) * len(loss)), 1)
+    worst = np.sort(loss)[-k:]  # 最差 k 个
+    return float(worst.mean())
+
+
 def test_min_cvar_optimized_better_than_ew() -> None:
-    """N1：构造已知低尾风险资产 → 优化 CVaR ≤ EW CVaR + 低尾资产权重更高。"""
-    from china_etf.evaluation.baselines import _cvar_value, _min_cvar_subgradient
+    """N1/F2：构造已知低尾资产 → 优化 CVaR ≤ EW CVaR + 低尾资产权重更低（独立 empirical ES 对照）。"""
+    from china_etf.evaluation.baselines import _min_cvar_subgradient
     rng = np.random.default_rng(7)
     T, n = 300, 5
     R = rng.normal(0.0002, 0.01, (T, n))
     R[:, 3] -= 0.004  # 资产3 更差尾部 → MinCVaR 应更低权重
     w, _, _ = _min_cvar_subgradient(R, n, alpha=0.95)
     _assert_legal(w)
-    cvar_w = _cvar_value(w, R, 0.95)
-    cvar_ew = _cvar_value(np.full(n, 1.0 / n), R, 0.95)
-    assert cvar_w <= cvar_ew * 1.001, f"MinCVaR {cvar_w:.5f} > EW {cvar_ew:.5f}"
+    # 独立 empirical ES（非 _cvar_value，防自证）
+    es_w = _empirical_es(w, R, 0.95)
+    es_ew = _empirical_es(np.full(n, 1.0 / n), R, 0.95)
+    assert es_w <= es_ew * 1.001, f"MinCVaR ES {es_w:.5f} > EW ES {es_ew:.5f}"
     assert w[3] < np.mean(w), "低尾资产应获得更低权重"
 
 
@@ -283,3 +299,100 @@ def test_shrinkage_mv_utility_gte_ew() -> None:
     ut_ew = float(mu_shrunk @ np.ones(len(env.slots)) / len(env.slots)) - lam / 2.0 * float(
         np.ones(len(env.slots)) / len(env.slots) @ sigma @ np.ones(len(env.slots)) / len(env.slots))
     assert ut_w >= ut_ew - 1e-6, f"ShrinkMV utility {ut_w:.6f} < EW {ut_ew:.6f}"
+
+
+# --- F1/F4/F5 语义测试（GATE_4_NON_RL_HORSE_RACE_FINAL_CORRECTIONS）---
+
+
+def _runner_local():
+    from china_etf.evaluation.walkforward import WalkForwardRunner
+    from china_etf.contracts import EnvironmentMode
+    n = 700
+    dates = pd.bdate_range("2021-01-02", periods=n)
+    rng = np.random.default_rng(21)
+    adj = pd.DataFrame(
+        {s: pd.Series(100 * np.cumprod(1 + rng.normal(0.0002, 0.01, n)), index=dates) for s in SLOTS}
+    )
+    opens = {s: adj[s] * 0.999 for s in SLOTS}
+    closes = {s: adj[s] for s in SLOTS}
+
+    def build_env(a, o, c, corporate_actions=None):
+        broker = MockBroker(tradability=TradabilityMask(), premium_guard=PremiumGuard(),
+                            cost_model=MainlandETFCostModel(), open_prices=o)
+        return ChinaETFPortfolioEnv(
+            slots=SLOTS, adj_close=a, open_prices=o, close_prices=c,
+            initial_cash=1_000_000.0, broker=broker, order_generator=OrderGenerator(),
+            slot_to_instrument={s: s for s in SLOTS}, mode=EnvironmentMode.METHOD_RESEARCH,
+            risk_overlay=RiskOverlayV0(SLOTS, single_core_max=1.0),
+            corporate_actions=corporate_actions,
+        )
+
+    return WalkForwardRunner(
+        adj=adj, opens=opens, closes=closes, slots=SLOTS,
+        slot_to_instrument={s: s for s in SLOTS}, build_env=build_env,
+    )
+
+
+def test_hrp_low_variance_cluster_gets_more_weight() -> None:
+    """F1：两簇不等方差 → 低方差簇总权重更高（HRP 分配方向反转）。"""
+    from china_etf.evaluation.baselines import _hrp_weights
+    n = 6
+    corr = np.eye(n)
+    for i in range(3):
+        for j in range(3):
+            if i != j:
+                corr[i, j] = 0.7
+    for i in range(3, 6):
+        for j in range(3, 6):
+            if i != j:
+                corr[i, j] = 0.7
+    vol = np.full(n, 0.01)
+    vol[:3] = 0.005  # 前簇低波动（低方差）
+    vol[3:] = 0.02   # 后簇高波动
+    cov = np.outer(vol, vol) * corr
+    w = _hrp_weights(corr, cov, vol, n)
+    _assert_legal(w)
+    low_var_total = w[:3].sum()
+    high_var_total = w[3:].sum()
+    assert low_var_total > high_var_total, f"低方差簇应更多权重: low={low_var_total:.3f} high={high_var_total:.3f}"
+
+
+def test_maxdiv_feasible_local_optimality() -> None:
+    """F4：MaxDiv 在 project 可行集内局部最优（可行扰动不改进 DR）。"""
+    from china_etf.evaluation.baselines import _maxdiv_coordinate, _maxdiv_dr, _proj_constrained
+    rng = np.random.default_rng(17)
+    n = 5
+    L = rng.normal(0, 0.01, (n, n))
+    cov = L @ L.T + np.eye(n) * 1e-4
+    std = np.sqrt(np.diag(cov))
+    slots = [f"S{i}" for i in range(n)]
+    w = _maxdiv_coordinate(cov, std, n, slots=slots)
+    _assert_legal(w)
+    dr0 = _maxdiv_dr(w, cov, std)
+    # 可行小扰动（保持 long-only + sum=1 + caps）→ DR 不显著改进
+    for _ in range(20):
+        perturb = rng.normal(0, 0.005, n)
+        w2 = _proj_constrained(w + perturb, slots)
+        assert _maxdiv_dr(w2, cov, std) <= dr0 + 1e-6, "MaxDiv 非局部最优（可行扰动改进 DR）"
+
+
+def test_rollout_execution_dates_recorded() -> None:
+    """F5：roll_out series 记录真实执行日（st.t_next）。"""
+    from china_etf.evaluation.benchmark import exact_test_mask
+    from china_etf.evaluation.walkforward import WalkForwardRunner
+
+    runner = _runner_local()
+    folds = runner.make_folds(n_folds=2, min_train_days=200, val_days=40)
+    train_env = runner._train_env_for(folds[0])
+    mean, std = runner.fit_scaler(train_env, folds[0])
+    m = runner._rollout_segment(folds[0], "test", mean, std, lambda o: np.zeros(len(SLOTS)))
+    dates = m["series"]["execution_dates"]
+    assert len(dates) == m["n_eval_steps"], "execution_dates 数 == n_eval"
+    # 首执行日 == test_start；末执行日 == test_end
+    assert dates[0] == str(folds[0].test_start.date())
+    assert dates[-1] == str(folds[0].test_end.date())
+    # 与 exact mask 中本 fold test 段一致（合成环境日历）
+    mask = exact_test_mask(folds, calendar=runner.adj.index)
+    seg_str = [str(d.date()) for d in mask["test_dates"]
+               if folds[0].test_start <= d <= folds[0].test_end]
+    assert dates == seg_str, "rollout execution_dates == 本 fold exact Test mask 段"

@@ -76,6 +76,7 @@ def roll_out(
     net_returns: list[float] = []
     costs: list[float] = []
     cash_after: list[float] = []
+    execution_dates: list = []  # F5：真实执行日 st.t_next
     active_assets: list[int] = []
     turnovers: list[float] = []
     traded_notional: list[float] = []
@@ -140,6 +141,7 @@ def roll_out(
             )
             rewards.append(float(reward))
             net_returns.append(float(st.net_return))
+            execution_dates.append(st.t_next)  # F5：真实执行日
             step_cost = float(st.fees_paid - prev_fees)
             costs.append(step_cost)
             prev_fees = float(st.fees_paid)
@@ -259,6 +261,7 @@ def roll_out(
         "cash": [float(x) for x in cash_after],
         "active_assets": list(active_assets),
         "turnovers": [float(x) for x in turnovers],
+        "execution_dates": [str(d.date()) for d in execution_dates],  # F5：真实执行日
         "actual_weights": W_actual.tolist(),
         "raw_weights": np.asarray(levels["raw_policy"]).tolist() if len(levels["raw_policy"]) else [],
         "post_risk_weights": np.asarray(levels["post_risk"]).tolist() if len(levels["post_risk"]) else [],

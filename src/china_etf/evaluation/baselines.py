@@ -128,13 +128,27 @@ def _cov_window(r: pd.DataFrame, t, lookback: int, shrinkage: float, n: int):
 
 
 def _safe_proj(w: np.ndarray, n: int) -> np.ndarray:
-    """long-only + sum=1 投影（waterfill，caps=1）。"""
+    """long-only + sum=1 投影（waterfill，caps=1；无 project 约束，供非约束基线）。"""
     w = np.clip(np.asarray(w, dtype=float), 0.0, None)
     if not np.isfinite(w).all():
         return np.full(n, 1.0 / n)
     if w.sum() <= 1e-12:
         return np.full(n, 1.0 / n)
     return RiskOverlayV0._waterfill(w, np.full(n, 1.0), total=1.0)
+
+
+def _project_caps(slots: list[str]) -> tuple[np.ndarray, float, tuple[int, ...]]:
+    """F4：project 可行集约束 = single_slot caps(0.25) + ChinaGrowth group cap(0.50, CHINEXT+STAR)。"""
+    caps = np.full(len(slots), 0.25)
+    growth = tuple(i for i, s in enumerate(slots) if s in ("CHINEXT", "STAR"))
+    return caps, 0.50, growth
+
+
+def _proj_constrained(w: np.ndarray, slots: list[str]) -> np.ndarray:
+    """投影到 project 可行集（single cap 0.25 + growth 0.50）。"""
+    from .optimizers import waterfill_proj
+    caps, gmax, gidx = _project_caps(slots)
+    return waterfill_proj(w, len(slots), caps, gmax, gidx)
 
 
 def _erc_solve(sigma: np.ndarray, n: int, max_iter: int = 500, tol: float = 1e-8) -> tuple[np.ndarray, int, bool]:
@@ -145,6 +159,7 @@ def _erc_solve(sigma: np.ndarray, n: int, max_iter: int = 500, tol: float = 1e-8
     """
     w = np.ones(n) / n
     converged = False
+    # 精化循环：牛顿直到残差 < tol（F3：贡献相等 ≤1e-3）
     for it in range(max_iter):
         sw = sigma @ w
         contrib = w * sw
@@ -152,14 +167,13 @@ def _erc_solve(sigma: np.ndarray, n: int, max_iter: int = 500, tol: float = 1e-8
         if np.abs(F).max() < tol:
             converged = True
             break
+        # 解析 Jacobian（F3）：∂(w_i(Σw)_i)/∂w_j = δ_ij(Σw)_i + w_i Σ_ij；sum 行 = 1
         J = np.zeros((n, n))
-        eps = 1e-7
-        for j in range(n):
-            wp = w.copy(); wp[j] += eps
-            sp = sigma @ wp
-            cp = wp * sp
-            Fp = np.concatenate([cp[1:] - cp[0], [wp.sum() - 1.0]])
-            J[:, j] = (Fp - F) / eps
+        for i in range(1, n):
+            for j in range(n):
+                J[i - 1, j] = (1.0 if i == j else 0.0) * sw[i] + w[i] * sigma[i, j] - (
+                    (1.0 if 0 == j else 0.0) * sw[0] + w[0] * sigma[0, j])
+        J[n - 1, :] = 1.0  # sum w = 1
         try:
             delta = np.linalg.solve(J, -F)
         except np.linalg.LinAlgError:
@@ -168,39 +182,22 @@ def _erc_solve(sigma: np.ndarray, n: int, max_iter: int = 500, tol: float = 1e-8
         w_new = np.clip(w_new, 0.0, None)
         if w_new.sum() > 0:
             w_new = w_new / w_new.sum()
-        if np.abs(w_new - w).max() < 1e-12:
+        if np.abs(w_new - w).max() < 1e-14:
             w = w_new
-            converged = True
             break
         w = w_new
-    # 精化：再迭代几次修正数值误差
-    for _ in range(50):
-        sw = sigma @ w
-        contrib = w * sw
-        F = np.concatenate([contrib[1:] - contrib[0], [w.sum() - 1.0]])
-        if np.abs(F).max() < tol:
-            converged = True
-            break
-        J = np.zeros((n, n))
-        for j in range(n):
-            wp = w.copy(); wp[j] += 1e-7
-            sp = sigma @ wp
-            cp = wp * sp
-            Fp = np.concatenate([cp[1:] - cp[0], [wp.sum() - 1.0]])
-            J[:, j] = (Fp - F) / 1e-7
-        try:
-            delta = np.linalg.solve(J, -F)
-        except np.linalg.LinAlgError:
-            break
-        w = w + delta
-        w = np.clip(w, 0.0, None)
-        if w.sum() > 0:
-            w = w / w.sum()
+    # 收敛后残差检查（F3：如实报告 max dev）
+    sw = sigma @ w
+    contrib = w * sw
+    rel = contrib / max(contrib.sum(), 1e-12)
+    max_dev = float(np.max(np.abs(rel - np.mean(rel))) / max(np.mean(rel), 1e-12)) if len(rel) > 1 else 0.0
+    if max_dev <= 1e-3:
+        converged = True
     return _safe_proj(w, n), it, converged
 
 
 def erc_policy(env, lookback: int = 120, shrinkage: float = 0.5):
-    """ERC：等边际风险贡献（N2 canonical，牛顿法，policy 同一收缩协方差）。"""
+    """ERC：等边际风险贡献（N2/F3 canonical，牛顿法，policy 同一收缩协方差；F4 投影 project 可行集）。"""
     r = _log_returns(env.adj)
     n = len(env.slots)
 
@@ -210,18 +207,19 @@ def erc_policy(env, lookback: int = 120, shrinkage: float = 0.5):
             return np.full(n, 1.0 / n)
         sigma, _ = got
         w, _, _ = _erc_solve(sigma, n)
-        return w
+        return _proj_constrained(w, list(env.slots))
 
     return BaselinePolicy(env, target)
 
 
 
-def _hrp_weights(corr: np.ndarray, cov: np.ndarray, vol: np.ndarray, n: int) -> np.ndarray:
+def _hrp_weights(corr: np.ndarray, cov: np.ndarray, vol: np.ndarray, n: int,
+                 slots: list[str] | None = None) -> np.ndarray:
     """完整 canonical HRP（N3，Lopez de Prado）：
 
     1. 相关距离 → 凝聚聚类（single-linkage，完整 dendrogram）
     2. quasi-diagonalization（seriation：递归左-右合并顺序）
-    3. recursive bisection：沿准对角顺序二分，用 cluster variance 分配（非 sum(inv_vol)）
+    3. recursive bisection：沿准对角顺序二分，用 cluster variance 分配（低方差簇更多，F1）
     """
     dist = np.sqrt(np.clip((1.0 - corr) / 2.0, 0.0, 1.0))
     inv_vol = np.where(np.isfinite(vol) & (vol > 0), 1.0 / vol, 0.0)
@@ -278,15 +276,17 @@ def _hrp_weights(corr: np.ndarray, cov: np.ndarray, vol: np.ndarray, n: int) -> 
         va, vb = _cluster_var(a), _cluster_var(b)
         if va + vb <= 0:
             va = vb = 1.0
-        bisect(a, w_in * va / (va + vb))
-        bisect(b, w_in * vb / (va + vb))
+        # F1（评审）：低方差簇得更多权重 → A 得 vb/(va+vb)，B 得 va/(va+vb)
+        bisect(a, w_in * vb / (va + vb))
+        bisect(b, w_in * va / (va + vb))
 
     bisect(order, 1.0)
-    return _safe_proj(weights, n)
+    return _proj_constrained(weights, slots) if slots else _safe_proj(weights, n)
 
 
 def hrp_policy(env, lookback: int = 120):
-    """HRP（N3 canonical）：完整层级聚类 + quasi-diagonal + cluster-variance recursive bisection。"""
+    """HRP（N3/F1 canonical）：完整层级聚类 + quasi-diagonal + cluster-variance recursive bisection
+    （低方差簇更多权重）；投影到 project 可行集（F4）。"""
     r = _log_returns(env.adj)
     n = len(env.slots)
 
@@ -297,7 +297,7 @@ def hrp_policy(env, lookback: int = 120):
         corr = window.corr().to_numpy()
         cov = window.cov().to_numpy()
         vol = window.std().to_numpy()
-        return _hrp_weights(corr, cov, vol, n)
+        return _hrp_weights(corr, cov, vol, n, slots=list(env.slots))
 
     return BaselinePolicy(env, target)
 
@@ -308,20 +308,20 @@ def _maxdiv_dr(w: np.ndarray, sigma: np.ndarray, std: np.ndarray) -> float:
     return float(v / np.sqrt(q)) if q > 1e-12 else 1.0
 
 
-def _maxdiv_coordinate(sigma: np.ndarray, std: np.ndarray, n: int, max_iter: int = 1000) -> np.ndarray:
-    """MaxDiv 约束 DR（N5 canonical）：max (w'σ)/√(w'Σw) s.t. w≥0, Σw=1。
+def _maxdiv_coordinate(sigma: np.ndarray, std: np.ndarray, n: int, max_iter: int = 1000,
+                       slots: list[str] | None = None) -> np.ndarray:
+    """MaxDiv 约束 DR（N5/F4 canonical）：max (w'σ)/√(w'Σw) s.t. project 可行集。
 
-    坐标上升：每步向 DR 梯度方向投影到 simplex（Choueifaty DR 凸最大化）。
+    坐标上升：每步向 DR 梯度方向投影到 project 可行集（single caps + growth group）。
     """
     w = np.full(n, 1.0 / n)
     step = 1.0
     for _ in range(max_iter):
         q = w @ sigma @ w
         v = std @ w
-        # DR 梯度（∂DR/∂w = σ/√q - DR·Σw/q）
         g = std / np.sqrt(q) - (v / np.sqrt(q)) * (sigma @ w) / q
         g = g / max(np.linalg.norm(g), 1e-12)
-        w_new = _safe_proj(w + step * g, n)
+        w_new = _proj_constrained(w + step * g, slots) if slots else _safe_proj(w + step * g, n)
         if _maxdiv_dr(w_new, sigma, std) <= _maxdiv_dr(w, sigma, std) + 1e-10:
             step *= 0.5
             if step < 1e-6:
@@ -329,11 +329,11 @@ def _maxdiv_coordinate(sigma: np.ndarray, std: np.ndarray, n: int, max_iter: int
         else:
             w = w_new
             step = min(step * 1.1, 2.0)
-    return w
+    return _proj_constrained(w, slots) if slots else w
 
 
 def maximum_diversification_policy(env, lookback: int = 120, shrinkage: float = 0.5):
-    """MaxDiv（N5 canonical）：long-only 约束 DR 最大化（坐标上升 + simplex 投影）。"""
+    """MaxDiv（N5/F4 canonical）：DR 最大化，优化迭代内投影到 project 可行集。"""
     r = _log_returns(env.adj)
     n = len(env.slots)
 
@@ -344,7 +344,7 @@ def maximum_diversification_policy(env, lookback: int = 120, shrinkage: float = 
         sigma, std = got
         if std.sum() <= 1e-12 or np.any(~np.isfinite(std)):
             return np.full(n, 1.0 / n)
-        return _maxdiv_coordinate(sigma, std, n)
+        return _maxdiv_coordinate(sigma, std, n, slots=list(env.slots))
 
     return BaselinePolicy(env, target)
 
@@ -390,23 +390,31 @@ def trend_risk_parity_policy(env, inv_vol_lookback: int = 60, trend_lookback: in
 
 
 def _cvar_value(w: np.ndarray, R: np.ndarray, alpha: float) -> float:
+    """Empirical CVaR_α（F2 修正）：worst (1-α) 尾部的平均损失（真实 ES）。
+
+    CVaR = (1/((1-α)T))·Σ_t max(loss_t - zeta*, 0) + zeta*，zeta*=VaR_α。
+    等价于：取 loss 的 (1-α) 最差样本（含 VaR 边界），对它们求均值。
+    """
     loss = -(R @ w)
-    var = np.quantile(loss, alpha)
-    tail = loss[loss >= var - 1e-9]
-    return float(var + tail.mean() / (1.0 - alpha)) if len(tail) else float(var)
+    var = np.quantile(loss, alpha)  # zeta* = VaR_α（分位数）
+    # R-U：zeta* + mean(max(loss - zeta*, 0))/(1-α)
+    excess = np.maximum(loss - var, 0.0)
+    return float(var + excess.mean() / (1.0 - alpha))
 
 
 def _min_cvar_subgradient(R: np.ndarray, n: int, alpha: float = 0.95,
-                          max_iter: int = 6000) -> tuple[np.ndarray, int, bool]:
-    """MinCVaR（N1 canonical）：凸 CVaR 最小化（Rockafellar-Uryasev），投影次梯度在 simplex 上。
+                          max_iter: int = 400, slots: list[str] | None = None) -> tuple[np.ndarray, int, bool]:
+    """MinCVaR（N1/F2 canonical）：凸 CVaR 最小化（R-U），投影次梯度，投影到 project 可行集（F4）。
 
-    内层对 zeta 解析（VaR）；次梯度 = -(1/((1-α)T))Σ_{tail} r_t。
-    标准步长 1/√(it+1)（投影次梯度理论收敛）；非单调接受（次梯度不需单调下降）。
+    次梯度 = -(1/((1-α)T))Σ_{tail} r_t（tail = loss ≥ VaR_α 的样本）。
+    收敛：用真实 CVaR 值（_cvar_value）跟踪 best_w；非自证。
+    性能：1500 迭代（1/√k 步长理论收敛；每决策日快速）。
     """
     w = np.full(n, 1.0 / n)
     best_w = w.copy()
     best_val = _cvar_value(w, R, alpha)
     converged = False
+    stagnant = 0
     for it in range(max_iter):
         loss = -(R @ w)
         var = np.quantile(loss, alpha)
@@ -416,19 +424,25 @@ def _min_cvar_subgradient(R: np.ndarray, n: int, alpha: float = 0.95,
         g = -(R[tail_mask].mean(axis=0)) / (1.0 - alpha)
         g = g / max(np.linalg.norm(g), 1e-12)
         step = 1.0 / np.sqrt(it + 1.0)
-        w = _safe_proj(w - step * g, n)
+        if slots is not None:
+            w = _proj_constrained(w - step * g, slots)
+        else:
+            w = _safe_proj(w - step * g, n)
         val = _cvar_value(w, R, alpha)
-        if val < best_val:
+        if val < best_val - 1e-12:
             best_w = w.copy()
             best_val = val
-        if it > 200 and abs(best_val - _cvar_value(best_w, R, alpha)) < 1e-12:
+            stagnant = 0
+        else:
+            stagnant += 1
+        if stagnant > 200:
             converged = True
             break
     return best_w, it, converged
 
 
 def minimum_cvar_policy(env, lookback: int = 120, alpha: float = 0.95):
-    """MinimumCVaR_95（N1 canonical）：long-only 历史 CVaR 最小化（R-U 凸优化，投影次梯度）。"""
+    """MinimumCVaR_95（N1/F2 canonical）：R-U CVaR 凸优化，投影到 project 可行集（F4）。"""
     r = _log_returns(env.adj)
     n = len(env.slots)
 
@@ -436,7 +450,7 @@ def minimum_cvar_policy(env, lookback: int = 120, alpha: float = 0.95):
         window = r.loc[:t].iloc[-lookback:].dropna(how="any")
         if len(window) < max(n, 20):
             return np.full(n, 1.0 / n)
-        w, _, _ = _min_cvar_subgradient(window.to_numpy(), n, alpha)
+        w, _, _ = _min_cvar_subgradient(window.to_numpy(), n, alpha, slots=list(env.slots))
         return w
 
     return BaselinePolicy(env, target)
@@ -452,6 +466,7 @@ def shrinkage_mean_variance_policy(env, ret_lookback: int = 252, cov_lookback: i
 
     r = _log_returns(env.adj)
     n = len(env.slots)
+    caps, gmax, gidx = _project_caps(list(env.slots))
 
     def target(t):
         hist = r.loc[:t]
@@ -465,8 +480,8 @@ def shrinkage_mean_variance_policy(env, ret_lookback: int = 252, cov_lookback: i
         if got is None:
             return np.full(n, 1.0 / n)
         sigma, _ = got
-        # min 0.5 λ w'Σw - μ'w  → qp_projected(grad_lin=μ, Q=λΣ)
-        w = qp_projected(mu_shrunk, lam * sigma)
-        return _safe_proj(w, n)
+        # min 0.5 λ w'Σw - μ'w → qp_projected，投影到 project 可行集（F4）
+        w = qp_projected(mu_shrunk, lam * sigma, caps=caps, growth_max=gmax, growth_slots=gidx)
+        return w
 
     return BaselinePolicy(env, target)

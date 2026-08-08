@@ -142,26 +142,47 @@ def simplex_lp_eq(c: np.ndarray, Aeq: np.ndarray, beq: np.ndarray) -> dict:
 def qp_projected(grad_lin: np.ndarray, Q: np.ndarray, *,
                  initial: np.ndarray | None = None,
                  caps: np.ndarray | None = None,
+                 growth_max: float = 0.50, growth_slots: tuple[int, ...] = (),
                  max_iter: int = 500, lr: float = 0.1, tol: float = 1e-8) -> np.ndarray:
-    """梯度投影解 min 0.5 w'Q w - grad_lin'w s.t. w≥0, Σw=1, 0≤w≤caps。"""
+    """梯度投影解 min 0.5 w'Q w - grad_lin'w s.t. w≥0, Σw=1, 0≤w≤caps, growth group cap。
+
+    迭代内投影到 project 可行集（F4）。
+    """
     n = len(grad_lin)
     if caps is None:
         caps = np.full(n, 1.0)
     w = np.full(n, 1.0 / n) if initial is None else np.asarray(initial, dtype=float).copy()
-    w = RiskOverlayV0._waterfill(np.clip(w, 0, caps), caps, total=1.0)
+    w = waterfill_proj(w, n, caps, growth_max, growth_slots)
     for _ in range(max_iter):
         grad = Q @ w - grad_lin
         w_new = w - lr * grad
-        w_new = RiskOverlayV0._waterfill(np.clip(w_new, 0, caps), caps, total=1.0)
+        w_new = waterfill_proj(w_new, n, caps, growth_max, growth_slots)
         if np.abs(w_new - w).max() < tol:
             return w_new
         w = w_new
     return w
 
 
-def waterfill_proj(w: np.ndarray, n: int, caps: np.ndarray | None = None) -> np.ndarray:
+def waterfill_proj(w: np.ndarray, n: int, caps: np.ndarray | None = None,
+                   growth_max: float = 0.50, growth_slots: tuple[int, ...] = ()) -> np.ndarray:
+    """long-only + sum=1 + single-slot caps + ChinaGrowth group cap（F4：project 可行集投影）。"""
     caps = np.full(n, 1.0) if caps is None else np.asarray(caps, dtype=float)
+    if caps.sum() < 1.0 - 1e-9:
+        raise ValueError(f"caps sum {caps.sum():.3f} < 1 (infeasible)")
     w = np.clip(np.asarray(w, dtype=float), 0.0, caps)
     if not np.isfinite(w).all() or w.sum() <= 1e-12:
         w = np.full(n, 1.0 / n)
-    return RiskOverlayV0._waterfill(w, caps, total=1.0)
+    # waterfill 先满足单槽 caps（与 RiskOverlayV0 同投影）
+    proj = RiskOverlayV0._waterfill(w, caps, total=1.0)
+    if growth_slots:
+        g = proj[list(growth_slots)].sum()
+        if g > growth_max + 1e-9:
+            scale = growth_max / max(g, 1e-12)
+            proj[list(growth_slots)] *= scale
+            non = [i for i in range(n) if i not in growth_slots]
+            slack = 1.0 - proj.sum()
+            if slack > 1e-9 and non:
+                proj[non] = RiskOverlayV0._waterfill(proj[non], caps[non], total=proj[non].sum() + slack)
+    if not np.isclose(proj.sum(), 1.0, atol=1e-6):
+        raise ValueError(f"projection sum {proj.sum():.6f}")
+    return proj

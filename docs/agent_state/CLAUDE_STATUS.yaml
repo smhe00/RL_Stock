@@ -1,19 +1,19 @@
 protocol_version: 2
 actor: claude
-handoff_id: G4_NON_RL_HORSE_RACE_CORRECTIONS_001
+handoff_id: G4_NON_RL_HORSE_RACE_FINAL_CORRECTIONS_001
 state: READY_FOR_REVIEW
 
 gate: 4
-phase: GATE_4_NON_RL_HORSE_RACE_CORRECTIONS
-code_commit: a084414
-packet: docs/review_packets/GATE_4_NON_RL_HORSE_RACE_CORRECTIONS.md
+phase: GATE_4_NON_RL_HORSE_RACE_FINAL_CORRECTIONS
+code_commit: PLACEHOLDER_COMMIT_SHA
+packet: docs/review_packets/GATE_4_NON_RL_HORSE_RACE_FINAL_CORRECTIONS.md
 
 progress:
-  current_task: N1-N8 corrections (canonical methods, mask parity, tracked artifacts)
+  current_task: F1-F6 final corrections (HRP direction, MinCVaR objective, ERC 1e-3, constraints in optimizer, real-date parity, complete diagnostics)
 
 last_consumed_review:
-  handoff_id: G4_NON_RL_HORSE_RACE_001
-  decision: TARGETED_CORRECTIONS_REQUIRED
-  response: docs/reviewer_responses/GATE_4_NON_RL_HORSE_RACE_REVIEWER_RESPONSE.md
+  handoff_id: G4_NON_RL_HORSE_RACE_CORRECTIONS_001
+  decision: TARGETED_FINAL_CORRECTIONS_REQUIRED
+  response: docs/reviewer_responses/GATE_4_NON_RL_HORSE_RACE_CORRECTIONS_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-09T06:00:00+08:00
+updated_at: 2026-08-09T07:00:00+08:00

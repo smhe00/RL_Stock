@@ -87,46 +87,72 @@ def main() -> None:
         t0 = time.time()
         per_fold = {}
         all_ret = []
-        exec_dates = []
+        actual_exec_dates = []  # F5：真实 rollout 执行日期（st.t_next）
         for f in folds:
             m = runner.run_fold_baseline(f, fac)
             per_fold[f.name] = {k: m["test"][k] for k in METRICS}
             all_ret.extend(m["test"]["series"]["net_returns"])
-            # N7：逐 fold n_eval == 该 fold test 段执行日数
-            seg_dates = [d for d in mask_dates if f.test_start <= d <= f.test_end]
-            assert m["test"]["n_eval_steps"] == len(seg_dates), \
-                f"{name} {f.name}: n_eval={m['test']['n_eval_steps']} != mask {len(seg_dates)}"
-            exec_dates.extend(seg_dates)
-        # N7：stitched 执行日期 == exact Test mask 日期（逐日相等）
+            actual_exec_dates.extend(m["test"]["series"]["execution_dates"])
+            assert m["test"]["n_eval_steps"] == len(m["test"]["series"]["execution_dates"]), \
+                f"{name} {f.name}: n_eval vs execution_dates mismatch"
+        # F5：真实执行日期 == exact Test mask（独立于 mask 重建）
+        mask_dates_str = [str(d.date()) for d in mask_dates]
+        assert actual_exec_dates == mask_dates_str, \
+            f"{name}: 真实执行日期 != exact Test mask（差异 {len(set(actual_exec_dates) ^ set(mask_dates_str))}）"
         assert len(all_ret) == mask_count, f"{name} stitched {len(all_ret)} != mask {mask_count}"
-        assert exec_dates == mask_dates, f"{name} 执行日期 != exact Test mask"
         results["methods"][name] = {
             "per_fold": per_fold,
             "seconds": round(time.time() - t0, 1),
             "mask_parity": {"n_eval_steps": len(all_ret), "exact_test_date_count": mask_count,
-                            "dates_equal": True},
+                            "actual_execution_dates_equal_mask": True},
         }
-        # stitched：按 fold 时间序拼接 net_returns（已在上方收集）
+        # stitched（F6 完整诊断）
         nr = np.asarray(all_ret, float)
         cum = float(np.exp(np.log1p(nr).sum()) - 1.0)
-        cagr = float((1.0 + cum) ** (252.0 / len(nr)) - 1.0)
+        # active-day annualized return（非普通日历 CAGR）
+        active_ann = float((1.0 + cum) ** (252.0 / len(nr)) - 1.0)
         vol = float(np.std(nr) * np.sqrt(252))
         sharpe = float(np.mean(nr) / np.std(nr) * np.sqrt(252)) if np.std(nr) > 0 else float("nan")
+        downside = nr[nr < 0]
+        sortino = float(np.mean(nr) / np.std(downside) * np.sqrt(252)) if len(downside) > 1 and np.std(downside) > 0 else float("nan")
         eq = np.exp(np.log1p(nr).cumsum())
         mdd = float((eq / np.maximum.accumulate(eq) - 1.0).min())
-        results["methods"][name]["stitched"] = {
-            "n_steps": len(nr), "cum_return": round(cum, 6), "cagr": round(cagr, 6),
+        calmar = float(active_ann / abs(mdd)) if np.isfinite(active_ann) and abs(mdd) > 1e-12 else float("nan")
+        # 聚合 turnover/cost/HHI/active/maxweight/overlay（跨 fold 平均）
+        def agg(key):
+            vals = [per_fold[f][key] for f in per_fold if np.isfinite(per_fold[f][key])]
+            return float(np.mean(vals)) if vals else float("nan")
+        stitched = {
+            "n_steps": len(nr), "cum_return": round(cum, 6),
+            "active_day_annualized_return": round(active_ann, 6),  # 明确标注
             "annualized_vol": round(vol, 6), "sharpe": round(sharpe, 6),
-            "max_drawdown": round(mdd, 6),
+            "sortino": round(sortino, 6), "max_drawdown": round(mdd, 6), "calmar": round(calmar, 6),
+            "mean_turnover": round(agg("mean_turnover"), 6),
+            "total_turnover": round(sum(per_fold[f]["mean_turnover"] * per_fold[f]["n_eval_steps"] for f in per_fold), 6),
+            "total_cost": round(agg("total_cost") * 4, 2),
+            "cost_over_initial_value": round(agg("cost_over_initial_value"), 6),
+            "mean_hhi": round(agg("mean_hhi"), 6),
+            "mean_active_assets": round(agg("mean_active_assets"), 6),
+            "max_single_asset_weight": round(agg("max_single_asset_weight"), 6),
+            "risk_overlay_intervention_rate": round(agg("risk_overlay_intervention_rate"), 6),
+            "nan_obs_or_reward": int(sum(per_fold[f]["nan_obs_or_reward"] for f in per_fold)),
+            "negative_cash_count": int(sum(per_fold[f]["negative_cash_count"] for f in per_fold)),
         }
+        results["methods"][name]["stitched"] = stitched
         results["horse_race_table"][name] = {
-            "cum_return": round(cum, 5), "cagr": round(cagr, 5),
-            "sharpe": round(sharpe, 5), "max_drawdown": round(mdd, 5),
-            "mean_turnover": round(float(np.mean([per_fold[f]["mean_turnover"] for f in per_fold if np.isfinite(per_fold[f]["mean_turnover"])])), 5),
+            "cum_return": round(cum, 5), "active_day_annualized_return": round(active_ann, 5),
+            "sharpe": round(sharpe, 5), "sortino": round(sortino, 5),
+            "max_drawdown": round(mdd, 5), "calmar": round(calmar, 5),
+            "mean_turnover": round(agg("mean_turnover"), 5),
+            "total_cost": round(agg("total_cost") * 4, 2),
+            "mean_hhi": round(agg("mean_hhi"), 5),
+            "mean_active_assets": round(agg("mean_active_assets"), 5),
+            "max_single_asset_weight": round(agg("max_single_asset_weight"), 5),
+            "overlay_intervention_rate": round(agg("risk_overlay_intervention_rate"), 5),
+            "fallback_count": 0,
         }
-        s = results["methods"][name]["stitched"]
-        print(f"{name:32s} cum={s['cum_return']:+.4f} cagr={s['cagr']:+.4f} "
-              f"sharpe={s['sharpe']:.3f} mdd={s['max_drawdown']:.3f}")
+        print(f"{name:32s} cum={cum:+.4f} active_ann={active_ann:+.4f} sharpe={sharpe:.3f} "
+              f"mdd={mdd:.3f} overlay={agg('risk_overlay_intervention_rate'):.2f}")
 
     # RL 历史参考（pre-correction caveat）
     rl_path = ROOT / "runs" / "gate4_3seed_pilot_results.json"
