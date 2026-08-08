@@ -1,13 +1,16 @@
-"""GATE_4_NON_RL_HORSE_RACE — 非 RL 组合方法对比（ROADMAP directive）。
+"""GATE_4_NON_RL_HORSE_RACE(CORRECTIONS) — 非 RL 组合方法对比（N1-N8 修正）。
 
 Tier A 10 方法 × 4 folds，全部走 corrected 评估路径（fold-local test reset, 1x cost, CA）：
   EW / RiskParity(IVOL) / MinimumVariance / Momentum(12-1)   （现有，corrected-path 重跑）
-  ERC / HRP / MaxDiv / TrendRiskParity / MinCVaR_95 / ShrinkageMV   （新增）
+  ERC / HRP / MaxDiv / TrendRiskParity / MinCVaR_95 / ShrinkageMV   （N1-N6 canonical）
+
+N7：每方法 assert n_eval_steps == exact_test_date_count（475）+ 执行日期 == mask.test_dates。
+N8：结果输出到 tracked artifacts/ 路径（非 runs/）。
 
 RL 3-seed 结果仅作为 HISTORICAL_RL_PILOT_REFERENCE（pre-correction caveat），不重训。
 禁止：RL 重训 / 10-seed / Optuna / Test-informed 调参。
 
-输出：runs/gate4_non_rl_horse_race_results.json + _raw.json
+输出：artifacts/gate4_non_rl_horse_race_results.json + _raw.json
 """
 
 from __future__ import annotations
@@ -65,24 +68,43 @@ def main() -> None:
     print(f"== Track A: decision_start={runner.decision_start.date()} "
           f"calendar_rows={(adj.index >= runner.decision_start).sum()} ==")
 
+    # N7：exact Test mask
+    from china_etf.evaluation.benchmark import exact_test_mask
+    mask = exact_test_mask(folds, calendar=adj.index)
+    mask_dates = mask["test_dates"]
+    mask_count = mask["exact_test_date_count"]
+    print(f"exact_test_date_count = {mask_count} (475)")
+
     results = {
         "methods": {},
         "horse_race_table": {},
         "rl_historical_reference": {},
         "timing": {},
+        "exact_test_mask": {k: v for k, v in mask.items() if k != "test_dates"},
     }
 
     for name, fac in TIER_A:
         t0 = time.time()
         per_fold = {}
         all_ret = []
+        exec_dates = []
         for f in folds:
             m = runner.run_fold_baseline(f, fac)
             per_fold[f.name] = {k: m["test"][k] for k in METRICS}
             all_ret.extend(m["test"]["series"]["net_returns"])
+            # N7：逐 fold n_eval == 该 fold test 段执行日数
+            seg_dates = [d for d in mask_dates if f.test_start <= d <= f.test_end]
+            assert m["test"]["n_eval_steps"] == len(seg_dates), \
+                f"{name} {f.name}: n_eval={m['test']['n_eval_steps']} != mask {len(seg_dates)}"
+            exec_dates.extend(seg_dates)
+        # N7：stitched 执行日期 == exact Test mask 日期（逐日相等）
+        assert len(all_ret) == mask_count, f"{name} stitched {len(all_ret)} != mask {mask_count}"
+        assert exec_dates == mask_dates, f"{name} 执行日期 != exact Test mask"
         results["methods"][name] = {
             "per_fold": per_fold,
             "seconds": round(time.time() - t0, 1),
+            "mask_parity": {"n_eval_steps": len(all_ret), "exact_test_date_count": mask_count,
+                            "dates_equal": True},
         }
         # stitched：按 fold 时间序拼接 net_returns（已在上方收集）
         nr = np.asarray(all_ret, float)
@@ -129,9 +151,12 @@ def main() -> None:
         for algo, ref in results["rl_historical_reference"].items():
             print(f"  {algo}: cagr_median={ref['cagr']['median']:.4f} sharpe_median={ref['sharpe']['median']:.4f}")
 
-    out = ROOT / "runs" / "gate4_non_rl_horse_race_results.json"
+    # N8：结果输出到 tracked artifacts/（非 runs/，可审计提交）
+    art_dir = ROOT / "artifacts"
+    art_dir.mkdir(parents=True, exist_ok=True)
+    out = art_dir / "gate4_non_rl_horse_race_results.json"
     out.write_text(json.dumps(results, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
-    raw = ROOT / "runs" / "gate4_non_rl_horse_race_raw.json"
+    raw = art_dir / "gate4_non_rl_horse_race_raw.json"
     raw.write_text(json.dumps({"methods": results["methods"]}, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
     print(f"\n-> {out}")
 

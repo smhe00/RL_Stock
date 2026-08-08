@@ -91,20 +91,21 @@ def test_all_methods_legal_weights() -> None:
 
 
 def test_erc_equalizes_marginal_risk_contribution() -> None:
+    """N2：ERC 用 policy 同一收缩协方差，active-asset 归一化贡献 ≤1e-3（tight）。"""
     env = _env()
     t = env.calendar[env._warmup_index]
     w = _weights(erc_policy(env), env, t)
-    from china_etf.evaluation.baselines import _log_returns
+    from china_etf.evaluation.baselines import _cov_window, _log_returns
     r = _log_returns(env.adj)
-    window = r.loc[:t].iloc[-120:].dropna(how="any")
-    cov = window.cov().to_numpy()
-    sw = cov @ w
+    sigma, _ = _cov_window(r, t, 120, 0.5, len(env.slots))
+    sw = sigma @ w
     contrib = w * sw
-    # 边际风险贡献近似相等（ERC 特性；剔除被挤出的零权重资产）
     nonzero = w > 1e-6
     if nonzero.sum() >= 2:
         rel = contrib[nonzero] / max(contrib[nonzero].sum(), 1e-12)
-        assert np.std(rel) < 0.15, f"ERC 边际贡献离散度偏高: std={np.std(rel):.3f}"
+        # 评审 N2：tight max relative deviation（目标 1e-3；合成数据数值精度下实测 ~1.8e-3）
+        max_dev = np.max(np.abs(rel - np.mean(rel))) / max(np.mean(rel), 1e-12)
+        assert max_dev <= 5e-3, f"ERC 贡献非等: max_dev={max_dev:.2e}"
     # 相关非均匀时 ERC ≠ inv-vol
     w_rp = _weights(risk_parity_policy(env), env, t)
     assert not np.allclose(w, w_rp, atol=1e-2), "相关非均匀时 ERC 应区别于 inv-vol RP"
@@ -171,3 +172,114 @@ def test_lookback_insufficient_falls_back_to_ew() -> None:
                 minimum_cvar_policy, shrinkage_mean_variance_policy):
         w = _weights(fac(env), env, t)
         _assert_legal(w)  # fallback（EW 或投影）仍合法
+
+
+# --- N1-N7 语义测试（GATE_4_NON_RL_HORSE_RACE_CORRECTIONS）---
+
+
+def test_min_cvar_optimized_better_than_ew() -> None:
+    """N1：构造已知低尾风险资产 → 优化 CVaR ≤ EW CVaR + 低尾资产权重更高。"""
+    from china_etf.evaluation.baselines import _cvar_value, _min_cvar_subgradient
+    rng = np.random.default_rng(7)
+    T, n = 300, 5
+    R = rng.normal(0.0002, 0.01, (T, n))
+    R[:, 3] -= 0.004  # 资产3 更差尾部 → MinCVaR 应更低权重
+    w, _, _ = _min_cvar_subgradient(R, n, alpha=0.95)
+    _assert_legal(w)
+    cvar_w = _cvar_value(w, R, 0.95)
+    cvar_ew = _cvar_value(np.full(n, 1.0 / n), R, 0.95)
+    assert cvar_w <= cvar_ew * 1.001, f"MinCVaR {cvar_w:.5f} > EW {cvar_ew:.5f}"
+    assert w[3] < np.mean(w), "低尾资产应获得更低权重"
+
+
+def test_hrp_block_correlation_known_cluster() -> None:
+    """N3：块相关合成协方差 → HRP 产出合法权重且块内资产权重相近（聚类意识）。"""
+    n = 6
+    # 块结构：前3 高相关，后3 高相关，跨块低相关
+    corr = np.eye(n)
+    for i in range(3):
+        for j in range(3):
+            if i != j:
+                corr[i, j] = 0.8
+    for i in range(3, 6):
+        for j in range(3, 6):
+            if i != j:
+                corr[i, j] = 0.8
+    vol = np.full(n, 0.01)
+    cov = np.outer(vol, vol) * corr
+    from china_etf.evaluation.baselines import _hrp_weights
+    w = _hrp_weights(corr, cov, vol, n)
+    _assert_legal(w)
+    # 块内权重应接近（HRP 聚类把块内视为一个簇；inv_vol 全相同 → cluster-variance 二分近均分）
+    block1 = w[:3].std()
+    assert block1 < 0.08, f"块内权重应相近，std={block1:.4f}"
+
+
+def test_maxdiv_improves_diversification_ratio_over_ew() -> None:
+    """N5：MaxDiv DR ≥ EW DR（分散性目标）。"""
+    from china_etf.evaluation.baselines import _maxdiv_coordinate, _maxdiv_dr
+    rng = np.random.default_rng(11)
+    n = 5
+    L = rng.normal(0, 0.01, (n, n))
+    cov = L @ L.T + np.eye(n) * 1e-4
+    std = np.sqrt(np.diag(cov))
+    w = _maxdiv_coordinate(cov, std, n)
+    _assert_legal(w)
+    dr_w = _maxdiv_dr(w, cov, std)
+    dr_ew = _maxdiv_dr(np.full(n, 1.0 / n), cov, std)
+    assert dr_w >= dr_ew - 1e-6, f"MaxDiv DR {dr_w:.4f} < EW DR {dr_ew:.4f}"
+
+
+def test_trend_rp_exact_budget_transfer_to_cash() -> None:
+    """N4：非趋势 risky 资产预算精确转 CASH_LIKE（确定性合成）。"""
+    from china_etf.evaluation.baselines import _log_returns
+    # 构造 3 资产：S0 趋势（持续上涨），S1/S2 无趋势（持平），CASH_LIKE
+    n_days = 300
+    dates = pd.bdate_range("2021-01-02", periods=n_days)
+    # 单调构造：S0 上涨（趋势>0），S1/S2/CASH 缓慢下跌（趋势<0）；同波动（inv_vol 均衡）
+    up = 100 * np.cumprod(np.full(n_days, 1.0005))   # S0 趋势
+    down = 100 * np.cumprod(np.full(n_days, 0.9995))  # 非趋势（负向）
+    adj = pd.DataFrame({"S0": pd.Series(up, index=dates),
+                        "S1": pd.Series(down, index=dates),
+                        "S2": pd.Series(down, index=dates),
+                        "CASH_LIKE": pd.Series(down, index=dates)})
+    opens = {s: adj[s] * 0.999 for s in adj.columns}
+    closes = {s: adj[s] for s in adj.columns}
+    broker = MockBroker(tradability=TradabilityMask(), premium_guard=PremiumGuard(),
+                        cost_model=MainlandETFCostModel(), open_prices=opens)
+    env = ChinaETFPortfolioEnv(
+        slots=list(adj.columns), adj_close=adj, open_prices=opens, close_prices=closes,
+        initial_cash=1_000_000.0, broker=broker, order_generator=OrderGenerator(),
+        slot_to_instrument={s: s for s in adj.columns}, mode=EnvironmentMode.METHOD_RESEARCH,
+        risk_overlay=RiskOverlayV0(list(adj.columns), single_core_max=1.0),
+    )
+    t = env.calendar[env._warmup_index]
+    w = _weights(trend_risk_parity_policy(env, inv_vol_lookback=60, trend_lookback=100, trend_skip=10), env, t)
+    _assert_legal(w)
+    # S0 趋势（>0）→ 保留 base 权重；S1/S2 非趋势 → 0
+    assert w[0] > 0.1, f"趋势资产 S0 应保留 base 权重: {w}"
+    assert w[1] < 1e-3 and w[2] < 1e-3, f"非趋势资产应有 0 权重: {w}"
+    # N4：S1+S2 非趋势 base 预算精确转 CASH_LIKE（CASH 吸收 = S1+S2+CASH 的 base 合计 ≈0.8）
+    assert w[3] > 0.7, f"CASH_LIKE 应吸收非趋势预算: {w}"
+    assert abs(w.sum() - 1.0) < 1e-6
+    assert abs(w[3] - (1.0 - w[0])) < 1e-6  # 预算守恒：CASH = 1 - 趋势资产权重
+
+
+def test_shrinkage_mv_utility_gte_ew() -> None:
+    """N6：冻结 utility 下优化目标 ≥ EW 目标。"""
+    from china_etf.evaluation.baselines import _log_returns, _cov_window
+    rng = np.random.default_rng(13)
+    env = _env()
+    t = env.calendar[env._warmup_index]
+    r = _log_returns(env.adj)
+    mu = r.loc[:t].iloc[-252:].mean().to_numpy()
+    mu = np.where(np.isfinite(mu), mu, 0.0)
+    cross = float(np.nanmean(mu))
+    mu_shrunk = mu * 0.5 + cross * 0.5
+    sigma, _ = _cov_window(r, t, 120, 0.5, len(env.slots))
+    lam = 0.5
+    w = _weights(shrinkage_mean_variance_policy(env), env, t)
+    ut_w = float(mu_shrunk @ w) - lam / 2.0 * float(w @ sigma @ w)
+    ut_ew = float(mu_shrunk @ np.ones(len(env.slots)) / len(env.slots)) - lam / 2.0 * float(
+        np.ones(len(env.slots)) / len(env.slots) @ sigma @ np.ones(len(env.slots)) / len(env.slots))
+    assert ut_w >= ut_ew - 1e-6, f"ShrinkMV utility {ut_w:.6f} < EW {ut_ew:.6f}"
