@@ -1,6 +1,9 @@
 """Gate 1 — Data & Universe Audit: 拉取 ETF 历史行情与元数据（只读研究用途）。
 
-数据来源: AkShare (fund_etf_hist_em / stock_hk_hist / fund_etf_spot_em)。
+数据来源: AkShare (fund_etf_hist_sina / stock_hk_daily)。
+说明: 东方财富 push2his 的 kline 接口（fund_etf_hist_em / stock_hk_hist）对当前
+出口 IP 触发反爬拦截（TLS 握手后直接断连），故统一改用 Sina 数据源；列结构略有
+不同（date/open/high/low/close/volume/amount），下游按 date 列对齐即可。
 输出: data/raw/ 下 CSV（该目录不入库）。
 """
 
@@ -39,11 +42,12 @@ ALL = {**CORE, **THEMES}
 
 def fetch_ashare_etf(code: str) -> pd.DataFrame | None:
     try:
-        df = ak.fund_etf_hist_em(
-            symbol=code, period="daily",
-            start_date="20050101", end_date="20260808", adjust="qfq",
-        )
-        return df
+        prefix = "sh" if code.startswith("5") else "sz"
+        df = ak.fund_etf_hist_sina(symbol=f"{prefix}{code}")
+        if df is None or df.empty:
+            return None
+        df["date"] = pd.to_datetime(df["date"])
+        return df[df["date"] >= "2005-01-01"]
     except Exception as exc:  # noqa: BLE001
         print(f"  A-share fetch error {code}: {str(exc)[:160]}")
         return None
@@ -51,11 +55,11 @@ def fetch_ashare_etf(code: str) -> pd.DataFrame | None:
 
 def fetch_hk_etf(code: str) -> pd.DataFrame | None:
     try:
-        df = ak.stock_hk_hist(
-            symbol=code.replace(".HK", ""), period="daily",
-            start_date="20100101", end_date="20260808", adjust="qfq",
-        )
-        return df
+        df = ak.stock_hk_daily(symbol=code.replace(".HK", ""), adjust="qfq")
+        if df is None or df.empty:
+            return None
+        df["date"] = pd.to_datetime(df["date"])
+        return df[(df["date"] >= "2010-01-01") & (df["date"] <= "2026-08-08")]
     except Exception as exc:  # noqa: BLE001
         print(f"  HK fetch error {code}: {str(exc)[:160]}")
         return None
