@@ -83,7 +83,7 @@ F1/F3（内部特征，无外部数据）不依赖该 carry-forward
 
 # 6. Git Commit
 
-`GATE_4_FEATURE_ABLATION_PREP_REAFFIRMATION` 提交 SHA：**`PENDING_SHA`**
+`GATE_4_FEATURE_ABLATION_PREP_REAFFIRMATION` 提交 SHA：**`eb8128f`**
 
 ```text
 docs/review_packets/GATE_4_FEATURE_ABLATION_PREP_002.md  ← 本 packet（gate transition + 重验证）

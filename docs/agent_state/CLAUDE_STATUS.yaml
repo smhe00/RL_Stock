@@ -5,7 +5,7 @@ state: READY_FOR_REVIEW
 
 gate: 4
 phase: GATE_4_FEATURE_ABLATION_PREP
-code_commit: 2a8ea68
+code_commit: eb8128f
 packet: docs/review_packets/GATE_4_FEATURE_ABLATION_PREP_002.md
 
 progress:
