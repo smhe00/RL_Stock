@@ -297,7 +297,7 @@ SAC 0.030s/step、PPO 0.014s/step）：
 
 # N. Git Commit
 
-`GATE_4_PILOT_READY` 实现提交 SHA：**（commit 后填写）**
+`GATE_4_PILOT_READY` 实现提交 SHA：**`5392fd4`**
 
 包含：
 

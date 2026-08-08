@@ -48,7 +48,7 @@ Phase 4 — GATE_4_PILOT_READY 已提交（Track A 迁 513690 + 公司行为记�
 
 ## Current branch / commit
 
-`main` @ `GATE_4_PILOT_READY commit SHA（待 commit 后回填）`（此前 `fefb1c7` GATE_4_PRECHECK）
+`main` @ `5392fd4`（GATE_4_PILOT_READY；此前 `fefb1c7` GATE_4_PRECHECK）
 
 ## Tests
 
