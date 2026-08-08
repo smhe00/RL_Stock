@@ -29,7 +29,7 @@
 
 ## 4. Commit SHA
 
-（提交后填写）
+`904d388`
 
 ## 5. Gate 1 authorization
 
