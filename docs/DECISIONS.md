@@ -151,3 +151,20 @@ class TargetAssetWeights:
 - Run Manifest 必须输出 mode 与 Slot→Instrument 映射。
 - C3 状态：`PARTIALLY_RESOLVED`（算法已用 QMT 真实事件验证 14/14；
   正式关闭在真实 Data Loader 接入环境主循环时）。
+
+### D-019 Gate 3 Preflight 约定（Reviewer 2026-08-08）
+
+- **P1 现金偿付**：禁止负现金；先卖后买；买入按 investable=V×(1−1% buffer) 计，费用由 buffer 覆盖；
+  `Σw_actual ≤ 1+ε`。新增 3 个 solvency 测试。
+- **P2 CNY 收益**：HK_DIVIDEND 研究序列 = `P_HKD × FX_HKD/CNY`（CNY total-return）。
+- **P3 决策时戳**：canonical decision = 当日全部市场收盘后（A股 15:00 / 港股 ~16:00 之后，
+  记 16:30 CST EOD），执行 = 下一交易日开盘；禁止用港股 16:00 数据假设 15:00 已决策。
+- **P4 Slot 映射**：11 槽位 → 研究序列 manifest 强制输出；禁止静默 drop（ActionDim 恒 11）。
+- **P5 观测有效**：真实 11-Core 100 个连续观测 shape=(104,)、全 finite、
+  无 fallback 锚点补 0（生产宇宙缺失必需锚点 → RAISE）、无静默缺失槽位。
+- **C3 精确 diff**：max/median/event 级 |TR−front| 报告；目标 ≤1bp，超限需证明来自
+  price/distribution rounding 或 provider 调整约定。
+- Gate 3 范围：单 fold/单 seed、PPO/SAC/TD3 + Equal Weight 基线、METHOD_RESEARCH 模式、
+  CURRENT_FEE_SCENARIO_2026（非 PIT 历史费率，manifest 标注）。
+- 延续：F1（历史费率规则，Gate 4 前）、F2（港股通券商佣金，Gate 4/6 前）、
+  C1（Gate 6 前）、C2（用 proxy 前）、C3（真实数据接入后）。

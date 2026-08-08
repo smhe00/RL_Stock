@@ -9,6 +9,7 @@ import pandas as pd
 
 from ...accounting import PortfolioAccounting
 from ...contracts import (
+    REASON_INSUFFICIENT_CASH,
     REASON_MARKET_CLOSED,
     REASON_QUOTE_UNAVAILABLE,
     CostBreakdown,
@@ -57,6 +58,7 @@ class MockBroker:
         self.orders: list[Order] = []
         self.fills: list[Fill] = []
         self.rejects: list[tuple[Order, str]] = []
+        self.clamped_fills: list[tuple[Order, float, float]] = []  # (order, requested, executed)
         self._seq = 0
 
     def execute_plan(
@@ -69,7 +71,7 @@ class MockBroker:
         fills: list[Fill] = []
         # 先卖后买（EXECUTION_SPEC §51）
         for order in sorted(orders, key=lambda o: 0 if o.side == "sell" else 1):
-            fill = self._fill(order, execution_date)
+            fill = self._fill(order, execution_date, accounting)
             if fill is None:
                 continue
             accounting.apply_fill(fill, fx_to_base=self.fx_rate)
@@ -77,7 +79,12 @@ class MockBroker:
             fills.append(fill)
         return fills
 
-    def _fill(self, order: Order, execution_date: pd.Timestamp) -> Fill | None:
+    def _fill(
+        self,
+        order: Order,
+        execution_date: pd.Timestamp,
+        accounting: PortfolioAccounting,
+    ) -> Fill | None:
         px = self.open_prices.get(order.instrument)
         if px is None:
             raise OrderRejected(order.instrument, "no_price_series")
@@ -102,6 +109,23 @@ class MockBroker:
             if not pd.buy_allowed:
                 self.rejects.append((order, f"premium:{pd.reason}"))
                 return None
+        if order.side == "buy":
+            # P1 现金偿付：买入数量按实际可用现金夹取（预留费用 + 整手），现金永不为负
+            rate = self._unit_cost_rate(order, price)
+            max_qty = (
+                np.floor(accounting.cash / (price * (1.0 + rate)) / self.minimum_quote_lot)
+                * self.minimum_quote_lot
+            )
+            if max_qty <= 0:
+                self.rejects.append((order, REASON_INSUFFICIENT_CASH))
+                return None
+            if max_qty < order.quantity:
+                self.clamped_fills.append((order, order.quantity, float(max_qty)))
+                order = Order(
+                    instrument=order.instrument, side="buy", quantity=float(max_qty),
+                    limit_price=order.limit_price, order_type=order.order_type,
+                    strategy_name=order.strategy_name,
+                )
         cost = self.cost_model.estimate(order.instrument, order.side, order.quantity, price)
         self._seq += 1
         return Fill(
@@ -113,3 +137,11 @@ class MockBroker:
             cost=cost,
             timestamp=execution_date,
         )
+
+    def _unit_cost_rate(self, order: Order, price: float) -> float:
+        """单位成本率估计（佣金+价差+滑点比例），用于买入现金夹取时预留费用。"""
+        try:
+            probe = self.cost_model.estimate(order.instrument, "buy", 1000.0, price)
+            return max(0.0, probe.total / (1000.0 * price))
+        except Exception:  # noqa: BLE001
+            return 0.001

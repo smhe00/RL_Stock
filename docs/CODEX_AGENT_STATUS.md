@@ -4,10 +4,13 @@
 
 ## Current Phase
 
-Phase 2 — Environment & Accounting（Gate 2 已完成，等待复核）
+Phase 3 — First RL Sanity（Gate 3 已完成，等待复核）
 
 ## Last completed task
 
+- 2026-08-08：Gate 3 完成 → `docs/review_packets/GATE_3_RL_SANITY.md`
+  （Preflight P1–P5 + C3 全过；TD3/SAC/PPO + EW 单 seed sanity；44 测试全过）
+- 2026-08-08：Gate 2 APPROVED（Reviewer: `APPROVED_WITH_GATE3_PREFLIGHT_CONDITIONS`，Gate 3 AUTHORIZED）
 - 2026-08-08：Gate 2 corrections 完成 → `docs/review_packets/GATE_2_CORRECTIONS.md`
   （港股通印花税=0+AFRC、实际持仓观测、端到端/隔夜/无双算/暖机测试、EnvironmentMode、
   C3 真实事件验证 14/14；40 测试全过）
@@ -39,11 +42,13 @@ Gate 0 — APPROVED_WITH_REQUIRED_CORRECTIONS → CORRECTIONS_COMPLETE（`GATE_0
 
 Gate 1 — **APPROVED**（`GATE_1_CORRECTIONS_REVIEWER_RESPONSE.md`）
 
-Gate 2 — CORRECTIONS_COMPLETE（`GATE_2_CORRECTIONS.md`），等待 Reviewer 确认后才可进入 Gate 3
+Gate 2 — **APPROVED**（`GATE_2_CORRECTIONS_REVIEWER_RESPONSE.md`）
+
+Gate 3 — First RL Sanity（COMPLETED，等待 Reviewer 复核）
 
 ## Blockers
 
-等待 Reviewer 对 `GATE_2_CORRECTIONS.md` 复核。
+等待 Reviewer 对 `GATE_3_RL_SANITY.md` 复核。
 
 ## Deviations
 
@@ -51,11 +56,12 @@ Carry-Forward 条件（详见 DECISIONS.md）：
 - C1: 03110 same-day trading rule — Gate 6 前验证（当前 UNKNOWN）
 - C2: proxy launch/backfill 审计 — Gate 3 前完成（当前未验证的 proxy 禁入严格 PIT 管线）
 - C3: adjusted price PIT 语义 — Gate 2 必须覆盖（test_adjustment_point_in_time_semantics）
+- F1: 历史费率规则 PIT（mainland/southbound 各费项生效日）— Gate 4 前
+- F2: 港股通券商佣金是否 0.00005 — Gate 4 真实成本比较 / Gate 6 执行前
 
 ## Next intended step
 
-Reviewer 确认 GATE_2_CORRECTIONS 后进入 Gate 3 — First RL Sanity（单 fold / 单 seed，TD3/SAC/PPO）；
-依赖已就绪（GPU CUDA 可用）。
+Reviewer 批准后进入 Gate 4 — Core Walk-Forward（≥10 seeds、baselines、1x/2x/3x 成本压力）。
 
 ## Reviewer approval
 

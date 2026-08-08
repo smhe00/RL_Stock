@@ -64,6 +64,13 @@ class ChinaETFPortfolioEnv:
         self.broker.premium_enforced = mode in (EnvironmentMode.PAPER, EnvironmentMode.LIVE)
         self.accounting = PortfolioAccounting(initial_cash=initial_cash)
         self.calendar = sorted(adj_close.index)
+        # 预计算特征（一次性；warm-up 与 step 均使用预计算帧，避免重复滚动）
+        from ..features.etf_features import global_features, per_asset_features
+
+        self._per_features = {
+            s: per_asset_features(self.adj[s]) for s in self.slots
+        }
+        self._global_feat = global_features(self.adj)
         self._i = 0
         self._warmup_index = self._find_warmup_index()
         self._weights = pd.Series(np.zeros(len(slots)), index=slots)
@@ -76,11 +83,11 @@ class ChinaETFPortfolioEnv:
 
     def _find_warmup_index(self) -> int:
         """Reviewer §21/§22：warm-up 期后 observation 必须全 finite；禁止 NaN 静默填 0。"""
-        from ..features.etf_features import state_vector
-
+        per_ok = pd.DataFrame({s: self._per_features[s].notna().all(axis=1) for s in self.slots})
+        global_ok = self._global_feat.notna().all(axis=1)
+        ok = per_ok.all(axis=1) & global_ok
         for i in range(max(0, self.min_history - 1), len(self.calendar)):
-            obs = state_vector(self.adj, pd.Series(np.zeros(len(self.slots)), index=self.slots), self.calendar[i])
-            if np.isfinite(obs).all():
+            if bool(ok.iloc[i]):
                 return i
         raise ValueError(
             f"no fully-finite observation within calendar (slots={len(self.slots)}, "
@@ -101,10 +108,13 @@ class ChinaETFPortfolioEnv:
         return out
 
     def _observe(self, t: pd.Timestamp) -> np.ndarray:
-        from ..features.etf_features import state_vector
-
         actual = self._actual_weights(t)
-        obs = state_vector(self.adj, actual, t)
+        parts: list[np.ndarray] = []
+        for s in self.slots:
+            parts.append(self._per_features[s].loc[t].values)
+        parts.append(actual.values)
+        parts.append(self._global_feat.loc[t].values)
+        obs = np.concatenate(parts).astype(float)
         if not np.isfinite(obs).all():
             raise ValueError(f"observation contains non-finite values at {t}")
         return obs
