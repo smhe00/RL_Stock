@@ -1,19 +1,19 @@
 protocol_version: 2
 actor: claude
-handoff_id: G4_EVAL_FIX_001
+handoff_id: G4_EVAL_FIX_CORRECTIONS_001
 state: READY_FOR_REVIEW
 
 gate: 4
-phase: GATE_4_EVAL_FIX
-code_commit: dcb1287
-packet: docs/review_packets/GATE_4_EVAL_FIX.md
+phase: GATE_4_EVAL_FIX_CORRECTIONS
+code_commit: PLACEHOLDER_COMMIT_SHA
+packet: docs/review_packets/GATE_4_EVAL_FIX_CORRECTIONS.md
 
 progress:
-  current_task: closed E1/E2/E3 + benchmark mask + fallback sensitivity + feature spec freeze
+  current_task: closed B1/B2/B3 fold-local benchmark + feature spec formula corrections
 
 last_consumed_review:
-  handoff_id: G4_3SEED_001
-  decision: PILOT_MECHANICS_PASS_FORMAL_NOT_AUTHORIZED
-  response: docs/reviewer_responses/GATE_4_3_SEED_PILOT_REVIEWER_RESPONSE.md
+  handoff_id: G4_EVAL_FIX_001
+  decision: TARGETED_CORRECTIONS_REQUIRED
+  response: docs/reviewer_responses/GATE_4_EVAL_FIX_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-09T02:00:00+08:00
+updated_at: 2026-08-09T02:30:00+08:00

@@ -1,11 +1,14 @@
-"""Benchmark helpers（GATE_4_EVAL_FIX）：exact Test-date mask + 可执行 510300 buy-and-hold。
+"""Benchmark helpers（GATE_4_EVAL_FIX_CORRECTIONS B1/B2/B3）。
 
-评审要求：
-- stitched OOS 非连续（Validation gaps 在 Test folds 之间）→ 510300 benchmark 必须用**完全相同**
-  Test-date mask，输出 exact_test_date_count / first_test_date / last_test_date / excluded_validation_dates，
-  并 assert 步数相等。
-- `510300_EXECUTABLE_NET_BUY_HOLD`（raw 执行价 + 公司行为记账 + 1x cost + exact Test mask）与
-  `510300_RESEARCH_TR_REFERENCE`（研究 TR）分开标注。
+评审要求（`GATE_4_EVAL_FIX_REVIEWER_RESPONSE.md` §5-§9）：
+- 可执行 510300 benchmark 必须与 RL/baseline walk-forward **Test-mask 等价**：
+  每 fold 在 val_end 重置为现金+零持仓+零应收款，test_start open 买入 510300 + 1x 成本，
+  首日记录 open→close 收益（对 initial equity），仅在本 fold Test 段内持仓，
+  逐 CA 按规范顺序（先基于开盘前持仓 apply → 再 execute），**不跨 Validation gap**。
+- `benchmark_return_count == strategy_stitched_return_count`（独立生成后比对，非同一 len）。
+- 拼接 F1→F4 Test 返回 → `510300_EXECUTABLE_NET_STITCHED_BUY_HOLD`。
+- 可保留连续日历 buy-hold 作为**另一参考**，但必须标注 `510300_CONTINUOUS_CALENDAR_REFERENCE`
+  且不得当作 stitched OOS mask 等价。
 """
 
 from __future__ import annotations
@@ -19,6 +22,8 @@ from ..cost.mainland import MainlandETFCostModel
 from ..data.corporate_actions import CorporateActionEvent
 
 CN_LARGE_INSTRUMENT = "510300.SH"
+STITCHED_LABEL = "510300_EXECUTABLE_NET_STITCHED_BUY_HOLD"
+CONTINUOUS_LABEL = "510300_CONTINUOUS_CALENDAR_REFERENCE"
 
 
 def exact_test_mask(folds, calendar=None) -> dict:
@@ -60,12 +65,71 @@ def _select(series: pd.Series, date: pd.Timestamp) -> float:
     return float(valid.iloc[-1])
 
 
-def _ca_events_for(events: list[CorporateActionEvent], date: pd.Timestamp) -> list[CorporateActionEvent]:
+def _ca_on(events: list[CorporateActionEvent], date: pd.Timestamp) -> list[CorporateActionEvent]:
     return [e for e in events if e.ex_date == date]
 
 
-def _ca_settle_for(events: list[CorporateActionEvent], date: pd.Timestamp) -> list[CorporateActionEvent]:
+def _ca_settle_on(events: list[CorporateActionEvent], date: pd.Timestamp) -> list[CorporateActionEvent]:
     return [e for e in events if e.pay_date is not None and e.pay_date == date]
+
+
+def _apply_corporate_actions(acc: PortfolioAccounting, events: list[CorporateActionEvent], date: pd.Timestamp) -> None:
+    """按规范顺序（GATE_4_EVAL_FIX_CORRECTIONS B3）：settle → 折算 → 计提（基于开盘前持仓）。"""
+    for ev in _ca_settle_on(events, date):
+        if ev.cash_per_share > 0:
+            acc.settle_dividend(ev.instrument)
+    for ev in _ca_on(events, date):
+        if ev.unit_factor != 1.0:
+            acc.apply_unit_conversion(ev.instrument, ev.unit_factor)
+        if ev.cash_per_share > 0:
+            pos = acc.positions.get(ev.instrument)
+            if pos is not None and pos.quantity > 0:
+                acc.accrue_dividend(ev.instrument, pos.quantity, ev.cash_per_share)
+
+
+def _fold_buy_hold(
+    raw_open: pd.Series,
+    raw_close: pd.Series,
+    events: list[CorporateActionEvent],
+    test_dates: list[pd.Timestamp],
+    *,
+    initial_cash: float = 1_000_000.0,
+    cost_model=MainlandETFCostModel(),
+    lot_size: int = 100,
+) -> list[float]:
+    """单 fold 可执行 510300 buy-hold：val_end 重置现金 → test_start open 买入 → 段内 mark → 返回。
+
+    返回：该 fold Test 段每个执行日（含首日）对 initial equity 的净收益序列。
+    """
+    inst = CN_LARGE_INSTRUMENT
+    acc = PortfolioAccounting(initial_cash=initial_cash)  # B1：每 fold 重置现金+零持仓+零应收款
+    net_returns: list[float] = []
+    prev_v: float | None = None
+    for d in test_dates:
+        # B3：先 apply CA（基于开盘前持仓）→ 再执行（首日开盘前零持仓，不享 ex-date 当日分红）
+        _apply_corporate_actions(acc, events, d)
+        if prev_v is None:
+            # 首 test 日：open 全仓买入 + 1x 成本
+            px_buy = _select(raw_open, d)
+            probe = cost_model.estimate(inst, "buy", 1.0, px_buy)
+            rate = probe.total / px_buy
+            max_qty = np.floor(acc.cash / (px_buy * (1.0 + rate)) / lot_size) * lot_size
+            cost = cost_model.estimate(inst, "buy", float(max_qty), px_buy)
+            acc.apply_fill(
+                Fill(order_id="bh", instrument=inst, side="buy", quantity=float(max_qty),
+                     price=px_buy, cost=cost, timestamp=d),
+                fx_to_base=1.0,
+            )
+        # 收盘 mark
+        px_mark = _select(raw_close, d)
+        v = acc.snapshot(d, {inst: px_mark}, {}).portfolio_value
+        if prev_v is not None and prev_v > 0:
+            net_returns.append(v / prev_v - 1.0)
+        elif prev_v is None:
+            # 首日：相对 initial equity 的净收益（open→close + 成本）——B2：首 transition 计入
+            net_returns.append(v / initial_cash - 1.0)
+        prev_v = v
+    return net_returns
 
 
 def cn_large_buy_hold_net_return(
@@ -78,65 +142,81 @@ def cn_large_buy_hold_net_return(
     cost_model=MainlandETFCostModel(),
     lot_size: int = 100,
 ) -> dict:
-    """可执行 510300 buy-and-hold（评审 benchmark 要求）。
+    """可执行 510300 buy-hold（连续日历版本，供独立参考）。
 
-    首 test 日 open 全仓买入（预留费用 + 整手），持有至末 test 日；期间处理公司行为
-    （ex-date 应收款 / pay-date 结算 / 份额折算）+ 1x 成本；逐 test 执行日 mark close。
-    输出 net_returns 序列（执行日口径）与成本/换手诊断。
+    注意：此版本为连续持仓参考（`510300_CONTINUOUS_CALENDAR_REFERENCE`），
+    **不等价于 stitched OOS Test mask**（跨 fold 连续持仓、无 val gap 重置）。
+    正式 stitched 对比请用 `cn_large_buy_hold_stitched`。
     """
     inst = CN_LARGE_INSTRUMENT
     acc = PortfolioAccounting(initial_cash=initial_cash)
     net_returns: list[float] = []
-    costs: list[float] = []
-    traded_notional: list[float] = []
-    cash_after: list[float] = []
     prev_v: float | None = None
-
-    # 首 test 日：open 全仓买入
-    first = test_dates[0]
-    px_buy = _select(raw_open, first)
-    probe = cost_model.estimate(inst, "buy", 1.0, px_buy)
-    rate = probe.total / px_buy
-    max_qty = np.floor(acc.cash / (px_buy * (1.0 + rate)) / lot_size) * lot_size
-    cost = cost_model.estimate(inst, "buy", float(max_qty), px_buy)
-    acc.apply_fill(
-        Fill(order_id="bh", instrument=inst, side="buy", quantity=float(max_qty),
-             price=px_buy, cost=cost, timestamp=first),
-        fx_to_base=1.0,
-    )
-
     for d in test_dates:
-        # CA：结算应收款（pay_date）→ 折算 → 计提（ex_date，基于开盘前持仓）
-        for ev in _ca_settle_for(events, d):
-            if ev.cash_per_share > 0:
-                acc.settle_dividend(ev.instrument)
-        for ev in _ca_events_for(events, d):
-            if ev.unit_factor != 1.0:
-                acc.apply_unit_conversion(ev.instrument, ev.unit_factor)
-            if ev.cash_per_share > 0:
-                pos = acc.positions.get(ev.instrument)
-                if pos is not None and pos.quantity > 0:
-                    acc.accrue_dividend(ev.instrument, pos.quantity, ev.cash_per_share)
-        # mark close
+        _apply_corporate_actions(acc, events, d)
+        if prev_v is None:
+            px_buy = _select(raw_open, d)
+            probe = cost_model.estimate(inst, "buy", 1.0, px_buy)
+            rate = probe.total / px_buy
+            max_qty = np.floor(acc.cash / (px_buy * (1.0 + rate)) / lot_size) * lot_size
+            cost = cost_model.estimate(inst, "buy", float(max_qty), px_buy)
+            acc.apply_fill(
+                Fill(order_id="bh", instrument=inst, side="buy", quantity=float(max_qty),
+                     price=px_buy, cost=cost, timestamp=d),
+                fx_to_base=1.0,
+            )
         px_mark = _select(raw_close, d)
-        snap = acc.snapshot(d, {inst: px_mark}, {})
-        v = snap.portfolio_value
+        v = acc.snapshot(d, {inst: px_mark}, {}).portfolio_value
         if prev_v is not None and prev_v > 0:
             net_returns.append(v / prev_v - 1.0)
-            costs.append(0.0)  # buy-hold 无交易成本（首日买入已在 initial 计提）
-        cash_after.append(acc.cash)
         prev_v = v
-
-    # 末 test 日结算：若仍持有，无卖出成本（buy-hold 到期末 mark）
-    snap_final = acc.snapshot(test_dates[-1], {inst: _select(raw_close, test_dates[-1])}, {})
-    cum = snap_final.portfolio_value / initial_cash - 1.0
+    final = acc.snapshot(test_dates[-1], {inst: _select(raw_close, test_dates[-1])}, {})
     return {
+        "label": CONTINUOUS_LABEL,
         "net_returns": [float(x) for x in net_returns],
-        "cum_net_return": float(cum),
-        "initial_cash": initial_cash,
-        "final_value": float(snap_final.portfolio_value),
-        "total_cost": float(sum(costs)) + cost.total,
-        "traded_notional_first_day": float(max_qty * px_buy),
+        "cum_net_return": float(final.portfolio_value / initial_cash - 1.0),
         "n_returns": len(net_returns),
-        "label": "510300_EXECUTABLE_NET_BUY_HOLD",
+    }
+
+
+def cn_large_buy_hold_stitched(
+    raw_open: pd.Series,
+    raw_close: pd.Series,
+    events: list[CorporateActionEvent],
+    folds,
+    *,
+    calendar=None,
+    initial_cash: float = 1_000_000.0,
+    cost_model=MainlandETFCostModel(),
+    lot_size: int = 100,
+) -> dict:
+    """fold-local 可执行 510300 buy-hold（B1/B2/B3 修复版，正式 stitched 对比用）。
+
+    每 fold 在 val_end 重置现金+零持仓+零应收款；test_start open 买入 + 1x 成本；
+    首日记录 open→close 对 initial equity 的净收益；仅本 fold Test 段内持仓；
+    不跨 Validation gap；逐 CA 按规范顺序。
+    拼接 F1→F4 Test 返回 → `510300_EXECUTABLE_NET_STITCHED_BUY_HOLD`。
+    """
+    mask = exact_test_mask(folds, calendar=calendar)
+    test_dates = mask["test_dates"]
+    all_returns: list[float] = []
+    per_fold: dict[str, list[float]] = {}
+    for f in sorted(folds, key=lambda x: x.test_start):
+        seg = _segment_days(f.test_start, f.test_end, calendar)
+        rets = _fold_buy_hold(raw_open, raw_close, events, seg,
+                              initial_cash=initial_cash, cost_model=cost_model, lot_size=lot_size)
+        per_fold[f.name] = [float(x) for x in rets]
+        all_returns.extend(rets)
+    nr = np.asarray(all_returns, dtype=float)
+    cum = float(np.exp(np.log1p(nr).sum()) - 1.0) if len(nr) else float("nan")
+    return {
+        "label": STITCHED_LABEL,
+        "per_fold": {k: [round(x, 6) for x in v] for k, v in per_fold.items()},
+        "net_returns": [float(x) for x in all_returns],
+        "cum_net_return": round(cum, 6),
+        "n_returns": len(all_returns),
+        "strategy_stitched_steps": mask["strategy_stitched_steps"],
+        "benchmark_stitched_steps": len(all_returns),
+        "execution_dates": [str(d.date()) for d in test_dates],
+        "parity_assert": bool(len(all_returns) == mask["strategy_stitched_steps"]),
     }

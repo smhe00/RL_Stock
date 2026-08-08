@@ -32,7 +32,10 @@ from china_etf.data.corporate_actions import load_corporate_actions  # noqa: E40
 from china_etf.data.loader import SLOT_MAP, load_execution_prices, load_research_adj  # noqa: E402
 from china_etf.environment.portfolio_env import ChinaETFPortfolioEnv  # noqa: E402
 from china_etf.evaluation.baselines import equal_weight_policy  # noqa: E402
-from china_etf.evaluation.benchmark import cn_large_buy_hold_net_return, exact_test_mask  # noqa: E402
+from china_etf.evaluation.benchmark import (  # noqa: E402
+    cn_large_buy_hold_stitched,
+    exact_test_mask,
+)
 from china_etf.evaluation.walkforward import WalkForwardRunner  # noqa: E402
 from china_etf.execution.broker.mock import MockBroker  # noqa: E402
 from china_etf.execution.order_generator import OrderGenerator  # noqa: E402
@@ -76,7 +79,7 @@ def main() -> None:
 
     print(f"== E1/E2/E3 smoke: fold={SMOKE_FOLD} seed={SEED} device={device} ==")
 
-    # --- Benchmark: exact mask + 可执行 buy-hold ---
+    # --- Benchmark: exact mask + fold-local 可执行 stitched buy-hold（B1/B2/B3）---
     mask = exact_test_mask(folds, calendar=adj.index)
     results["benchmark"]["mask"] = {k: v for k, v in mask.items() if k != "test_dates"}
     assert mask["strategy_stitched_steps"] == mask["benchmark_stitched_steps"]
@@ -86,13 +89,16 @@ def main() -> None:
 
     raw_open_510 = load_execution_prices()[0]["510300.SH"]
     raw_close_510 = load_execution_prices()[1]["510300.SH"]
-    bh = cn_large_buy_hold_net_return(
-        raw_open_510, raw_close_510, CA.get("510300.SH", []), mask["test_dates"])
-    results["benchmark"]["cn_large_executable_buy_hold"] = {
-        "label": bh["label"], "cum_net_return": round(bh["cum_net_return"], 5),
-        "n_returns": bh["n_returns"], "total_cost": round(bh["total_cost"], 2)}
-    print(f"CN_LARGE_EXECUTABLE_NET_BUY_HOLD cum={bh['cum_net_return']:.4f} "
-          f"n={bh['n_returns']} cost={bh['total_cost']:.0f}")
+    bh = cn_large_buy_hold_stitched(
+        raw_open_510, raw_close_510, CA.get("510300.SH", []), folds, calendar=adj.index)
+    assert bh["parity_assert"], "benchmark 步数必须 == strategy stitched 步数（独立生成）"
+    results["benchmark"]["cn_large_executable_stitched_buy_hold"] = {
+        "label": bh["label"], "cum_net_return": bh["cum_net_return"],
+        "n_returns": bh["n_returns"], "strategy_stitched_steps": bh["strategy_stitched_steps"],
+        "parity": bh["parity_assert"],
+        "per_fold_return_count": {k: len(v) for k, v in bh["per_fold"].items()}}
+    print(f"{bh['label']}: cum={bh['cum_net_return']:.4f} n={bh['n_returns']} "
+          f"(strategy={bh['strategy_stitched_steps']}) parity={bh['parity_assert']}")
 
     # --- RL 冒烟（3 algos × 1 fold，低 passes）---
     for algo_name, algo_cls, dev in [("TD3", TD3, "cuda"), ("SAC", SAC, "cuda"), ("PPO", PPO, "cpu")]:

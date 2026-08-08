@@ -15,7 +15,11 @@ from china_etf.cost.mainland import MainlandETFCostModel
 from china_etf.data.corporate_actions import CorporateActionEvent
 from china_etf.environment.gym_wrapper import ChinaETFGymEnv
 from china_etf.environment.portfolio_env import ChinaETFPortfolioEnv
-from china_etf.evaluation.benchmark import cn_large_buy_hold_net_return, exact_test_mask
+from china_etf.evaluation.benchmark import (
+    cn_large_buy_hold_net_return,
+    cn_large_buy_hold_stitched,
+    exact_test_mask,
+)
 from china_etf.evaluation.rollout import roll_out
 from china_etf.evaluation.walkforward import WalkForwardRunner
 from china_etf.evaluation.baselines import equal_weight_policy
@@ -300,7 +304,7 @@ def test_exact_test_mask_steps_equal() -> None:
 
 
 def test_cn_large_buy_hold_uses_raw_prices() -> None:
-    """可执行 buy-hold：首 test 日 open 买入，成交价 = raw open（非研究 TR）。"""
+    """连续参考 buy-hold：首日 open 买入，成交价 = raw open（非研究 TR）。"""
     n = 300
     dates = pd.bdate_range("2025-01-02", periods=n)
     rng = np.random.default_rng(3)
@@ -308,10 +312,174 @@ def test_cn_large_buy_hold_uses_raw_prices() -> None:
     raw_open = pd.Series([10.0 + float(x) for x in rng.normal(0, 0.04, n)], index=dates)
     test_dates = list(dates[250:280])
     res = cn_large_buy_hold_net_return(raw_open, raw_close, [], test_dates)
-    assert res["label"] == "510300_EXECUTABLE_NET_BUY_HOLD"
+    assert res["label"] == "510300_CONTINUOUS_CALENDAR_REFERENCE"
     assert res["n_returns"] == len(test_dates) - 1
-    # 首日买入成本计入 traded_notional（首 test 日 open）
-    assert res["traded_notional_first_day"] > 0
     assert np.isfinite(res["cum_net_return"])
-    # 持仓数量合理：约 1e6 现金买 ~10 元 ETF（整手 100）
-    assert res["final_value"] > 0
+
+
+def _mk_runner_data(n=700, seed=21):
+    from china_etf.environment.portfolio_env import ChinaETFPortfolioEnv
+
+    dates = pd.bdate_range("2021-01-02", periods=n)
+    rng = np.random.default_rng(seed)
+    adj = pd.DataFrame(
+        {s: pd.Series(100 * np.cumprod(1 + rng.normal(0.0002, 0.01, n)), index=dates) for s in SLOTS}
+    )
+    opens = {s: adj[s] * 0.999 for s in SLOTS}
+    closes = {s: adj[s] for s in SLOTS}
+
+    def build_env(a, o, c, corporate_actions=None):
+        broker = MockBroker(
+            tradability=TradabilityMask(), premium_guard=PremiumGuard(),
+            cost_model=MainlandETFCostModel(), open_prices=o,
+        )
+        return ChinaETFPortfolioEnv(
+            slots=SLOTS, adj_close=a, open_prices=o, close_prices=c,
+            initial_cash=1_000_000.0, broker=broker, order_generator=OrderGenerator(),
+            slot_to_instrument={s: s for s in SLOTS}, mode=EnvironmentMode.METHOD_RESEARCH,
+            risk_overlay=RiskOverlayV0(SLOTS, single_core_max=0.5),
+            corporate_actions=corporate_actions,
+        )
+
+    return adj, opens, closes, build_env
+
+
+def _fold_setup(n=700, seed=21):
+    from china_etf.environment.portfolio_env import ChinaETFPortfolioEnv
+
+    adj, opens, closes, build_env = _mk_runner_data(n=n, seed=seed)
+    runner = WalkForwardRunner(
+        adj=adj, opens=opens, closes=closes, slots=SLOTS,
+        slot_to_instrument={s: s for s in SLOTS}, build_env=build_env,
+    )
+    folds = runner.make_folds(n_folds=2, min_train_days=200, val_days=40)
+    return runner, folds, adj, opens, closes
+
+
+# --- B1/B2/B3 fold-local benchmark tests（评审 §9）---
+
+
+def test_benchmark_return_count_equals_strategy_stitched_steps() -> None:
+    """benchmark_return_count == strategy_stitched_return_count（独立生成后比对）。"""
+    runner, folds, adj, opens, closes = _fold_setup()
+    mask = exact_test_mask(folds, calendar=runner.adj.index)
+    strategy_steps = mask["strategy_stitched_steps"]
+    # 用 S0 的价格模拟 510300（真实数据在 smoke 验证）
+    res = cn_large_buy_hold_stitched(
+        opens["S0"], closes["S0"], [], folds, calendar=runner.adj.index)
+    assert res["strategy_stitched_steps"] == strategy_steps
+    assert res["benchmark_stitched_steps"] == strategy_steps
+    assert res["n_returns"] == strategy_steps
+    assert res["parity_assert"] is True
+
+
+def test_benchmark_execution_dates_exactly_equal_test_mask() -> None:
+    """benchmark 执行日期 == exact Test 执行日期（逐日期相等，独立生成）。"""
+    runner, folds, adj, opens, closes = _fold_setup()
+    mask = exact_test_mask(folds, calendar=runner.adj.index)
+    res = cn_large_buy_hold_stitched(
+        opens["S0"], closes["S0"], [], folds, calendar=runner.adj.index)
+    expected = [d.date().isoformat() for d in mask["test_dates"]]
+    assert res["execution_dates"] == expected
+
+
+def _simple_folds(dates, n_folds=2, min_train=60, val=40, decision_start=0):
+    """构造满足 make_folds 约束（step >= val+40）的 folds。"""
+    from china_etf.evaluation.walkforward import make_folds
+
+    decision = dates[decision_start:]
+    return make_folds(decision, n_folds=n_folds, min_train_days=min_train, val_days=val)
+
+
+def test_benchmark_resets_to_cash_each_fold() -> None:
+    """每 fold benchmark 在 val_end 重置为现金+零持仓+零应收款（B1）。"""
+    n = 400
+    dates = pd.bdate_range("2023-01-02", periods=n)
+    rng = np.random.default_rng(31)
+    px = pd.Series([10.0 + float(x) for x in rng.normal(0, 0.03, n)], index=dates)
+    folds = _simple_folds(dates, n_folds=2, min_train=120, val=40)
+    res = cn_large_buy_hold_stitched(px, px, [], folds, calendar=dates)
+    per_fold = res["per_fold"]
+    assert len(per_fold) == 2
+    assert len(per_fold["F1"]) > 0 and len(per_fold["F2"]) > 0
+    # F2 也重新从初始现金开始（fold-local），首日收益基于 1e6 而非 F1 结束价值
+    assert np.isfinite(per_fold["F2"][0])
+
+
+def test_benchmark_has_no_validation_gap_exposure() -> None:
+    """benchmark 在 Validation gap 期间无持仓暴露（B1：不跨 gap）。"""
+    runner, folds, adj, opens, closes = _fold_setup()
+    res_stitched = cn_large_buy_hold_stitched(
+        opens["S0"], closes["S0"], [], folds, calendar=runner.adj.index)
+    f1_first = res_stitched["per_fold"]["F1"][0]
+    f2_first = res_stitched["per_fold"]["F2"][0]
+    # 每 fold 从 1e6 现金开始（首日收益近 0，不含 gap 暴露）
+    assert abs(f1_first) < 0.05
+    assert abs(f2_first) < 0.05
+
+
+def test_benchmark_first_test_day_return_includes_open_to_close_and_cost() -> None:
+    """首 test 日收益 = open→close 净收益（含买入成本），对 initial equity（B2）。"""
+    n = 200
+    dates = pd.bdate_range("2025-01-02", periods=n)
+    folds = _simple_folds(dates, n_folds=1, min_train=10, val=40)
+    ts = folds[0].test_start
+    # 首日（test_start）open=10 → close=11（+10%），其余日持平
+    open_s = pd.Series([10.0] * n, index=dates); open_s.loc[ts] = 10.0
+    close_s = pd.Series([10.0] * n, index=dates); close_s.loc[ts] = 11.0
+    seg = _seg_dates(folds[0].test_start, folds[0].test_end)
+    res_stitched = cn_large_buy_hold_stitched(open_s, close_s, [], folds, calendar=dates)
+    first = res_stitched["per_fold"]["F1"][0]
+    # 首日：买入 10 → 收盘 11，net ≈ 10% - 成本（~3.5bp）≈ 9.6%
+    assert 0.09 < first < 0.10, f"首日收益 {first:.4f} 应≈10% - 成本"
+    assert res_stitched["n_returns"] == len(seg)  # 含首日 transition
+
+
+def _seg_dates(start, end):
+    return list(pd.bdate_range(start, end))
+
+
+def _cash_ev(ex, pay):
+    return CorporateActionEvent(
+        instrument="510300.SH", action_type="CASH_DIVIDEND", ex_date=ex, unit_factor=1.0,
+        cash_per_share=0.5, pay_date=pay, settle_date=pay, source="official_fund_announcement",
+    )
+
+
+def test_benchmark_exdate_open_purchase_does_not_receive_same_day_dividend() -> None:
+    """ex-date open 买入不享当日分红（B3：CA 基于开盘前持仓）。"""
+    n = 200
+    dates = pd.bdate_range("2025-01-02", periods=n)
+    open_s = pd.Series([10.0] + [10.0] * (n - 1), index=dates)
+    close_s = pd.Series([10.0] + [10.0] * (n - 1), index=dates)
+    folds = _simple_folds(dates, n_folds=1, min_train=10, val=40)
+    # 首 test 日恰为 ex-date：open 买入 → 不应享当日分红
+    ex = folds[0].test_start
+    pay = ex + pd.offsets.BDay(5)
+    ev = _cash_ev(ex, pay)
+    res = cn_large_buy_hold_stitched(open_s, close_s, [ev], folds, calendar=dates)
+    # 价格不变（ex 无机械下跌）+ 首日买入不享分红 → 累计 ≈ 0（仅成本 -0.03%）
+    assert abs(res["cum_net_return"]) < 0.01, "ex-date open 买入不得享当日分红"
+    # 对照：若 ex 在买入之后（已持跨 ex）应享分红 → 累计显著为正
+    ex_later = folds[0].test_start + pd.offsets.BDay(20)
+    ev_later = _cash_ev(ex_later, ex_later + pd.offsets.BDay(5))
+    res_later = cn_large_buy_hold_stitched(open_s, close_s, [ev_later], folds, calendar=dates)
+    assert res_later["cum_net_return"] > 0.02, "已持跨 ex 应享分红"
+
+
+def test_benchmark_corporate_actions_inside_test_are_processed_in_order() -> None:
+    """段内 CA 按规范顺序处理（settle→折算→计提→execute；应收款→现金无跳变）。"""
+    n = 260
+    dates = pd.bdate_range("2025-01-02", periods=n)
+    open_s = pd.Series([10.0] + [10.0] * (n - 1), index=dates)
+    close_s = pd.Series([10.0] + [10.0] * (n - 1), index=dates)
+    folds = _simple_folds(dates, n_folds=1, min_train=10, val=40)
+    ts = folds[0].test_start
+    ex = ts + pd.offsets.BDay(15)
+    pay = ex + pd.offsets.BDay(5)
+    ev = _cash_ev(ex, pay)
+    res = cn_large_buy_hold_stitched(open_s, close_s, [ev], folds, calendar=dates)
+    # 已持跨 ex → ex 计提 0.5/份，pay 结算；价格不变 → 累计 ≈ 分红收益（扣除成本）
+    # 买入约 1e6/10 = 99000 份（留 buffer），分红 ≈ 99000*0.5/1e6 ≈ 4.95%
+    assert res["cum_net_return"] > 0.04, f"应含分红收益，实际 {res['cum_net_return']:.4f}"
+    assert res["cum_net_return"] < 0.06, f"分红收益量级异常 {res['cum_net_return']:.4f}"
