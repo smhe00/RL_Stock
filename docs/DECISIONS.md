@@ -26,3 +26,40 @@
 - 审计结论：复用 weight contract 与 S/A/T/R 分层概念；中国 ETF 核心模块在 `src/china_etf/` 自建；
   不深度依赖 upstream 运行时（其 requirements.txt 未声明 DRL 依赖）。
 - 详细证据见 `docs/review_packets/GATE_0_UPSTREAM_AUDIT.md`（待 Reviewer 批准）。
+
+### D-005 Canonical Weight Contract（Reviewer 强制）
+
+- 冻结唯一 Source of Truth：
+
+```python
+@dataclass(frozen=True)
+class TargetAssetWeights:
+    decision_time: pd.Timestamp
+    weights: pd.Series          # index=AssetSlot ID, value=target weight
+    metadata: Mapping[str, Any]
+```
+
+- 约束：`w_i >= 0`、`sum(w)=1`。上游 `StrategyResult.weights` 仅为 `pd.DataFrame`，无 concrete schema
+  （TradeExecutor 读 long-form `gvkey/weight`，BacktestEngine 要 wide-form `date×ticker`，二者不一致）。
+- 所有下游（Backtest/Paper/Live）只能从 `TargetAssetWeights` 转换：
+  `to_backtest_frame()` → wide frame；`InstrumentSelector` → `TargetInstrumentWeights`；
+  `FinRLXStrategyAdapter` → `StrategyResult`（上游边界兼容）。
+
+### D-006 FAIL CLOSED（Reviewer 强制安全规则）
+
+- 行情缺失/过期 → **NO ORDER**，reason=`QUOTE_UNAVAILABLE`。
+- 禁止复制上游行为：`_get_current_price()` 失败返回默认 `100.0`
+  （`trade_executor.py:394-404`、`alpaca_manager.py:507/575`）。
+
+### D-007 上游版本口径
+
+- 三口径并存：GitHub release `v1.0.0`（2026-03-25, `0b5b4235`）、master `e65d6f0`（2026-05-02）、
+  `setup.py version=2.0.2`。reproducibility 以 audited_commit 为准。
+
+### D-008 上游 BacktestEngine 定位
+
+- 仅作 reference / smoke comparison / compatibility adapter（D-008）。
+- 原因：`weight_signals.reindex(...).ffill()`（`backtest_engine.py:145-153`）与 `price_data.ffill()`（`:241`）
+  无法表达 ETF 未上市/港股休市/港股通 sell-only/停牌/QDII 溢价禁买/T+0/T+1/lot/next-open/cash 可用性。
+- Gate 2 之后中国 ETF 正式 OOS 以 `PortfolioAccounting + ExecutionSimulator/MockBroker +
+  CostModel + TradabilityMask` 为准。

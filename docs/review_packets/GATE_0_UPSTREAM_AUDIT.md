@@ -79,10 +79,20 @@ Reviewer 批准本 Gate 后进入 **Gate 1 — Data & Universe Audit**（EXECUTI
 
 ### 1. FinRL-X 当前正式版本与 commit？
 
-仓库 `AI4Finance-Foundation/FinRL-Trading`（README 标题 FinRL-X）。master HEAD =
-`e65d6f0483ead7d2ef4a5fc940cdf960392a25c1`（2026-05-02）。remote tag `v1.0.0` =
-`0b5b4235640e74cd6e59f374bb13b3779e898e57`（浅克隆未见对象，日期待完整 fetch 确认）。
-论文：`arXiv:2603.21330`。
+仓库 `AI4Finance-Foundation/FinRL-Trading`（README 标题 FinRL-X）。论文：`arXiv:2603.21330`。
+
+存在 **三个不同版本口径**，不得混用：
+
+```yaml
+upstream:
+  github_latest_release: v1.0.0          # "FinRL-X: Initial Public Release" (2026-03-25)
+  github_release_commit: 0b5b4235640e74cd6e59f374bb13b3779e898e57
+  audited_branch: master
+  audited_commit: e65d6f0483ead7d2ef4a5fc940cdf960392a25c1   # 2026-05-02
+  package_metadata_version: 2.0.2        # setup.py:27
+```
+
+项目 reproducibility 以 **audited_commit** 为准，而非版本字符串。
 
 ### 2. README 所说 PPO/SAC DRL allocator 实际代码在哪？
 
@@ -93,9 +103,16 @@ README Use Case 1 表（"DRL Allocator | Learning | PPO/SAC continuous weight ge
 
 ### 3. TD3 是否已在 FinRL-X 中存在？
 
-**否**。upstream 无 TD3 allocator 模块。`fundamental_portfolio_drl.py:559` 注释提到
-`td3_model, sac_model` 但依赖经典 finrl 的 DRLAgent；经典 FinRL/FinRL-Meta 的 DRLAgent
-明确支持 `a2c/ddpg/ppo/sac/td3`（已核实文档与 `OFF_POLICY_MODELS = ["ddpg","td3","sac"]`）。
+**并非完全不存在，而是存在 legacy training helper、当前未启用为正式 allocator。**
+
+- `src/strategies/rl_model.py:175` 存在 `train_td3(agent)`：`agent.get_model("td3", model_kwargs=TD3_PARAMS)`，
+  经经典 FinRL `DRLAgent` 调用 SB3 TD3（TD3_PARAMS: batch_size=100 / buffer_size=1e6 / learning_rate=0.001）。
+- 但 `run_models()` 中 `#td3_model = train_td3(agent)` 与 `#sac_model = train_sac(agent)` 被注释
+  （`rl_model.py:265-266`）；当前实际启用 A2C / PPO / DDPG（`:131/:154/:167`）。
+- 结论：**FinRL-X master 存在 TD3 legacy/helper training entry point，但没有启用状态的、
+  符合 `BaseStrategy.generate_weights()` contract 的正式 Portfolio Allocator。**
+- 经典 FinRL/FinRL-Meta DRLAgent 支持 `a2c/ddpg/ppo/sac/td3` 已另行核实
+  （文档与 `OFF_POLICY_MODELS = ["ddpg","td3","sac"]`）。
 
 ### 4. 若不存在，最小接入点是什么？
 
@@ -108,14 +125,36 @@ README Use Case 1 表（"DRL Allocator | Learning | PPO/SAC continuous weight ge
 `src/strategies/base_strategy.py:26`：
 `generate_weights(self, data: Dict[str, pd.DataFrame], target_date: Optional[str] = None) -> StrategyResult`。
 输出 `StrategyResult{strategy_name: str, weights: pd.DataFrame, metadata: Dict}`（`:8-15`）。
-**注意**：weights DataFrame 的具体形态（行=日期？列=标的？）上游未冻结，须在 china_etf 内
-统一冻结（建议：index=decision_date，columns=slot_id，行和=1），作为我们自己的 contract 扩展。
+
+**上游并未冻结 concrete weight schema**（详见 Q14）：TradeExecutor 隐含 long-form
+（`gvkey | weight`），BacktestEngine 隐含 wide-form（`index=dates, columns=tickers`），二者不一致。
+本项目必须冻结自己的 canonical contract（决策 D-005）：
+
+```python
+@dataclass(frozen=True)
+class TargetAssetWeights:
+    decision_time: pd.Timestamp
+    weights: pd.Series          # index=AssetSlot ID, value=target weight
+    metadata: Mapping[str, Any]
+```
+
+约束：`w_i >= 0`，`sum(w) = 1`。所有下游（Backtest / Paper / Live）只从该对象向下转换。
 
 ### 6. 当前 BacktestEngine 如何接受 weights？
 
 `src/backtest/backtest_engine.py` 用 `bt` 库，`BacktestConfig` 默认
 `rebalance_freq='Q'`、`transaction_cost=0.001`、`benchmark=['SPY','QQQ']`（`:33-53`），
 `bt.Backtest(... commissions=...)` 传入成本（`:317`）。无 A股日历、无 next-open 成交语义。
+
+接收格式为 **wide-form**：`weight_signals` 要求 `index=dates, columns=tickers`（`:132`），
+且内部执行 `weight_signals.reindex(...).ffill()`（`:145-153`）与 `price_data.ffill()`（`:241`）。
+该 ffill 语义无法表达：ETF 未上市、港股休市、港股通 sell-only、停牌、QDII 溢价禁买、
+T+0/T+1、lot size、next-open 成交、实际 cash availability。
+
+> **Reviewer 裁决（D-008）**：上游 BacktestEngine 仅作为 reference / smoke comparison /
+> compatibility adapter，不作为中国 ETF 正式 OOS 回测的 Source of Truth。
+> Gate 2 之后正式结果以本项目 `PortfolioAccounting + ExecutionSimulator/MockBroker +
+> CostModel + TradabilityMask` 为准。
 
 ### 7. transaction costs 当前在哪处理？
 
@@ -162,10 +201,25 @@ allocators 包装为 weights contract。三层：Env（训练）→ SB3 model �
 
 ### 14. 如何保证 Backtest 和 Live 使用同一个 weight contract？
 
-上游已以 `StrategyResult.weights` 为统一接口（TradeExecutor 与 BacktestEngine 都消费 weights）。
-我们按 EXECUTION_SPEC §52 冻结 `TargetAssetWeights / TargetInstrumentWeights / RiskDecision /
-TradabilityDecision / OrderPlan` 对象，Backtest（MockBroker）与 Live（QMTBrokerAdapter）共享同一
-OrderGenerator，禁止维护两套策略逻辑。
+**上游并不存在真正统一的 concrete weight schema**（Reviewer 修正项）：
+
+- `TradeExecutor._weights_to_orders()` 直接读 long-form：`row['gvkey']` / `row['weight']`
+  （`trade_executor.py:237-249`）；
+- `BacktestEngine.run_backtest()` 要求 wide-form：`index=dates, columns=tickers`（`backtest_engine.py:125-153`）。
+
+二者互不直接兼容，且 BacktestEngine 不直接消费 `StrategyResult`。因此：
+
+```text
+TargetAssetWeights（唯一 Source of Truth，D-005）
+        │
+        ├── to_backtest_frame()        → date × asset/instrument wide frame
+        ├── InstrumentSelector         → TargetInstrumentWeights
+        └── FinRLXStrategyAdapter      → StrategyResult（上游边界兼容）
+```
+
+按 EXECUTION_SPEC §52 冻结 `TargetAssetWeights / TargetInstrumentWeights / RiskDecision /
+TradabilityDecision / OrderPlan`；Backtest（MockBroker）与 Live（QMTBrokerAdapter）共享同一
+OrderGenerator。禁止 Backtest schema 与 Live schema 各自成为 Source of Truth，禁止维护两套策略逻辑。
 
 ### 15. 当前 upstream tests 覆盖哪些部分？
 

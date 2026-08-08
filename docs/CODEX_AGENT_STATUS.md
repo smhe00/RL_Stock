@@ -4,10 +4,11 @@
 
 ## Current Phase
 
-Phase 0 — Upstream & Feasibility Audit（Gate 0 已完成，等待复核）
+Phase 1 — Data & Universe Audit（Gate 1，进行中）
 
 ## Last completed task
 
+- 2026-08-08：Gate 0 corrections 完成（Reviewer: APPROVED_WITH_REQUIRED_CORRECTIONS → CORRECTIONS_COMPLETE）
 - 2026-08-08：Gate 0 上游审计完成 → `docs/review_packets/GATE_0_UPSTREAM_AUDIT.md`
 - 2026-08-08：仓库骨架建立（独立 git 仓、docs/config/src 目录、QMT 参考代码拷贝、初始配置草稿）
 
@@ -21,11 +22,13 @@ Phase 0 — Upstream & Feasibility Audit（Gate 0 已完成，等待复核）
 
 ## Current Gate
 
-Gate 0 — FinRL-X upstream architecture audit（COMPLETED，等待 Reviewer 复核）
+Gate 0 — APPROVED_WITH_REQUIRED_CORRECTIONS → CORRECTIONS_COMPLETE（`GATE_0_CORRECTIONS.md`）
+
+Gate 1 — Data & Universe Audit（AUTHORIZED，进行中）
 
 ## Blockers
 
-等待 Reviewer 对 `GATE_0_UPSTREAM_AUDIT.md` 复核与批准。
+无。
 
 ## Deviations
 
@@ -33,7 +36,8 @@ Gate 0 — FinRL-X upstream architecture audit（COMPLETED，等待 Reviewer 复
 
 ## Next intended step
 
-Reviewer 批准后进入 Gate 1 — Data & Universe Audit（EXECUTION_SPEC §66）。
+完成 Gate 1：ETF 元数据/历史覆盖/代理设计/相关性初筛/03110.HK 与 513500 专项，
+产出 `GATE_1_DATA_UNIVERSE.md`，然后 STOP-GATE。
 
 ## Reviewer approval
 
