@@ -292,7 +292,8 @@ def test_exact_test_mask_steps_equal() -> None:
     expected = int(((cal >= f1.test_start) & (cal <= f1.test_end)).sum()) + \
                int(((cal >= f2.test_start) & (cal <= f2.test_end)).sum())
     assert mask["exact_test_date_count"] == expected
-    assert mask["strategy_stitched_steps"] == mask["benchmark_stitched_steps"] == expected
+    assert mask["strategy_stitched_steps"] == expected
+    assert "benchmark_stitched_steps" not in mask  # 评审 §3.1：已移除误导字段
     assert mask["first_test_date"] == str(f1.test_start.date())
     assert mask["last_test_date"] == str(f2.test_end.date())
     # val 日期被排除：mask 不含任何 val 段日期

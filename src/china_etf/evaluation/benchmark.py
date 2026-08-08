@@ -40,9 +40,10 @@ def exact_test_mask(folds, calendar=None) -> dict:
         vseg = _segment_days(f.val_start, f.val_end, calendar)
         val_dates.update(vseg)
     dates = sorted(all_dates)
+    # 评审 §3.1：benchmark_stitched_steps 已由 cn_large_buy_hold_stitched 独立生成，
+    # 此处不再暴露（避免误导为独立测量）。
     return {
         "strategy_stitched_steps": len(dates),
-        "benchmark_stitched_steps": len(dates),
         "exact_test_date_count": len(dates),
         "first_test_date": str(dates[0].date()) if dates else None,
         "last_test_date": str(dates[-1].date()) if dates else None,
@@ -70,7 +71,8 @@ def _ca_on(events: list[CorporateActionEvent], date: pd.Timestamp) -> list[Corpo
 
 
 def _ca_settle_on(events: list[CorporateActionEvent], date: pd.Timestamp) -> list[CorporateActionEvent]:
-    return [e for e in events if e.pay_date is not None and e.pay_date == date]
+    # 评审 §3.2：结算用 settle_date（与主环境一致），而非 pay_date
+    return [e for e in events if e.settle_date is not None and e.settle_date == date]
 
 
 def _apply_corporate_actions(acc: PortfolioAccounting, events: list[CorporateActionEvent], date: pd.Timestamp) -> None:
