@@ -15,6 +15,14 @@ decision: TARGETED_CORRECTIONS_REQUIRED
 response:
   path: docs/reviewer_responses/GATE_4_FEATURE_ABLATION_PREP_REVIEWER_RESPONSE.md
 
+roadmap_directive:
+  path: docs/reviewer_responses/ROADMAP_NON_RL_BASELINE_COMPARISON_DIRECTIVE.md
+  user_decision: DEFER_10_SEED_AND_PRIORITIZE_NON_RL_COMPARISON
+  ten_seed_status: REMOVED_FROM_ACTIVE_ROADMAP
+  rl_retraining: FORBIDDEN
+  after_current_corrections_priority: GATE_4_NON_RL_HORSE_RACE
+  feature_ablation_runs_priority: DEFERRED_BEHIND_NON_RL_HORSE_RACE
+
 passed:
   - F1_INTERNAL_FEATURE_FORMULAS
   - F_A1_LPM2_CODE
@@ -33,10 +41,14 @@ blocked:
 authorized_next:
   - GATE_4_FEATURE_ABLATION_PREP_CORRECTIONS
 
+planned_after_next_review:
+  - GATE_4_NON_RL_HORSE_RACE
+
 forbidden_next:
   - FEATURE_ABLATION_RUNS
   - GATE_4_FEATURE_DATA_READY
   - GATE_4_10_SEED_FORMAL
+  - RL_RETRAINING
   - OPTUNA
   - TEST_INFORMED_FEATURE_SELECTION
   - THEME_SLEEVE
@@ -49,5 +61,7 @@ notes:
   - Implement frozen VIX percentile as (rank-1)/(N-1) with explicit tie convention.
   - Synchronize FEATURE_ABLATION_SPEC.md with the already-approved F-A1/F-A2 code contracts.
   - Preserve legacy F0 normalization semantics; add parity test because legacy pandas std uses ddof=1 while new NumPy preprocessor currently uses ddof=0.
+  - User explicitly removed 10-seed formal from the active exploration roadmap due low marginal value versus compute cost.
+  - After the current correctness corrections pass review, prioritize deterministic/classical non-RL portfolio comparison. Existing RL must not be retrained.
 
-updated_at: 2026-08-09T03:47:00+08:00
+updated_at: 2026-08-09T04:05:00+08:00
