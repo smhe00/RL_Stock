@@ -8,10 +8,11 @@ venv/
 *.egg-info/
 
 # Data / experiment artifacts (EXECUTION_SPEC §55: runs 内容不入库)
-data/
-logs/
-runs/
-tmp/
+# 注意：锚定仓库根，避免误忽略 src/china_etf/data/（loader 研究序列模块）
+/data/
+/logs/
+/runs/
+/tmp/
 
 # Local secrets / overrides
 *.local.yaml

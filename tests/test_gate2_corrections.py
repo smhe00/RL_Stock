@@ -78,11 +78,19 @@ def make_env(
 
 
 def test_southbound_fee_03110_reviewer_numbers() -> None:
+    """GATE_4_PRECHECK F2：冻结 conservative 万3（NOT ACCOUNT-VERIFIED）。
+
+    notional=300,000 HKD；佣金 max(90,5)=90；交易费 16.95+SFC 8.10+AFRC 0.45
+    +结算 12.6（2025-06-30 后无钳制）=38.10；印花税 0；total=90+38.10+30+60=218.10。
+    """
     s = SouthboundETFCostModel()
     c = s.estimate("03110.HK", "buy", 10_000, 30.0)  # notional 300,000 HKD
     assert c.tax == 0.0  # 港股通 ETF 印花税暂免
-    assert c.exchange_fee == pytest.approx(16.95 + 8.10 + 0.45 + 6.00)
-    assert c.total == pytest.approx(136.50)
+    assert c.commission == pytest.approx(90.0)
+    assert c.exchange_fee == pytest.approx(16.95 + 8.10 + 0.45 + 12.60)
+    assert c.total == pytest.approx(218.10)
+    # F2 必须显式标注未账户核实
+    assert "NOT ACCOUNT-VERIFIED" in s.source
 
 
 def test_fee_metadata_present() -> None:
@@ -92,7 +100,10 @@ def test_fee_metadata_present() -> None:
         "UNKNOWN_PENDING_BROKER_FEE_AUDIT"
     )
     s = SouthboundETFCostModel()
-    assert s.effective_from == "2026-08-08" and s.source
+    # F1 研究期起点（2014-01-01）+ F2 conservative 元数据
+    assert s.effective_from == "2014-01-01" and s.source
+    assert s.broker_commission_rate == pytest.approx(0.0003)
+    assert s.broker_min_commission_hkd == pytest.approx(5.0)
     rule = FeeRule(
         name="AFRC", rate=0.0000015, minimum=None, maximum=None,
         currency="HKD", effective_from=pd.Timestamp("2026-08-08").date(),

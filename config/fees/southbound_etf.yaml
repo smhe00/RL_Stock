@@ -1,16 +1,41 @@
-# EXECUTION_SPEC §24 港股通 ETF 成本模型配置（草案）
-# 状态：pending verification — 以港交所/结算所最新费率与券商实际结算为准。
-broker_commission_rate: 0.00005
-hkex_trading_fee_rate: 0.0000565     # 交易费 0.00565%（待核实）
-regulatory_levy_rate: 0.000027       # 交易征费 0.0027%（待核实）
-stamp_duty_rate: 0.001               # 印花税 0.1%（双边，待核实最新政策）
+# EXECUTION_SPEC §24 港股通 ETF 成本模型配置（GATE_4_PRECHECK F1/F2 冻结）
+#
+# F2 券商佣金（NOT ACCOUNT-VERIFIED）：
+#   原 placeholder 0.00005（万0.5）低于市场默认（2025-2026 常见万2.5~万3）。
+#   冻结 conservative：佣金 0.0003（万3）双边 + 单笔最低 5 HKD。
+#   Gate 4 cost sensitivity 覆盖 1x/2x/3x。账户核实前不得当作确定事实。
+#
+# F1 历史分段费率（官方生效日；生效日前用 pre_rate）：
+#   交易费    0.005% → 0.00565%（2023-01-01，HKEX 通函 086/22）
+#   SFC 征费  0.003% → 0.0027% （2014-11-01）
+#   AFRC      0      → 0.00015%（2022-01-01）
+#   股份交收费 0.002%（min2/max100 HKD）→ 0.0042%（无上下限，2025-06-30）
+#   印花税    ETF 豁免 0（全程）；投资者赔偿/特别征费暂不征收
+broker_commission_rate: 0.0003
+broker_min_commission_hkd: 5.0
+broker_commission_account_verified: false
+
+hkex_trading_fee:
+  pre_rate: 0.00005
+  schedule:
+    - {effective: "2023-01-01", rate: 0.0000565}
+regulatory_levy:
+  pre_rate: 0.00003
+  schedule:
+    - {effective: "2014-11-01", rate: 0.000027}
+afrc_levy:
+  pre_rate: 0.0
+  schedule:
+    - {effective: "2022-01-01", rate: 0.0000015}
 settlement_fee:
-  rate: 0.00002
-  min_hkd: 2.0
-  max_hkd: 100.0
+  schedule:
+    - {effective: "2014-01-01", rate: 0.00002, min_hkd: 2.0, max_hkd: 100.0}
+    - {effective: "2025-06-30", rate: 0.000042, min_hkd: null, max_hkd: null}
+
+stamp_duty_rate: 0.0  # 港股通 ETF 印花税暂免（Reviewer 核实）
 fx_cost_model: pending
 spread_model: pending
 slippage_model: pending
 market_impact_model: pending
-effective_date: 2026-08-08
-source: hkex_ccass_rules_pending
+effective_from: "2014-01-01"
+source: "HKEX 通函 086/22 + SSE 港股通税费页 + HKSCC 股份交收费 (2025-06-30) + F2 conservative 万3 NOT ACCOUNT-VERIFIED"

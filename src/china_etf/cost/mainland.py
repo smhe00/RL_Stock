@@ -24,7 +24,10 @@ class MainlandETFCostModel:
     slippage_bps: float = 2.0  # 单边滑点（bps）
     impact_bps: float = 0.0  # Gate 2 不校准 market impact
     effective_from: str = "2026-08-08"
-    source: str = "user broker commission 万0.5 + config/fees/mainland_etf.yaml (pending broker verification)"
+    source: str = (
+        "user broker commission 万0.5 constant assumption (NOT ACCOUNT-VERIFIED for "
+        "historical period) + config/fees/mainland_etf.yaml"
+    )
 
     def estimate(
         self,

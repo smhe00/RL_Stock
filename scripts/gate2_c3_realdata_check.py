@@ -1,7 +1,17 @@
-"""GATE_2 CORRECTION — Carry-Forward C3 真实数据验证（510300/512890/511260/515070）。
+"""GATE_2/4 CORRECTION — Carry-Forward C3 真实数据验证。
+
+GATE_4_PRECHECK C3 修正（2026-08-08）：
+1. split 因子改为**累计**（现金分红事件不重置；原实现会在折算后的首次分红日
+   把 split 重置回 1.0，制造虚假 +170% 收益）；
+2. 分红现金为当前份额口径，×split 换算到旧股口径再相加（折算后分红不被放大）。
 
 用 QMT raw 收盘价 + get_divid_factors 事件表构造 total-return，
-与 QMT front（前复权）收益在事件日对比，验证 corporate-action 事件驱动正确。
+与 QMT front（前复权）收益在事件日对比。结论（独立来源 Sina 已验证）：
+- QMT front 对单事件品种（512890/513500/512100）与官方 TR 一致（≤8bp）；
+- 510300 事件日偏差 13.8bp（2023-01-16）为 front 自身调整口径，非记账错误；
+- QMT front 对 510300 存在**非事件日**系统性放大（2015-07-08 显示 -12.48%，
+  超过 ±10% 涨跌停；2012-2026 累计高估 +4464bp）→ 生产研究序列改用 raw+事件 TR。
+
 只读研究脚本（脚本层允许接触 xtquant；研究核心 src/china_etf/ 不 import xtquant）。
 """
 
@@ -20,6 +30,8 @@ CHECKS = [
     ("512890.SH", "CN_DIVIDEND 送股(2021-10)"),
     ("511260.SH", "CN_DURATION 季度分配"),
     ("515070.SH", "AI 份额折算(早期 0.5 因子)"),
+    ("512100.SH", "CN_SMALL 折算(2022-09) + 后续分红"),
+    ("513500.SH", "US_BROAD 送股(2022-03)"),
 ]
 
 
@@ -46,7 +58,9 @@ def main() -> None:
         ).dt.tz_localize(None).dt.normalize()
         ev = ev.set_index("time")
         cash = ev["interest"].reindex(raw.index).fillna(0.0)
-        split = (1.0 + ev["stockBonus"] + ev["stockGift"]).reindex(raw.index).ffill().fillna(1.0)
+        # C3 修正：split = 累计因子（现金分红事件 per=1.0，不重置折算因子）
+        per = (1.0 + ev["stockBonus"] + ev["stockGift"]).reindex(raw.index).fillna(1.0)
+        split = per.cumprod()
         tr = total_return_with_events(raw, cash_distribution=cash, split_factor=split)
         front_ret = front / front.shift(1) - 1.0
         raw_ret = raw / raw.shift(1) - 1.0

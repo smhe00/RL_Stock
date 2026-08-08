@@ -51,3 +51,86 @@ def test_515070_adjustment_event_no_future_leak() -> None:
     assert np.isclose(r1, 0.02)
     # 若用 raw（无调整），折算日收益为 -50% —— 这正是 C3 禁止的
     assert not np.isclose(raw.iloc[1] / raw.iloc[0] - 1.0, 0.0)
+
+
+def test_conversion_then_cash_dividend_not_inflated() -> None:
+    """GATE_4_PRECHECK C3：份额折算(1:0.36555) 后的现金分红不能被 1/split 放大。
+
+    构造 512100 型事件序列：折算日 raw 跳 2.76x（中性），之后分红 0.037/份。
+    若现金不按 split 换算，分红收益会被错误放大 1/0.36555≈2.74 倍。
+    """
+    idx = pd.to_datetime(
+        ["2022-09-01", "2022-09-05", "2025-01-14", "2025-01-15", "2025-01-16"]
+    )
+    raw = pd.Series([1.0, 2.76, 2.80, 2.72, 2.75], index=idx)
+    # 累计 split：折算日 1→0.36555（1:0.36555），现金分红不改变
+    split = pd.Series([1.0, 0.36555, 0.36555, 0.36555, 0.36555], index=idx)
+    cash = pd.Series([0.0, 0.0, 0.0, 0.037, 0.0], index=idx)
+    tr = total_return_with_events(raw, cash_distribution=cash, split_factor=split)
+    # 折算日（2022-09-05）：2.76*0.36555/1.0 - 1 ≈ +0.9%（中性，仅真实行情）
+    conv_day = tr.loc[idx[1]]
+    assert abs(conv_day - (2.76 * 0.36555 / 1.0 - 1.0)) < 1e-9
+    # 分红日（2025-01-15）：收益 ≈ 0.037/2.80 的水平（不被放大）
+    div_day = tr.loc[idx[3]]
+    # (2.72*0.36555 + 0.037*0.36555)/(2.80*0.36555) - 1 = 2.757/2.80 - 1 ≈ -1.54%
+    assert abs(div_day - (2.757 / 2.80 - 1.0)) < 1e-9
+    # 关键断言：分红贡献 ≈ 1.32%（≈0.037/2.80），而非 ≈3.6%（被放大 1/split 的错误值）
+    div_contrib = div_day + (2.80 - 2.72) / 2.80  # 剔除价格变动后的分红贡献
+    assert abs(div_contrib - 0.037 / 2.80) < 1e-9
+    assert not np.isclose(div_contrib, 0.037 / 2.80 / 0.36555)
+
+
+def test_split_cumulative_not_reset_by_cash_event() -> None:
+    """GATE_4_PRECHECK C3：累计 split 因子在纯现金分红事件不得重置回 1.0。"""
+    idx = pd.to_datetime(["2022-09-05", "2023-01-03", "2025-01-15", "2025-01-16"])
+    raw = pd.Series([2.76, 2.80, 2.72, 2.75], index=idx)
+    # 错误实现（旧 gate2 脚本）：per-event ffill 会把现金事件(per=1.0)后的 split 重置
+    per_event = pd.Series([0.36555, 1.0, 1.0, 1.0], index=idx)
+    bad_split = per_event.reindex(idx).ffill().fillna(1.0)
+    good_split = per_event.cumprod()
+    assert bad_split.iloc[1] == 1.0  # 旧逻辑：折算因子被"重置"
+    assert abs(good_split.iloc[1] - 0.36555) < 1e-9  # 新逻辑：保持累计
+
+
+def test_loader_cn_large_uses_raw_plus_events_not_front() -> None:
+    """GATE_4_PRECHECK C3：研究序列 = raw + 官方事件 TR，而非 QMT front。
+
+    QMT front 在 2015-07-08 显示 -12.48%（超过 ±10% 涨跌停，系统性失真）；
+    raw+事件序列在该日必须 ≈ -10%。
+    """
+    from china_etf.data.loader import load_research_adj
+
+    cn = load_research_adj()["CN_LARGE"].dropna()
+    d = pd.Timestamp("2015-07-08")
+    prev = cn.index[cn.index < d][-1]
+    ret = cn.loc[d] / cn.loc[prev] - 1.0
+    assert -0.105 < ret < -0.095, f"2015-07-08 research return={ret:.4f} (应为 ≈-10%，非 front 的 -12.48%)"
+
+
+def test_loader_cn_large_full_history_matches_official_tr() -> None:
+    """GATE_4_PRECHECK C3：510300 全周期累计研究收益 ≈ 官方事件 TR（+130.9%），
+    而非 QMT front 的 +175.6%（+4464bp 高估）。"""
+    from china_etf.data.loader import load_research_adj
+
+    cn = load_research_adj()["CN_LARGE"].dropna()
+    cum = cn.iloc[-1] / cn.iloc[0] - 1.0
+    assert 1.25 < cum < 1.36, f"CN_LARGE 全周期累计={cum:.4f}（官方 TR ≈ 1.309）"
+
+
+def test_loader_hk_dividend_includes_official_distributions() -> None:
+    """GATE_4_PRECHECK H1：03110 研究序列必须包含官方派息。
+
+    sina qfq==raw（无分红调整），2025-09-24 除息日原序列收益 -5.05%；
+    修正后（raw + Global X 官方派息 1.60 HKD）该日研究收益应 ≈ +0.3%。
+    """
+    from china_etf.data.loader import load_research_adj
+
+    adj = load_research_adj()
+    hk = adj["HK_DIVIDEND"].dropna()
+    d = pd.Timestamp("2025-09-24")
+    prev = hk.index[hk.index < d][-1]
+    ret = hk.loc[d] / hk.loc[prev] - 1.0
+    assert ret > -0.02, f"2025-09-24 HK_DIVIDEND return={ret:.4f}（应包含 1.60 派息，≈+0.3%）"
+    # 累计收益合理性：2013-06 以来总收益明显高于 raw 价（含 19 次派息）
+    cum = hk.iloc[-1] / hk.iloc[0] - 1.0
+    assert cum > 1.0, f"HK_DIVIDEND 全周期累计={cum:.4f}"
