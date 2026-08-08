@@ -27,7 +27,7 @@ rl_training_runs: 36
 
 # 2. Git Commit
 
-`GATE_4_3_SEED_PILOT` 提交 SHA：**（commit 后填写）**
+`GATE_4_3_SEED_PILOT` 提交 SHA：**`8081d01`**（实现 runner 在 `78eb297`）
 
 包含：
 

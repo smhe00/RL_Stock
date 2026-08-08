@@ -58,7 +58,7 @@ Phase 4 — GATE_4_3_SEED_PILOT 完成（36/36 runs 通过）→ `GATE_4_3_SEED_
 
 ## Current branch / commit
 
-`main` @ `GATE_4_3_SEED_PILOT commit SHA（待 commit 后回填）`（此前 `78eb297`；remote: origin → GitHub smhe00/RL_Stock）
+`main` @ `8081d01`（GATE_4_3_SEED_PILOT 结果；此前 `78eb297`；remote: origin → GitHub smhe00/RL_Stock）
 
 ## Tests
 
