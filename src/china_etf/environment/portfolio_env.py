@@ -1,0 +1,120 @@
+"""ChinaETFPortfolioEnv（EXECUTION_SPEC §32/§34；Reviewer §16.8）。
+
+Gate 2 范围：11 Core、action dim=11、long-only、无杠杆、无 Theme Sleeve。
+时序：T 日收盘决策 → T+1 开盘成交（禁止同日收盘成交）。
+Reward V1 (R0)：r_t = log(V_{t+1}^{net} / V_t^{net})，已扣全部成本。
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+import numpy as np
+import pandas as pd
+
+from ..accounting import PortfolioAccounting
+from ..contracts import TargetAssetWeights, TargetInstrumentWeights, softmax_weights
+from ..execution.broker.mock import MockBroker
+from ..execution.order_generator import OrderGenerator
+
+
+@dataclass
+class EnvStep:
+    t: pd.Timestamp
+    t_next: pd.Timestamp
+    value_before: float
+    value_after: float
+    net_return: float
+    reward: float
+    fees_paid: float
+    fills: list = field(default_factory=list)
+
+
+class ChinaETFPortfolioEnv:
+    def __init__(
+        self,
+        *,
+        slots: list[str],
+        adj_close: pd.DataFrame,  # columns=slot, 复权收盘（研究收益）
+        open_prices: dict[str, pd.Series],  # instrument -> 原始开盘价（执行）
+        close_prices: dict[str, pd.Series],  # instrument -> 原始收盘价（执行/现金）
+        initial_cash: float,
+        broker: MockBroker,
+        order_generator: OrderGenerator,
+        slot_to_instrument: dict[str, str],
+    ) -> None:
+        self.slots = list(slots)
+        self.action_dim = len(self.slots)
+        self.adj = adj_close
+        self.open_prices = open_prices
+        self.close_prices = close_prices
+        self.broker = broker
+        self.order_generator = order_generator
+        self.slot_to_instrument = slot_to_instrument
+        self.accounting = PortfolioAccounting(initial_cash=initial_cash)
+        self.calendar = sorted(adj_close.index)
+        self._i = 0
+        self._weights = pd.Series(
+            np.full(len(slots), 1.0 / len(slots)), index=slots
+        )
+
+    def reset(self) -> np.ndarray:
+        self._i = 0
+        self.accounting = PortfolioAccounting(initial_cash=self.accounting.cash)
+        self._weights = pd.Series(
+            np.full(len(self.slots), 1.0 / len(self.slots)), index=self.slots
+        )
+        return self._observe(self.calendar[self._i])
+
+    def _observe(self, t: pd.Timestamp) -> np.ndarray:
+        from ..features.etf_features import state_vector
+
+        return state_vector(self.adj, self._weights, t)
+
+    def step(self, raw_action: np.ndarray) -> tuple[np.ndarray, float, bool, dict]:
+        if self._i >= len(self.calendar) - 1:
+            return self._observe(self.calendar[-1]), 0.0, True, {}
+        t = self.calendar[self._i]
+        t_next = self.calendar[self._i + 1]
+        weights = softmax_weights(raw_action, self.slots)
+        self._weights = weights
+        v_before = self.accounting.snapshot(t, self._close_marks(t), self._fx()).portfolio_value
+
+        target_asset = TargetAssetWeights(decision_time=t, weights=weights)
+        inst_w = pd.Series(
+            {self.slot_to_instrument[s]: w for s, w in weights.items()},
+        )
+        target_inst = TargetInstrumentWeights(decision_time=t, weights=inst_w)
+        close_marks = self._close_marks(t)
+        orders = self.order_generator.plan(
+            target_inst, accounting=self.accounting, close_prices=close_marks
+        )
+        fills = self.broker.execute_plan(
+            orders, execution_date=t_next, accounting=self.accounting
+        )
+        v_after = self.accounting.snapshot(t_next, self._close_marks(t_next), self._fx()).portfolio_value
+        net_return = v_after / v_before - 1.0
+        reward = float(np.log(v_after / v_before))
+        step = EnvStep(
+            t=t,
+            t_next=t_next,
+            value_before=v_before,
+            value_after=v_after,
+            net_return=net_return,
+            reward=reward,
+            fees_paid=self.accounting.fees_paid,
+            fills=fills,
+        )
+        self._i += 1
+        return self._observe(t_next), reward, self._i >= len(self.calendar) - 1, {"step": step}
+
+    def _close_marks(self, t: pd.Timestamp) -> dict[str, float]:
+        out: dict[str, float] = {}
+        for inst, series in self.close_prices.items():
+            valid = series[series.index <= t]
+            if not valid.empty:
+                out[inst] = float(valid.iloc[-1])
+        return out
+
+    def _fx(self) -> dict[str, float]:
+        return {inst: 1.0 for inst in self.close_prices}

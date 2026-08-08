@@ -99,3 +99,21 @@ class TargetAssetWeights:
 
 - 511360 = `risk_class=SHORT_CREDIT, cash_equivalent=false`；与 Broker Cash 分开。
 - preferred 暂不更换；切换 511880/511990 等货币 ETF 需 RFC。
+
+### D-015 Gate 1 验收 + Carry-Forward 登记（2026-08-08）
+
+- `GATE_1 = APPROVED_WITH_CARRY_FORWARD_CONDITIONS`；`GATE_2 = AUTHORIZED`。
+- **C1**：03110 当日回转规则未完成官方验证 → `same_day_reversal=UNKNOWN_PENDING_RULE_VERIFICATION`，
+  Instrument Master 保留 unknown；Gate 6 前完成 HKEX/Southbound 规则 + 券商能力验证。
+- **C2**：未验证 proxy（HSHYLDI/中债国债总财富/H30184/930713/H30590/931152/399967 等）：
+  `PROXY_STATUS != VERIFIED → STRICT_PIT_PIPELINE = FORBIDDEN`；Gate 2 只用真实 ETF 历史；
+  Proxy 审计在 Gate 3（RL Sanity）前完成。
+- **C3**：QMT front/qfq 不得当作 Point-in-Time Truth；Gate 2 实现
+  `test_adjustment_point_in_time_semantics`（510300/512890/511260/515070），
+  内部数据层保留 `raw_market_price / distribution_cash / split_factor / conversion_factor`，
+  研究收益用 TR 公式（含现金分红与拆分因子），或已验证无未来信息的 total-return series。
+- Gate 2 范围：canonical contracts、PortfolioAccounting、MockBroker、CostModel skeleton、
+  Tradability、PremiumGuard（接口+新鲜度+fail-closed）、FX skeleton、ChinaETFPortfolioEnv(11)。
+- Gate 2 禁止：TD3/SAC/PPO 性能比较、Optuna、多种子研究、Theme Sleeve、真实 QMT 下单、
+  动态 Instrument 排序、未验证 proxy 进严格 PIT。
+- Gate 2 报告要求：任何 correlation/stress 数字必须附带 overlap N 与日期区间（不依赖本地 CSV）。
