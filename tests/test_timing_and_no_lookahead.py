@@ -12,7 +12,7 @@ from china_etf.features.etf_features import per_asset_features
 from china_etf.cost.mainland import MainlandETFCostModel
 
 
-def _make_env(n=130, seed=7):
+def _make_env(n=300, seed=7):
     rng = np.random.default_rng(seed)
     dates = pd.bdate_range("2026-01-02", periods=n)
     slots = ["CN_LARGE", "GOLD", "CN_DURATION", "CASH_LIKE", "CHINEXT",
@@ -48,6 +48,7 @@ def test_action_dim_and_obs_shape() -> None:
     obs = env.reset()
     assert env.action_dim == 11
     assert obs.shape == (8 * 11 + 11 + 5,)
+    assert np.isfinite(obs).all()
 
 
 def test_fill_at_next_open_not_same_close() -> None:
@@ -56,15 +57,16 @@ def test_fill_at_next_open_not_same_close() -> None:
     raw = np.zeros(11)
     obs, reward, done, info = env.step(raw)
     step = info["step"]
-    assert step.t_next == env.calendar[1]
-    assert step.t == env.calendar[0]
+    i0 = env._i - 1
+    assert step.t == env.calendar[i0]
+    assert step.t_next == env.calendar[i0 + 1]
     # 成交价 = T+1 开盘价（open ≈ 0.999 * close），而非 T 收盘价
     for f in step.fills:
-        expected_open = env.open_prices[f.instrument].iloc[1]
+        expected_open = env.open_prices[f.instrument].iloc[i0 + 1]
         assert np.isclose(f.price, expected_open)
     # 禁止同日收盘成交：成交价必须等于 T+1 开盘价（而非 T 收盘价）
     for f in step.fills:
-        close_t = env.close_prices[f.instrument].iloc[0]
+        close_t = env.close_prices[f.instrument].iloc[i0]
         assert not np.isclose(f.price, close_t)
 
 

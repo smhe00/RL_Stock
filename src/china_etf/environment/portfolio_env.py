@@ -13,7 +13,12 @@ import numpy as np
 import pandas as pd
 
 from ..accounting import PortfolioAccounting
-from ..contracts import TargetAssetWeights, TargetInstrumentWeights, softmax_weights
+from ..contracts import (
+    EnvironmentMode,
+    TargetAssetWeights,
+    TargetInstrumentWeights,
+    softmax_weights,
+)
 from ..execution.broker.mock import MockBroker
 from ..execution.order_generator import OrderGenerator
 
@@ -42,6 +47,8 @@ class ChinaETFPortfolioEnv:
         broker: MockBroker,
         order_generator: OrderGenerator,
         slot_to_instrument: dict[str, str],
+        mode: str = EnvironmentMode.METHOD_RESEARCH,
+        min_history: int = 252,
     ) -> None:
         self.slots = list(slots)
         self.action_dim = len(self.slots)
@@ -51,25 +58,56 @@ class ChinaETFPortfolioEnv:
         self.broker = broker
         self.order_generator = order_generator
         self.slot_to_instrument = slot_to_instrument
+        self.mode = mode
+        self.min_history = min_history
+        # 研究模式不启用实时 PremiumGuard（历史无 IOPV）；PAPER/LIVE fail-closed
+        self.broker.premium_enforced = mode in (EnvironmentMode.PAPER, EnvironmentMode.LIVE)
         self.accounting = PortfolioAccounting(initial_cash=initial_cash)
         self.calendar = sorted(adj_close.index)
         self._i = 0
-        self._weights = pd.Series(
-            np.full(len(slots), 1.0 / len(slots)), index=slots
-        )
+        self._warmup_index = self._find_warmup_index()
+        self._weights = pd.Series(np.zeros(len(slots)), index=slots)
 
     def reset(self) -> np.ndarray:
-        self._i = 0
+        self._i = int(self._warmup_index)
         self.accounting = PortfolioAccounting(initial_cash=self.accounting.cash)
-        self._weights = pd.Series(
-            np.full(len(self.slots), 1.0 / len(self.slots)), index=self.slots
-        )
+        self._weights = pd.Series(np.zeros(len(self.slots)), index=self.slots)
         return self._observe(self.calendar[self._i])
+
+    def _find_warmup_index(self) -> int:
+        """Reviewer §21/§22：warm-up 期后 observation 必须全 finite；禁止 NaN 静默填 0。"""
+        from ..features.etf_features import state_vector
+
+        for i in range(max(0, self.min_history - 1), len(self.calendar)):
+            obs = state_vector(self.adj, pd.Series(np.zeros(len(self.slots)), index=self.slots), self.calendar[i])
+            if np.isfinite(obs).all():
+                return i
+        raise ValueError(
+            f"no fully-finite observation within calendar (slots={len(self.slots)}, "
+            f"min_history={self.min_history}, calendar_len={len(self.calendar)})"
+        )
+
+    def _actual_weights(self, t: pd.Timestamp) -> pd.Series:
+        """Reviewer §7/§8：observation 必须用实际持仓权重（实际成交后），而非 target。
+        cash 隐含在残差 1 - Σw_actual。"""
+        marks = self._close_marks(t)
+        snap = self.accounting.snapshot(t, marks, self._fx())
+        v = snap.portfolio_value
+        out = pd.Series(0.0, index=self.slots, dtype=float)
+        for slot in self.slots:
+            inst = self.slot_to_instrument[slot]
+            if inst in snap.positions and v > 0:
+                out[slot] = snap.positions[inst] * marks.get(inst, 0.0) / v
+        return out
 
     def _observe(self, t: pd.Timestamp) -> np.ndarray:
         from ..features.etf_features import state_vector
 
-        return state_vector(self.adj, self._weights, t)
+        actual = self._actual_weights(t)
+        obs = state_vector(self.adj, actual, t)
+        if not np.isfinite(obs).all():
+            raise ValueError(f"observation contains non-finite values at {t}")
+        return obs
 
     def step(self, raw_action: np.ndarray) -> tuple[np.ndarray, float, bool, dict]:
         if self._i >= len(self.calendar) - 1:

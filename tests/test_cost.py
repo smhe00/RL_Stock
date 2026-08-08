@@ -35,10 +35,22 @@ def test_southbound_cost_components() -> None:
     s = SouthboundETFCostModel()
     c = s.estimate("03110.HK", "buy", 10_000, 30.0)  # notional 300,000 HKD
     assert c.commission == pytest.approx(300_000 * 0.00005)
-    # 交易所费 0.00565% + 征费 0.0027% + 股份交收费(6.0 HKD，在 min/max 内)
-    assert c.exchange_fee == pytest.approx(300_000 * (0.0000565 + 0.000027) + 6.0)
-    assert c.tax == pytest.approx(300_000 * 0.001)
+    # 交易所费 0.00565% + SFC 征费 0.0027% + AFRC 0.00015% + 股份交收费(6.0，在 min/max 内)
+    assert c.exchange_fee == pytest.approx(
+        300_000 * (0.0000565 + 0.000027 + 0.0000015) + 6.0
+    )
+    # 港股通 ETF 印花税暂免（Reviewer 核实）
+    assert c.tax == 0.0
     assert c.total > c.commission + c.tax
+    # Reviewer 示例：total = 16.95 + 8.10 + 0.45 + 6.00 + 15.00 + 30.00 + 60.00 = 136.50
+    assert c.total == pytest.approx(136.50)
+
+
+def test_southbound_cost_converts_to_base() -> None:
+    s = SouthboundETFCostModel(fx_to_base=0.9)
+    c_hkd = SouthboundETFCostModel(fx_to_base=1.0).estimate("03110.HK", "buy", 10_000, 30.0)
+    c_cny = s.estimate("03110.HK", "buy", 10_000, 30.0)
+    assert c_cny.total == pytest.approx(c_hkd.total * 0.9)
 
 
 def test_cost_input_validation() -> None:

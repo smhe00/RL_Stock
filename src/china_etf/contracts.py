@@ -107,6 +107,13 @@ class PremiumDecision:
 
 @dataclass(frozen=True)
 class CostBreakdown:
+    """交易成本明细。
+
+    约定（D-017）：**所有字段一律为 base 币种**（SouthboundCostModel 在内部按
+    fx_to_base 折算后再返回）。Fill.price 为 reference 执行价；spread/slippage/impact
+    以显式现金成本计入本对象（禁止在成交价内再叠加，防 double count）。
+    """
+
     commission: float = 0.0
     exchange_fee: float = 0.0
     tax: float = 0.0
@@ -126,6 +133,15 @@ class CostBreakdown:
             + self.impact
             + self.fx_cost
         )
+
+
+class EnvironmentMode:
+    """环境运行模式（Reviewer §19）：决定 PremiumGuard / 可执行性语义。"""
+
+    METHOD_RESEARCH = "METHOD_RESEARCH"  # 资产槽位收益序列，无历史实时 IOPV → 不启用实时 PremiumGuard
+    INSTRUMENT_BACKTEST = "INSTRUMENT_BACKTEST"  # 真实 ETF 历史，PremiumGuard 不可忠实重建
+    PAPER = "PAPER"  # 实时价格 + IOPV + fail-closed
+    LIVE = "LIVE"  # 同 PAPER，真实下单（Gate 6+）
 
 
 @dataclass(frozen=True)

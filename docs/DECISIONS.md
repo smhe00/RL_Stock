@@ -133,3 +133,21 @@ class TargetAssetWeights:
   本项目 allocator 直接使用 SB3 + 自建 `ChinaETFPortfolioEnv`，不经经典 finrl legacy DRL 路径。
 - 上游 `strategies.base_strategy`（weight contract）可导入；`ml_strategy` 等需上游可选依赖，本项目不需要。
 - 锁定文件：`requirements-gate3.txt`。
+
+### D-017 执行摩擦与成本币种约定（Gate 2 修正冻结）
+
+- `Fill.price` = reference 执行价；spread/slippage/impact 以显式现金成本计入 `CostBreakdown`；
+  禁止成交价内隐含摩擦（防 double count）。
+- `CostBreakdown` 全部字段一律为 **base 币种**；SouthboundCostModel 内部按 `fx_to_base` 折算。
+- 港股通 ETF 印花税 = 0（暂免）；含 AFRC 0.00015%。
+- Mainland 0.004% 交易所经手费不直接叠加：`broker_commission_includes_exchange_fee=
+  UNKNOWN_PENDING_BROKER_FEE_AUDIT`（防 double count，Gate 4 前冻结）。
+- 费率规则带 `effective_from`/`source`（FeeRule），避免历史回测被当前费率污染。
+
+### D-018 EnvironmentMode（Reviewer §19）
+
+- 冻结 4 模式：`METHOD_RESEARCH / INSTRUMENT_BACKTEST / PAPER / LIVE`。
+- 研究模式不启用实时 PremiumGuard（历史无 IOPV）；PAPER/LIVE fail-closed。
+- Run Manifest 必须输出 mode 与 Slot→Instrument 映射。
+- C3 状态：`PARTIALLY_RESOLVED`（算法已用 QMT 真实事件验证 14/14；
+  正式关闭在真实 Data Loader 接入环境主循环时）。

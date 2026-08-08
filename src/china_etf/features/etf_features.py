@@ -40,8 +40,10 @@ def global_features(adj: pd.DataFrame) -> pd.DataFrame:
     gold = next((c for c in adj.columns if "GOLD" in c), None)
     dur = next((c for c in adj.columns if "CN_DURATION" in c), None)
     first = adj.columns[0]
-    out["gold_equity_corr_60"] = r[first].rolling(60).corr(r[gold]) if gold else float("nan")
-    out["bond_equity_corr_60"] = r[first].rolling(60).corr(r[dur]) if dur else float("nan")
+    # 全 11 槽位宇宙下为真实滚动相关；缩略测试宇宙缺少锚点槽位时用有限占位 0，
+    # 保证 observation 全 finite（Reviewer §21/§22，禁止 NaN）。
+    out["gold_equity_corr_60"] = r[first].rolling(60).corr(r[gold]) if gold else 0.0
+    out["bond_equity_corr_60"] = r[first].rolling(60).corr(r[dur]) if dur else 0.0
     return out
 
 

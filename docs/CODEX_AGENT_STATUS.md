@@ -8,6 +8,9 @@ Phase 2 — Environment & Accounting（Gate 2 已完成，等待复核）
 
 ## Last completed task
 
+- 2026-08-08：Gate 2 corrections 完成 → `docs/review_packets/GATE_2_CORRECTIONS.md`
+  （港股通印花税=0+AFRC、实际持仓观测、端到端/隔夜/无双算/暖机测试、EnvironmentMode、
+  C3 真实事件验证 14/14；40 测试全过）
 - 2026-08-08：Gate 3 依赖预装完成（只装不训练）：
   torch 2.7.1+cu118（GPU/1060 验证通过）、SB3 2.8.0、gymnasium 1.2.3、
   finrl 0.3.8@2334a5f、finrl-trading 2.0.2@e65d6f0；锁定文件 `requirements-gate3.txt`
@@ -36,11 +39,11 @@ Gate 0 — APPROVED_WITH_REQUIRED_CORRECTIONS → CORRECTIONS_COMPLETE（`GATE_0
 
 Gate 1 — **APPROVED**（`GATE_1_CORRECTIONS_REVIEWER_RESPONSE.md`）
 
-Gate 2 — Environment & Accounting（COMPLETED，等待 Reviewer 复核）
+Gate 2 — CORRECTIONS_COMPLETE（`GATE_2_CORRECTIONS.md`），等待 Reviewer 确认后才可进入 Gate 3
 
 ## Blockers
 
-等待 Reviewer 对 `GATE_2_ENVIRONMENT.md` 复核。
+等待 Reviewer 对 `GATE_2_CORRECTIONS.md` 复核。
 
 ## Deviations
 
@@ -51,7 +54,7 @@ Carry-Forward 条件（详见 DECISIONS.md）：
 
 ## Next intended step
 
-Gate 2 复核通过后进入 Gate 3 — First RL Sanity（单 fold / 单 seed，TD3/SAC/PPO）；
+Reviewer 确认 GATE_2_CORRECTIONS 后进入 Gate 3 — First RL Sanity（单 fold / 单 seed，TD3/SAC/PPO）；
 依赖已就绪（GPU CUDA 可用）。
 
 ## Reviewer approval

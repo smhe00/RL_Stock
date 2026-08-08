@@ -53,6 +53,7 @@ class MockBroker:
         self.open_prices = open_prices
         self.fx_rate = fx_rate
         self.minimum_quote_lot = minimum_quote_lot
+        self.premium_enforced: bool = False
         self.orders: list[Order] = []
         self.fills: list[Fill] = []
         self.rejects: list[tuple[Order, str]] = []
@@ -93,6 +94,14 @@ class MockBroker:
         if order.side == "sell" and not td.sell_allowed:
             self.rejects.append((order, "|".join(td.reason_codes)))
             return None
+        if order.side == "buy" and self.premium_enforced:
+            pd = self.premium_guard.evaluate(
+                order.instrument, execution_date, market_price=price,
+                iopv=None, iopv_ts=None,
+            )
+            if not pd.buy_allowed:
+                self.rejects.append((order, f"premium:{pd.reason}"))
+                return None
         cost = self.cost_model.estimate(order.instrument, order.side, order.quantity, price)
         self._seq += 1
         return Fill(
