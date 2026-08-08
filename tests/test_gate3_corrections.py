@@ -32,8 +32,9 @@ def test_action_transform_extreme_bounds() -> None:
     a = np.full(len(SLOTS), -1.0)
     a[0] = 1.0
     w = at.transform(a, T).weights
-    # 1 vs 10: e^1/(e^1+10e^-1) = e^2/(e^2+10) ≈ 0.4251
-    assert w.iloc[0] == pytest.approx(np.e ** 2 / (np.e ** 2 + 10), abs=1e-4)
+    # V2 score transform：+1→score1，-1→score0 → raw 100% 单资产
+    assert w.iloc[0] == pytest.approx(1.0, abs=1e-9)
+    assert (w.iloc[1:] == 0).all()
     assert np.isclose(w.sum(), 1.0)
 
 
@@ -46,6 +47,51 @@ def test_action_transform_is_monotonic() -> None:
     w1 = at.transform(a2, T).weights
     assert w1.iloc[0] > w0.iloc[0]
     assert (w1.iloc[1:] < w0.iloc[1:]).all()
+
+
+def test_action_zero_maps_equal_weight() -> None:
+    w = ActionTransform(SLOTS).transform(np.zeros(len(SLOTS)), T).weights
+    assert np.allclose(w.values, 1.0 / len(SLOTS))
+
+
+def test_action_minus_one_can_map_zero_weight() -> None:
+    at = ActionTransform(SLOTS)
+    a = np.full(len(SLOTS), 1.0)
+    a[3] = -1.0
+    w = at.transform(a, T).weights
+    assert w.iloc[3] == pytest.approx(0.0, abs=1e-12)
+
+
+def test_action_single_positive_can_create_sparse_raw_weight() -> None:
+    at = ActionTransform(SLOTS)
+    a = np.full(len(SLOTS), -1.0)
+    a[0] = 1.0
+    w = at.transform(a, T).weights
+    assert w.max() == pytest.approx(1.0, abs=1e-9)  # sparse
+
+
+def test_action_all_minus_one_fallback() -> None:
+    at = ActionTransform(SLOTS)
+    w = at.transform(np.full(len(SLOTS), -1.0), T).weights
+    assert at.last_fallback == "DEGENERATE_ACTION_FALLBACK"
+    assert np.allclose(w.values, 1.0 / len(SLOTS))
+    assert np.isfinite(w.values).all()
+
+
+def test_action_transform_no_nan() -> None:
+    at = ActionTransform(SLOTS)
+    rng = np.random.default_rng(0)
+    for _ in range(100):
+        w = at.transform(rng.uniform(-1, 1, len(SLOTS)), T).weights
+        assert np.isfinite(w.values).all() and np.isclose(w.sum(), 1.0)
+
+
+def test_action_transform_algorithm_neutral() -> None:
+    at = ActionTransform(SLOTS)
+    a = np.linspace(-1, 1, len(SLOTS))
+    w1 = at.transform(a, T).weights
+    w2 = at.transform(a.copy(), T).weights  # 同一输入 → 同一输出（与算法无关）
+    pd.testing.assert_series_equal(w1, w2)
 
 
 def test_action_space_is_normalized_symmetric() -> None:
@@ -139,6 +185,126 @@ def test_property_10000_random_actions() -> None:
         assert w.max() <= 0.25 + 1e-6
         assert w["CHINEXT"] + w["STAR"] <= 0.50 + 1e-6
         assert np.isclose(w.sum(), 1.0, atol=1e-6)
+
+
+def test_forced_risk_overlay_in_environment_transition() -> None:
+    """action=[1,-1,...]：raw max≈1.0 → post-risk ≤0.25 → actual 遵守执行语义。"""
+    from china_etf.contracts import EnvironmentMode
+    from china_etf.cost.mainland import MainlandETFCostModel
+    from china_etf.environment.portfolio_env import ChinaETFPortfolioEnv
+    from china_etf.execution.broker.mock import MockBroker
+    from china_etf.execution.order_generator import OrderGenerator
+    from china_etf.execution.premium import PremiumGuard
+    from china_etf.execution.tradability import TradabilityMask
+    from china_etf.risk.risk_overlay import RiskOverlayV0
+
+    slots = SLOTS  # 11 槽位，默认 overlay 0.25/0.50 可行
+    n = 400
+    dates = pd.bdate_range("2025-01-02", periods=n)
+    rng = np.random.default_rng(9)
+    adj = pd.DataFrame({s: pd.Series(100 * np.cumprod(1 + rng.normal(0.0002, 0.01, n)), index=dates) for s in slots})
+    broker = MockBroker(
+        tradability=TradabilityMask(), premium_guard=PremiumGuard(),
+        cost_model=MainlandETFCostModel(), open_prices={s: adj[s] * 0.999 for s in slots},
+    )
+    env = ChinaETFPortfolioEnv(
+        slots=slots, adj_close=adj,
+        open_prices={s: adj[s] * 0.999 for s in slots},
+        close_prices={s: adj[s] for s in slots},
+        initial_cash=1_000_000.0, broker=broker, order_generator=OrderGenerator(),
+        slot_to_instrument={s: s for s in slots},
+        mode=EnvironmentMode.METHOD_RESEARCH,
+        risk_overlay=RiskOverlayV0(slots),  # 默认 0.25/0.50
+    )
+    env.reset()
+    a = np.full(len(slots), -1.0)
+    a[0] = 1.0
+    _, _, _, info = env.step(a)
+    w = info["weights"]
+    assert w["raw_policy"].iloc[0] == pytest.approx(1.0, abs=1e-6)
+    assert w["post_risk"].max() <= 0.25 + 1e-6
+    assert w["actual"].max() <= 0.25 + 0.02  # 执行/价格漂移容忍
+
+
+# --- BLOCKER-B Observation Normalization V2 ---
+
+
+def _feature_frames(n=300, seed=4):
+    from china_etf.contracts import EnvironmentMode
+    from china_etf.environment.portfolio_env import ChinaETFPortfolioEnv
+    from china_etf.cost.mainland import MainlandETFCostModel
+    from china_etf.execution.broker.mock import MockBroker
+    from china_etf.execution.order_generator import OrderGenerator
+    from china_etf.execution.premium import PremiumGuard
+    from china_etf.execution.tradability import TradabilityMask
+    from china_etf.risk.risk_overlay import RiskOverlayV0
+
+    slots = SLOTS[:3]
+    dates = pd.bdate_range("2025-01-02", periods=n)
+    rng = np.random.default_rng(seed)
+    adj = pd.DataFrame({s: pd.Series(100 * np.cumprod(1 + rng.normal(0.0002, 0.01, n)), index=dates) for s in slots})
+    broker = MockBroker(
+        tradability=TradabilityMask(), premium_guard=PremiumGuard(),
+        cost_model=MainlandETFCostModel(), open_prices={s: adj[s] * 0.999 for s in slots},
+    )
+    env = ChinaETFPortfolioEnv(
+        slots=slots, adj_close=adj,
+        open_prices={s: adj[s] * 0.999 for s in slots},
+        close_prices={s: adj[s] for s in slots},
+        initial_cash=1_000_000.0, broker=broker, order_generator=OrderGenerator(),
+        slot_to_instrument={s: s for s in slots},
+        mode=EnvironmentMode.METHOD_RESEARCH,
+        risk_overlay=RiskOverlayV0(slots, single_core_max=0.5),
+    )
+    return env
+
+
+def test_scaler_fits_market_features_only_and_weights_not_normalized() -> None:
+    env = _feature_frames()
+    market = env.market_feature_frame()
+    mdim = 8 * len(env.slots) + 5
+    assert market.shape[1] == mdim
+    gym = ChinaETFGymEnv(env)
+    mean = market.mean().to_numpy()
+    std = market.std().to_numpy().clip(min=1e-8)
+    gym.set_market_scaler(mean, std)
+    obs, _ = gym.reset()
+    n = len(env.slots)
+    weight_pos = list(range(8 * n, 8 * n + n))
+    # 外生位置已标准化（无极端值）
+    assert np.abs(obs[gym._market_positions]).max() < 50.0
+    # portfolio weights 未归一化：初始无持仓 → 0
+    assert np.allclose(obs[weight_pos], 0.0)
+    # 权重维保持原始语义：跑一步后 ∈[0,1]
+    obs2, _, _, _, _ = gym.step(np.zeros(len(env.slots), dtype=np.float32))
+    assert ((obs2[weight_pos] >= -1e-6) & (obs2[weight_pos] <= 1.0 + 1e-6)).all()
+
+
+def test_scaler_uses_train_dates_only_and_eval_not_updating() -> None:
+    env = _feature_frames()
+    market = env.market_feature_frame()
+    # train-only：warmup 之后的前半段有效行（policy-independent、time-based）
+    warm = env._warmup_index
+    train_slice = market.iloc[warm : warm + (len(market) - warm) // 2]
+    assert train_slice.notna().all().all()  # 全 finite
+    mean = train_slice.mean().to_numpy()
+    std = train_slice.std().to_numpy().clip(min=1e-8)
+    gym = ChinaETFGymEnv(env)
+    gym.set_market_scaler(mean, std)
+    frozen = gym._scaler_mean.copy()
+    env.adj.iloc[-10:] *= 2.0
+    assert np.allclose(gym._scaler_mean, frozen)  # eval 不更新 scaler
+
+
+def test_scaler_save_load_exact() -> None:
+    env = _feature_frames()
+    market = env.market_feature_frame()
+    mean = market.mean().to_numpy()
+    std = market.std().to_numpy().clip(min=1e-8)
+    gym = ChinaETFGymEnv(env)
+    gym.set_market_scaler(mean, std)
+    np.testing.assert_allclose(gym._scaler_mean, mean, rtol=1e-6)
+    np.testing.assert_allclose(gym._scaler_std, std, rtol=1e-6)
 
 
 # --- BLOCKER-5 env API / check_env ---

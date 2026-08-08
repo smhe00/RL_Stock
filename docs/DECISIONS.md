@@ -180,3 +180,13 @@ class TargetAssetWeights:
 - 时序纪律：Train 早期 / Eval 最后 200 交易日 held-out，no shuffle。
 - Gym 语义：数据末尾 = truncated（terminated=False）。
 - 新延续项 H1：03110 sina qfq total-return 需与 Global X/HKEX 官方派息交叉验证（Gate 4 正式结论前）。
+
+### D-021 Gate 3 最终修正（Reviewer 2026-08-08）
+
+- ActionTransform V2：`score=(a+1)/2` 归一化（可表达 0 权重；消除 softmax 隐含下限；
+  全 -1 → 等权 fallback，reason=DEGENERATE_ACTION_FALLBACK）。
+- Observation 归一化 V2：仅 93 维外生特征（88 per-asset + 5 global）train-only scaler
+  （policy-independent，来自 train 有效外生特征矩阵）；11 维 actual weights 保持 [0,1]。
+- 时序 interval：Train=[start, eval_start) / Eval=[eval_start, end]，严格无重叠。
+- Track B 量化：共同 PIT 起点 2020-07-27（STAR/HSTECH 2020 上市），warmup 后 2021-07-22，
+  只比 Track A 多 208 交易日（≈0.8 年）→ 不作为主实验（Track A 主 + Track C 机制 + B1 交叉）。

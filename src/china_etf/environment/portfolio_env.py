@@ -112,6 +112,12 @@ class ChinaETFPortfolioEnv:
                 out[slot] = snap.positions[inst] * marks.get(inst, 0.0) / v
         return out
 
+    def market_feature_frame(self) -> pd.DataFrame:
+        """93 维外生特征（88 per-asset + 5 global），供 policy-independent train-only scaler。"""
+        parts = [self._per_features[s] for s in self.slots]
+        parts.append(self._global_feat)
+        return pd.concat(parts, axis=1)
+
     def _observe(self, t: pd.Timestamp) -> np.ndarray:
         actual = self._actual_weights(t)
         parts: list[np.ndarray] = []
