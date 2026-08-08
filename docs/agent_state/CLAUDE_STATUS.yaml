@@ -1,19 +1,19 @@
 protocol_version: 2
 actor: claude
-handoff_id: G4_FEATURE_ABLATION_PREP_002
+handoff_id: G4_FEATURE_ABLATION_RUNS_001
 state: READY_FOR_REVIEW
 
 gate: 4
-phase: GATE_4_FEATURE_ABLATION_PREP
-code_commit: eb8128f
-packet: docs/review_packets/GATE_4_FEATURE_ABLATION_PREP_002.md
+phase: GATE_4_FEATURE_ABLATION_RUNS
+code_commit: PENDING_SHA
+packet: docs/review_packets/GATE_4_FEATURE_ABLATION_RUNS.md
 
 progress:
-  current_task: prep re-affirmation after non-RL horse-race finalization (gate transition; prep re-validated on finalized eval path; no code change)
+  current_task: non-RL F1 factor-importance discovery (user-directed; no RL training; vol_ratio significant raw but F0-redundant)
 
 last_consumed_review:
-  handoff_id: G4_NON_RL_HORSE_RACE_FINALIZATION_001
+  handoff_id: G4_FEATURE_ABLATION_PREP_002
   decision: APPROVED
-  response: docs/reviewer_responses/GATE_4_NON_RL_HORSE_RACE_FINALIZATION_REVIEWER_RESPONSE.md
+  response: docs/reviewer_responses/GATE_4_FEATURE_ABLATION_PREP_002_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-09T08:10:00+08:00
+updated_at: 2026-08-09T08:40:00+08:00

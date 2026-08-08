@@ -1,0 +1,1105 @@
+{
+  "manifest": {
+    "gate": "4_FEATURE_ABLATION_RUNS",
+    "method": "NON_RL_F1_FACTOR_IMPORTANCE_DISCOVERY (user-directed; no RL training)",
+    "reference_strategies": [
+      "EqualWeight",
+      "RiskParity_IVOL",
+      "MinimumVariance"
+    ],
+    "f1_features": [
+      "corr_pc1_share_60",
+      "equity_bond_corr_change_20_60",
+      "equity_gold_corr_change_20_60",
+      "cn_us_corr_60",
+      "equity_vol_ratio_20_60",
+      "equity_downside_semivol_60"
+    ],
+    "n_panel_transitions": {
+      "EqualWeight": 475,
+      "RiskParity_IVOL": 475,
+      "MinimumVariance": 475
+    },
+    "folds": 4,
+    "started_at": "2026-08-09 07:05:28"
+  },
+  "importance": {
+    "corr_pc1_share_60": {
+      "per_strategy": {
+        "EqualWeight": {
+          "spearman_fwd_ret": 0.0007605014024263937,
+          "spearman_fwd_abs_ret": -0.0707671636276096,
+          "tercile_disc_fwd_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.001124078290099534,
+              "vol_fwd_ret_ann": 0.1313332861704803
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.0002546698274430032,
+              "vol_fwd_ret_ann": 0.12980211780161613
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.0015969316859262557,
+              "vol_fwd_ret_ann": 0.18782264868896917
+            },
+            "low_minus_high_mean": -0.00047285339582672174,
+            "mann_whitney_u": 12774.0,
+            "mann_whitney_p": 0.7196272344246233
+          },
+          "tercile_disc_fwd_abs_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.006423531351551291,
+              "vol_fwd_ret_ann": 0.0842892873230991
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.006118255324526178,
+              "vol_fwd_ret_ann": 0.08586154918625942
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.007309047643327006,
+              "vol_fwd_ret_ann": 0.14958593626268532
+            },
+            "low_minus_high_mean": -0.000885516291775715,
+            "mann_whitney_u": 12925.0,
+            "mann_whitney_p": 0.5858219751711256
+          }
+        },
+        "RiskParity_IVOL": {
+          "spearman_fwd_ret": 0.0018544499745267863,
+          "spearman_fwd_abs_ret": -0.06929486784720551,
+          "tercile_disc_fwd_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.0008824694980937304,
+              "vol_fwd_ret_ann": 0.09507670421633849
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.000268515326530649,
+              "vol_fwd_ret_ann": 0.09162074260866362
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.0012531003344032848,
+              "vol_fwd_ret_ann": 0.13959687430320117
+            },
+            "low_minus_high_mean": -0.0003706308363095544,
+            "mann_whitney_u": 12747.0,
+            "mann_whitney_p": 0.7446446351529057
+          },
+          "tercile_disc_fwd_abs_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.004665420307774595,
+              "vol_fwd_ret_ann": 0.060967774807542216
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.004275510093904143,
+              "vol_fwd_ret_ann": 0.06145675518175921
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.005355401152052439,
+              "vol_fwd_ret_ann": 0.11230332894518207
+            },
+            "low_minus_high_mean": -0.0006899808442778444,
+            "mann_whitney_u": 12929.0,
+            "mann_whitney_p": 0.5824386408910929
+          }
+        },
+        "MinimumVariance": {
+          "spearman_fwd_ret": -0.0016608535486146493,
+          "spearman_fwd_abs_ret": -0.0631221762522464,
+          "tercile_disc_fwd_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.0009962331041129585,
+              "vol_fwd_ret_ann": 0.10563286922087714
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.0002134371937132611,
+              "vol_fwd_ret_ann": 0.09586383371752268
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.0013301275092676354,
+              "vol_fwd_ret_ann": 0.15524881839472734
+            },
+            "low_minus_high_mean": -0.0003338944051546769,
+            "mann_whitney_u": 12807.0,
+            "mann_whitney_p": 0.6894558153121205
+          },
+          "tercile_disc_fwd_abs_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.0051729031813372,
+              "vol_fwd_ret_ann": 0.0679985354655939
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.004439020233817053,
+              "vol_fwd_ret_ann": 0.06484106887723909
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.006026192759039918,
+              "vol_fwd_ret_ann": 0.12385965789206214
+            },
+            "low_minus_high_mean": -0.0008532895777027183,
+            "mann_whitney_u": 12774.0,
+            "mann_whitney_p": 0.7196272344246233
+          }
+        }
+      },
+      "f0_residualization": {
+        "n_resid": 475,
+        "spearman_resid_fwd_abs_ret": -0.023482048382310956,
+        "spearman_resid_fwd_ret": 0.04404805759745604,
+        "spearman_raw_fwd_abs_ret": -0.0707671636276096,
+        "spearman_raw_fwd_ret": 0.0007605014024263937
+      },
+      "regime_response": {
+        "low": {
+          "n": 158,
+          "per_strategy_sharpe": {
+            "EqualWeight": 2.163719739042768,
+            "RiskParity_IVOL": 2.3464150878916517,
+            "MinimumVariance": 2.3841915841242733
+          },
+          "fwd_abs_ret_mean": 0.006423531351551291
+        },
+        "mid": {
+          "n": 159,
+          "per_strategy_sharpe": {
+            "EqualWeight": 0.4959824107680509,
+            "RiskParity_IVOL": 0.7408765207461672,
+            "MinimumVariance": 0.5628411848477841
+          },
+          "fwd_abs_ret_mean": 0.006118255324526178
+        },
+        "high": {
+          "n": 158,
+          "per_strategy_sharpe": {
+            "EqualWeight": 2.1494019348723077,
+            "RiskParity_IVOL": 2.2692869193563494,
+            "MinimumVariance": 2.165929069512051
+          },
+          "fwd_abs_ret_mean": 0.007309047643327006
+        }
+      }
+    },
+    "equity_bond_corr_change_20_60": {
+      "per_strategy": {
+        "EqualWeight": {
+          "spearman_fwd_ret": -0.06503664223850766,
+          "spearman_fwd_abs_ret": -0.06442248584976963,
+          "tercile_disc_fwd_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.0023522117015465282,
+              "vol_fwd_ret_ann": 0.18827241222797514
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.00033634917973808845,
+              "vol_fwd_ret_ann": 0.13293791529579443
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.00028660196425825787,
+              "vol_fwd_ret_ann": 0.12562242070919266
+            },
+            "low_minus_high_mean": 0.0020656097372882703,
+            "mann_whitney_u": 13865.0,
+            "mann_whitney_p": 0.0886749509307068
+          },
+          "tercile_disc_fwd_abs_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.007553906910418656,
+              "vol_fwd_ret_ann": 0.14959472990176245
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.006545941946984128,
+              "vol_fwd_ret_ann": 0.08267284316974328
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.0057482785846443615,
+              "vol_fwd_ret_ann": 0.08615117581968863
+            },
+            "low_minus_high_mean": 0.0018056283257742948,
+            "mann_whitney_u": 13759.0,
+            "mann_whitney_p": 0.11597390394680103
+          }
+        },
+        "RiskParity_IVOL": {
+          "spearman_fwd_ret": -0.06264988607035087,
+          "spearman_fwd_abs_ret": -0.06382669256909959,
+          "tercile_disc_fwd_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.0018128505287185199,
+              "vol_fwd_ret_ann": 0.1393527975571674
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.00032797627150804375,
+              "vol_fwd_ret_ann": 0.0950914063038908
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.0002628820237063071,
+              "vol_fwd_ret_ann": 0.09050531243925812
+            },
+            "low_minus_high_mean": 0.0015499685050122127,
+            "mann_whitney_u": 13864.0,
+            "mann_whitney_p": 0.08890586421456556
+          },
+          "tercile_disc_fwd_abs_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.0054759733131635,
+              "vol_fwd_ret_ann": 0.11246324946825761
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.004689205180903584,
+              "vol_fwd_ret_ann": 0.05910537427485365
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.004128534736328654,
+              "vol_fwd_ret_ann": 0.06233850784319599
+            },
+            "low_minus_high_mean": 0.0013474385768348458,
+            "mann_whitney_u": 13748.0,
+            "mann_whitney_p": 0.11914941044086215
+          }
+        },
+        "MinimumVariance": {
+          "spearman_fwd_ret": -0.05963979195942202,
+          "spearman_fwd_abs_ret": -0.040970669413668205,
+          "tercile_disc_fwd_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.001891055752467396,
+              "vol_fwd_ret_ann": 0.15099796991879233
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.00037434883551132597,
+              "vol_fwd_ret_ann": 0.1045335985864076
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.0002733747910024871,
+              "vol_fwd_ret_ann": 0.10228405000591953
+            },
+            "low_minus_high_mean": 0.0016176809614649088,
+            "mann_whitney_u": 13792.0,
+            "mann_whitney_p": 0.106845361775136
+          },
+          "tercile_disc_fwd_abs_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.0058686899188250645,
+              "vol_fwd_ret_ann": 0.12236321637327172
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.005127169580319097,
+              "vol_fwd_ret_ann": 0.06554648031928192
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.004637901299439237,
+              "vol_fwd_ret_ann": 0.07089359327931613
+            },
+            "low_minus_high_mean": 0.0012307886193858274,
+            "mann_whitney_u": 13443.0,
+            "mann_whitney_p": 0.23689926194981692
+          }
+        }
+      },
+      "f0_residualization": {
+        "n_resid": 475,
+        "spearman_resid_fwd_abs_ret": 0.02047128245035523,
+        "spearman_resid_fwd_ret": -0.09778724547780472,
+        "spearman_raw_fwd_abs_ret": -0.06442248584976963,
+        "spearman_raw_fwd_ret": -0.06503664223850766
+      },
+      "regime_response": {
+        "low": {
+          "n": 158,
+          "per_strategy_sharpe": {
+            "EqualWeight": 3.15841342634629,
+            "RiskParity_IVOL": 3.2887098863583795,
+            "MinimumVariance": 3.166011460041564
+          },
+          "fwd_abs_ret_mean": 0.007553906910418656
+        },
+        "mid": {
+          "n": 159,
+          "per_strategy_sharpe": {
+            "EqualWeight": 0.6396053214641712,
+            "RiskParity_IVOL": 0.8719101104786963,
+            "MinimumVariance": 0.9052971322867005
+          },
+          "fwd_abs_ret_mean": 0.006545941946984128
+        },
+        "high": {
+          "n": 158,
+          "per_strategy_sharpe": {
+            "EqualWeight": 0.5767548599412514,
+            "RiskParity_IVOL": 0.7342873990769496,
+            "MinimumVariance": 0.6756624850960938
+          },
+          "fwd_abs_ret_mean": 0.0057482785846443615
+        }
+      }
+    },
+    "equity_gold_corr_change_20_60": {
+      "per_strategy": {
+        "EqualWeight": {
+          "spearman_fwd_ret": 0.012395657796762943,
+          "spearman_fwd_abs_ret": -0.03349050213023251,
+          "tercile_disc_fwd_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.0010971680841961845,
+              "vol_fwd_ret_ann": 0.17787657700447335
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.0008798356488530352,
+              "vol_fwd_ret_ann": 0.15104624163212196
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.0009947193247144463,
+              "vol_fwd_ret_ann": 0.12292794983226427
+            },
+            "low_minus_high_mean": 0.00010244875948173813,
+            "mann_whitney_u": 12484.0,
+            "mann_whitney_p": 0.9985262121272885
+          },
+          "tercile_disc_fwd_abs_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.007004577397014562,
+              "vol_fwd_ret_ann": 0.13965118660421094
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.006937914561346671,
+              "vol_fwd_ret_ann": 0.10394504325292707
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.0059031546443545045,
+              "vol_fwd_ret_ann": 0.0807760998418485
+            },
+            "low_minus_high_mean": 0.0011014227526600579,
+            "mann_whitney_u": 12905.0,
+            "mann_whitney_p": 0.602873871173788
+          }
+        },
+        "RiskParity_IVOL": {
+          "spearman_fwd_ret": 0.01071005884032494,
+          "spearman_fwd_abs_ret": -0.0379281039531069,
+          "tercile_disc_fwd_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.0008999371354146005,
+              "vol_fwd_ret_ann": 0.13187815225149252
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.0007197331984670693,
+              "vol_fwd_ret_ann": 0.10886369366589768
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.0007815590158299413,
+              "vol_fwd_ret_ann": 0.088191128777544
+            },
+            "low_minus_high_mean": 0.00011837811958465916,
+            "mann_whitney_u": 12535.0,
+            "mann_whitney_p": 0.9484533043631798
+          },
+          "tercile_disc_fwd_abs_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.005086382788712687,
+              "vol_fwd_ret_ann": 0.10505307007677275
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.0049848972740949675,
+              "vol_fwd_ret_ann": 0.07537266407350186
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.004220561698643833,
+              "vol_fwd_ret_ann": 0.0584387080382423
+            },
+            "low_minus_high_mean": 0.0008658210900688535,
+            "mann_whitney_u": 12955.0,
+            "mann_whitney_p": 0.560672523893194
+          }
+        },
+        "MinimumVariance": {
+          "spearman_fwd_ret": 0.014317177903806428,
+          "spearman_fwd_abs_ret": -0.05008056253813985,
+          "tercile_disc_fwd_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.0009205167527086457,
+              "vol_fwd_ret_ann": 0.14520219398361994
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.0007370961065145567,
+              "vol_fwd_ret_ann": 0.11969315154265182
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.0008788706509541886,
+              "vol_fwd_ret_ann": 0.09576064926004399
+            },
+            "low_minus_high_mean": 4.1646101754457075e-05,
+            "mann_whitney_u": 12436.0,
+            "mann_whitney_p": 0.9553184550051949
+          },
+          "tercile_disc_fwd_abs_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.005607910314230306,
+              "vol_fwd_ret_ann": 0.115425429399765
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.00548669875977544,
+              "vol_fwd_ret_ann": 0.08264408059824181
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.004536876223441852,
+              "vol_fwd_ret_ann": 0.06438923778298525
+            },
+            "low_minus_high_mean": 0.0010710340907884534,
+            "mann_whitney_u": 13201.0,
+            "mann_whitney_p": 0.3762803753420847
+          }
+        }
+      },
+      "f0_residualization": {
+        "n_resid": 475,
+        "spearman_resid_fwd_abs_ret": -0.0573871760562986,
+        "spearman_resid_fwd_ret": 0.027653049227685744,
+        "spearman_raw_fwd_abs_ret": -0.03349050213023251,
+        "spearman_raw_fwd_ret": 0.012395657796762943
+      },
+      "regime_response": {
+        "low": {
+          "n": 158,
+          "per_strategy_sharpe": {
+            "EqualWeight": 1.559314295443452,
+            "RiskParity_IVOL": 1.725117089999878,
+            "MinimumVariance": 1.6026466359099822
+          },
+          "fwd_abs_ret_mean": 0.007004577397014562
+        },
+        "mid": {
+          "n": 159,
+          "per_strategy_sharpe": {
+            "EqualWeight": 1.4725233511441407,
+            "RiskParity_IVOL": 1.6713177646952553,
+            "MinimumVariance": 1.5567732999801522
+          },
+          "fwd_abs_ret_mean": 0.006937914561346671
+        },
+        "high": {
+          "n": 158,
+          "per_strategy_sharpe": {
+            "EqualWeight": 2.0456398466428647,
+            "RiskParity_IVOL": 2.240351354547927,
+            "MinimumVariance": 2.3201557409610136
+          },
+          "fwd_abs_ret_mean": 0.0059031546443545045
+        }
+      }
+    },
+    "cn_us_corr_60": {
+      "per_strategy": {
+        "EqualWeight": {
+          "spearman_fwd_ret": -0.0034596543480816715,
+          "spearman_fwd_abs_ret": 0.0023604431779373977,
+          "tercile_disc_fwd_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.0017374539444740818,
+              "vol_fwd_ret_ann": 0.1802119725098006
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.0007651994372504826,
+              "vol_fwd_ret_ann": 0.13298719744022824
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.00046979522168215577,
+              "vol_fwd_ret_ann": 0.13863567253679918
+            },
+            "low_minus_high_mean": 0.001267658722791926,
+            "mann_whitney_u": 13118.0,
+            "mann_whitney_p": 0.4338836179698219
+          },
+          "tercile_disc_fwd_abs_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.007123526491052821,
+              "vol_fwd_ret_ann": 0.14273341515326016
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.006132997724726915,
+              "vol_fwd_ret_ann": 0.0910793509405029
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.006594216797294355,
+              "vol_fwd_ret_ann": 0.09081924680983264
+            },
+            "low_minus_high_mean": 0.000529309693758466,
+            "mann_whitney_u": 12132.0,
+            "mann_whitney_p": 0.6669199594403086
+          }
+        },
+        "RiskParity_IVOL": {
+          "spearman_fwd_ret": -0.0054713104428980135,
+          "spearman_fwd_abs_ret": 0.01574311803335592,
+          "tercile_disc_fwd_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.0013370709794654216,
+              "vol_fwd_ret_ann": 0.13229487210332533
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.0006967187322866437,
+              "vol_fwd_ret_ann": 0.0956235191356176
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.000367585299137903,
+              "vol_fwd_ret_ann": 0.10135704446232209
+            },
+            "low_minus_high_mean": 0.0009694856803275187,
+            "mann_whitney_u": 13150.0,
+            "mann_whitney_p": 0.41109482448393175
+          },
+          "tercile_disc_fwd_abs_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.005104607142133919,
+              "vol_fwd_ret_ann": 0.10652289135680729
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.004359056983794817,
+              "vol_fwd_ret_ann": 0.06669560334610866
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.004832138650018322,
+              "vol_fwd_ret_ann": 0.06622649715050534
+            },
+            "low_minus_high_mean": 0.0002724684921155971,
+            "mann_whitney_u": 11872.0,
+            "mann_whitney_p": 0.4529256177125498
+          }
+        },
+        "MinimumVariance": {
+          "spearman_fwd_ret": 5.5089324204032057e-05,
+          "spearman_fwd_abs_ret": 0.017290209888085814,
+          "tercile_disc_fwd_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.0013163234566237632,
+              "vol_fwd_ret_ann": 0.14565879038378998
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.000825198874329334,
+              "vol_fwd_ret_ann": 0.10178141457583958
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.00039440356676976994,
+              "vol_fwd_ret_ann": 0.1136940524644477
+            },
+            "low_minus_high_mean": 0.0009219198898539932,
+            "mann_whitney_u": 13042.0,
+            "mann_whitney_p": 0.4908384686581132
+          },
+          "tercile_disc_fwd_abs_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.005627585258084427,
+              "vol_fwd_ret_ann": 0.11672319967317968
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.00459775486032721,
+              "vol_fwd_ret_ann": 0.07191182495838577
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.005411771406247658,
+              "vol_fwd_ret_ann": 0.07442033359800265
+            },
+            "low_minus_high_mean": 0.00021581385183676912,
+            "mann_whitney_u": 11759.0,
+            "mann_whitney_p": 0.3736290121749368
+          }
+        }
+      },
+      "f0_residualization": {
+        "n_resid": 475,
+        "spearman_resid_fwd_abs_ret": -0.024549907904534235,
+        "spearman_resid_fwd_ret": -0.0059478554912971195,
+        "spearman_raw_fwd_abs_ret": 0.0023604431779373977,
+        "spearman_raw_fwd_ret": -0.0034596543480816715
+      },
+      "regime_response": {
+        "low": {
+          "n": 158,
+          "per_strategy_sharpe": {
+            "EqualWeight": 2.4372996108830183,
+            "RiskParity_IVOL": 2.5549988560078436,
+            "MinimumVariance": 2.2845737342637107
+          },
+          "fwd_abs_ret_mean": 0.007123526491052821
+        },
+        "mid": {
+          "n": 159,
+          "per_strategy_sharpe": {
+            "EqualWeight": 1.4545724832791251,
+            "RiskParity_IVOL": 1.8418884486664047,
+            "MinimumVariance": 2.049560317282483
+          },
+          "fwd_abs_ret_mean": 0.006132997724726915
+        },
+        "high": {
+          "n": 158,
+          "per_strategy_sharpe": {
+            "EqualWeight": 0.8566686216598904,
+            "RiskParity_IVOL": 0.916818681674893,
+            "MinimumVariance": 0.8769651704888953
+          },
+          "fwd_abs_ret_mean": 0.006594216797294355
+        }
+      }
+    },
+    "equity_vol_ratio_20_60": {
+      "per_strategy": {
+        "EqualWeight": {
+          "spearman_fwd_ret": 0.07586259020596914,
+          "spearman_fwd_abs_ret": 0.186619228637491,
+          "tercile_disc_fwd_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": -0.00019807547527623336,
+              "vol_fwd_ret_ann": 0.10242898283686996
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.001227451020833498,
+              "vol_fwd_ret_ann": 0.1192227512592849
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.0019401474149153858,
+              "vol_fwd_ret_ann": 0.21052328471191661
+            },
+            "low_minus_high_mean": -0.002138222890191619,
+            "mann_whitney_u": 11171.0,
+            "mann_whitney_p": 0.10657789440850081
+          },
+          "tercile_disc_fwd_abs_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.004997197062718601,
+              "vol_fwd_ret_ann": 0.06456489333380847
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.005727166358958987,
+              "vol_fwd_ret_ann": 0.07923456044683809
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.009128946144344402,
+              "vol_fwd_ret_ann": 0.15536991973559852
+            },
+            "low_minus_high_mean": -0.0041317490816258,
+            "mann_whitney_u": 8920.0,
+            "mann_whitney_p": 1.156244625469467e-05
+          }
+        },
+        "RiskParity_IVOL": {
+          "spearman_fwd_ret": 0.07418258975808846,
+          "spearman_fwd_abs_ret": 0.18513629569082798,
+          "tercile_disc_fwd_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": -5.680222949890226e-05,
+              "vol_fwd_ret_ann": 0.07344012456030158
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.0009443002289433513,
+              "vol_fwd_ret_ann": 0.08645443814076569
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.0015123100399476919,
+              "vol_fwd_ret_ann": 0.1544829519321214
+            },
+            "low_minus_high_mean": -0.001569112269446594,
+            "mann_whitney_u": 11209.0,
+            "mann_whitney_p": 0.11712084876793741
+          },
+          "tercile_disc_fwd_abs_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.0035790797631533654,
+              "vol_fwd_ret_ann": 0.04632101647053818
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.004127756058206855,
+              "vol_fwd_ret_ann": 0.05813481606867545
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.006590430884495622,
+              "vol_fwd_ret_ann": 0.11588774855459598
+            },
+            "low_minus_high_mean": -0.0030113511213422568,
+            "mann_whitney_u": 8896.0,
+            "mann_whitney_p": 1.0090122762557693e-05
+          }
+        },
+        "MinimumVariance": {
+          "spearman_fwd_ret": 0.07326734557913774,
+          "spearman_fwd_abs_ret": 0.16527233944877087,
+          "tercile_disc_fwd_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": -0.0001131065946314713,
+              "vol_fwd_ret_ann": 0.08303958767875412
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.0010500816703242829,
+              "vol_fwd_ret_ann": 0.09462500362752913
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.0015975275131946444,
+              "vol_fwd_ret_ann": 0.16847119284496226
+            },
+            "low_minus_high_mean": -0.0017106341078261156,
+            "mann_whitney_u": 11207.0,
+            "mann_whitney_p": 0.11654626805204744
+          },
+          "tercile_disc_fwd_abs_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.004024031901172515,
+              "vol_fwd_ret_ann": 0.0528415804373387
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.004476479885433189,
+              "vol_fwd_ret_ann": 0.06443420447310126
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.007137367301185832,
+              "vol_fwd_ret_ann": 0.12692758991805983
+            },
+            "low_minus_high_mean": -0.003113335400013317,
+            "mann_whitney_u": 9230.0,
+            "mann_whitney_p": 6.229592193667032e-05
+          }
+        }
+      },
+      "f0_residualization": {
+        "n_resid": 475,
+        "spearman_resid_fwd_abs_ret": 0.03566373118201312,
+        "spearman_resid_fwd_ret": 0.1150093775018335,
+        "spearman_raw_fwd_abs_ret": 0.186619228637491,
+        "spearman_raw_fwd_ret": 0.07586259020596914
+      },
+      "regime_response": {
+        "low": {
+          "n": 158,
+          "per_strategy_sharpe": {
+            "EqualWeight": -0.48886292812641213,
+            "RiskParity_IVOL": -0.1955290253474107,
+            "MinimumVariance": -0.34433565973284036
+          },
+          "fwd_abs_ret_mean": 0.004997197062718601
+        },
+        "mid": {
+          "n": 159,
+          "per_strategy_sharpe": {
+            "EqualWeight": 2.602648935557433,
+            "RiskParity_IVOL": 2.7611713707102012,
+            "MinimumVariance": 2.805354365257643
+          },
+          "fwd_abs_ret_mean": 0.005727166358958987
+        },
+        "high": {
+          "n": 158,
+          "per_strategy_sharpe": {
+            "EqualWeight": 2.3297742987476235,
+            "RiskParity_IVOL": 2.474796732078977,
+            "MinimumVariance": 2.3971872198294997
+          },
+          "fwd_abs_ret_mean": 0.009128946144344402
+        }
+      }
+    },
+    "equity_downside_semivol_60": {
+      "per_strategy": {
+        "EqualWeight": {
+          "spearman_fwd_ret": -0.0034083945264435814,
+          "spearman_fwd_abs_ret": 0.04818544980667558,
+          "tercile_disc_fwd_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.001271949951880462,
+              "vol_fwd_ret_ann": 0.1836821182374836
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.000867233784793159,
+              "vol_fwd_ret_ann": 0.12978180807894
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.0008326190797233355,
+              "vol_fwd_ret_ann": 0.13783196100981193
+            },
+            "low_minus_high_mean": 0.0004393308721571264,
+            "mann_whitney_u": 12428.0,
+            "mann_whitney_p": 0.9474728689297689
+          },
+          "tercile_disc_fwd_abs_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.0069073335715602495,
+              "vol_fwd_ret_ann": 0.1484910749870203
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.0064351015074345,
+              "vol_fwd_ret_ann": 0.08082415454097315
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.006506393884821698,
+              "vol_fwd_ret_ann": 0.09185617518784704
+            },
+            "low_minus_high_mean": 0.00040093968673855177,
+            "mann_whitney_u": 11765.0,
+            "mann_whitney_p": 0.3776104003160131
+          }
+        },
+        "RiskParity_IVOL": {
+          "spearman_fwd_ret": -0.0025135789923412862,
+          "spearman_fwd_abs_ret": 0.047290130403474434,
+          "tercile_disc_fwd_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.0010493223779192327,
+              "vol_fwd_ret_ann": 0.13750900170179417
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.0006854610533198137,
+              "vol_fwd_ret_ann": 0.090984009239536
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.0006666628307836234,
+              "vol_fwd_ret_ann": 0.09918372742614212
+            },
+            "low_minus_high_mean": 0.0003826595471356093,
+            "mann_whitney_u": 12430.0,
+            "mann_whitney_p": 0.9494338178520609
+          },
+          "tercile_disc_fwd_abs_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.005083600685115462,
+              "vol_fwd_ret_ann": 0.11240128536109169
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.00450304166638575,
+              "vol_fwd_ret_ann": 0.05705261853380649
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.00470824912898641,
+              "vol_fwd_ret_ann": 0.06578985520773616
+            },
+            "low_minus_high_mean": 0.000375351556129052,
+            "mann_whitney_u": 11777.0,
+            "mann_whitney_p": 0.3856512436781895
+          }
+        },
+        "MinimumVariance": {
+          "spearman_fwd_ret": -0.006745127669939598,
+          "spearman_fwd_abs_ret": 0.05481877452212589,
+          "tercile_disc_fwd_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.001154020621089524,
+              "vol_fwd_ret_ann": 0.15028085898790544
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.000688391622662254,
+              "vol_fwd_ret_ann": 0.09599223613307299
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.0006943795226525263,
+              "vol_fwd_ret_ann": 0.11305937373381551
+            },
+            "low_minus_high_mean": 0.0004596410984369977,
+            "mann_whitney_u": 12494.0,
+            "mann_whitney_p": 0.9887013308600379
+          },
+          "tercile_disc_fwd_abs_ret": {
+            "low": {
+              "n": 158,
+              "mean_fwd_ret": 0.005587867574169551,
+              "vol_fwd_ret_ann": 0.12248855517954756
+            },
+            "mid": {
+              "n": 159,
+              "mean_fwd_ret": 0.0047064674667617054,
+              "vol_fwd_ret_ann": 0.06097002440876683
+            },
+            "high": {
+              "n": 158,
+              "mean_fwd_ret": 0.005342088429256936,
+              "vol_fwd_ret_ann": 0.07528174997052922
+            },
+            "low_minus_high_mean": 0.00024577914491261555,
+            "mann_whitney_u": 11598.0,
+            "mann_whitney_p": 0.27661549763893
+          }
+        }
+      },
+      "f0_residualization": {
+        "n_resid": 475,
+        "spearman_resid_fwd_abs_ret": -0.020267608709039913,
+        "spearman_resid_fwd_ret": -0.011614665853016758,
+        "spearman_raw_fwd_abs_ret": 0.04818544980667558,
+        "spearman_raw_fwd_ret": -0.0034083945264435814
+      },
+      "regime_response": {
+        "low": {
+          "n": 158,
+          "per_strategy_sharpe": {
+            "EqualWeight": 1.7505817726577715,
+            "RiskParity_IVOL": 1.9291103169106785,
+            "MinimumVariance": 1.941284372889896
+          },
+          "fwd_abs_ret_mean": 0.0069073335715602495
+        },
+        "mid": {
+          "n": 159,
+          "per_strategy_sharpe": {
+            "EqualWeight": 1.6892461098457778,
+            "RiskParity_IVOL": 1.9045319961501632,
+            "MinimumVariance": 1.8128840473920431
+          },
+          "fwd_abs_ret_mean": 0.0064351015074345
+        },
+        "high": {
+          "n": 158,
+          "per_strategy_sharpe": {
+            "EqualWeight": 1.5271288492924424,
+            "RiskParity_IVOL": 1.699202250666305,
+            "MinimumVariance": 1.5526357708076377
+          },
+          "fwd_abs_ret_mean": 0.006506393884821698
+        }
+      }
+    }
+  },
+  "ranked_importance": [
+    {
+      "feature": "equity_vol_ratio_20_60",
+      "importance_score": 0.253447,
+      "mean_abs_spearman_fwd_ret": 0.074438,
+      "mean_abs_spearman_fwd_risk": 0.179009,
+      "min_mw_p_fwd_risk": 1e-05
+    },
+    {
+      "feature": "equity_downside_semivol_60",
+      "importance_score": 0.045876,
+      "mean_abs_spearman_fwd_ret": 0.004222,
+      "mean_abs_spearman_fwd_risk": 0.050098,
+      "min_mw_p_fwd_risk": 0.276615
+    },
+    {
+      "feature": "cn_us_corr_60",
+      "importance_score": 0.008839,
+      "mean_abs_spearman_fwd_ret": 0.002995,
+      "mean_abs_spearman_fwd_risk": 0.011798,
+      "min_mw_p_fwd_risk": 0.373629
+    },
+    {
+      "feature": "equity_gold_corr_change_20_60",
+      "importance_score": -0.028025,
+      "mean_abs_spearman_fwd_ret": 0.012474,
+      "mean_abs_spearman_fwd_risk": 0.0405,
+      "min_mw_p_fwd_risk": 0.37628
+    },
+    {
+      "feature": "corr_pc1_share_60",
+      "importance_score": -0.06741,
+      "mean_abs_spearman_fwd_ret": 0.001425,
+      "mean_abs_spearman_fwd_risk": 0.067728,
+      "min_mw_p_fwd_risk": 0.582439
+    },
+    {
+      "feature": "equity_bond_corr_change_20_60",
+      "importance_score": -0.118849,
+      "mean_abs_spearman_fwd_ret": 0.062442,
+      "mean_abs_spearman_fwd_risk": 0.056407,
+      "min_mw_p_fwd_risk": 0.115974
+    }
+  ],
+  "runtime_seconds": 28.6
+}
