@@ -94,25 +94,81 @@ def _pc1_share(r: pd.DataFrame, w: int, cols: list[str]) -> pd.Series:
     return out
 
 
-def align_pit(macro_series: pd.Series, china_index: pd.DatetimeIndex) -> pd.Series:
-    """strict PIT 对齐：对每个 China 决策日 t，只取 ≤t 已发布的 macro 值（as-of）。
+def _native_rolling(series: pd.Series, w: int, fn) -> pd.Series:
+    """在源原生观测日历上算 w-观测窗口特征（P1：窗口 = 最近 w 个源观测，非 China 日）。"""
+    return fn(series.rolling(w))
 
-    macro_series 必须已含发布日索引；对 China t 用 asof（≤t 的最近值）。这是严格 PIT，
-    无未来值泄漏（不向前填充未来发布日）。
+
+def align_derived_to_china(derived_native: pd.Series, china_index: pd.DatetimeIndex,
+                           rule: str = "asof") -> pd.Series:
+    """PIT 对齐：把源原生衍生特征对齐到 China 决策日。
+
+    P1/P2（评审 §2/§3）：derived_native 已在源日历上算好；这里只做 as-of 对齐。
+    - rule="asof"：China 决策日 t 取 available ≤ t 的最新已发布值（USD/CNY/CGB/DR007/turnover）。
+    - rule="strict_prev_session"：China 决策日 t 取 available < t（严格早于）——
+      VIX 用前一完成 US session，same-calendar-date US close 对 China close 不可见。
     """
-    s = macro_series.dropna()
+    s = derived_native.dropna()
+    china = pd.DatetimeIndex(china_index)
+    out = pd.Series(np.nan, index=china)
     if s.empty:
-        raise ValueError("macro series empty after dropna")
-    asof = s.reindex(china_index, method="ffill")  # asof 只回溯已发布
-    # 未来发布日不得填充到更早的 China 日（ffill 天然只回看 ≤t）
-    return asof.reindex(china_index)
+        # 全 NaN（如窗口不足）→ 全 NaN 输出，由下游 imputation 处理（F-A2）
+        return out
+    if rule == "strict_prev_session":
+        for t in china:
+            avail = s[s.index < t]
+            if not avail.empty:
+                out[t] = avail.iloc[-1]
+    else:  # asof
+        out = s.reindex(china, method="ffill")
+    return out
+
+
+def align_pit(macro_series: pd.Series, china_index: pd.DatetimeIndex) -> pd.Series:
+    """strict PIT 对齐（旧 API，兼容）：对每个 China 决策日 t 取 ≤t 已发布 macro 值。
+
+    NOTE：P1/P2 修正后，正式 F2 使用 align_derived_to_china（native-first）。本函数保留
+    供简单 as-of 场景/旧测试兼容，但 VIX 必须走 strict_prev_session。
+    """
+    return align_derived_to_china(macro_series, china_index, rule="asof")
+
+
+def _vix_percentile_native(vix: pd.Series, w: int = 252) -> pd.Series:
+    """P3：VIX 分位精确公式 = (rank-1)/(N-1)，rank = 1-based average rank（ties），N=w。
+
+    在 VIX 原生 US session 日历上滚动计算（P1）。显式 tie convention：
+    ties 取平均 rank（如两个并列第 2 名 → rank 2.5）。
+    """
+    vals = vix.to_numpy(dtype=float)
+    n = len(vals)
+    out = np.full(n, np.nan)
+    for i in range(w - 1, n):
+        window = vals[i - w + 1: i + 1]
+        # average rank, 1-based（ties → mean of ranks）
+        order = np.argsort(window, kind="stable")
+        ranks = np.empty(w)
+        j = 0
+        while j < w:
+            k = j
+            while k + 1 < w and window[order[k + 1]] == window[order[j]]:
+                k += 1
+            avg = (j + k) / 2.0 + 1.0  # 1-based average rank
+            for m in range(j, k + 1):
+                ranks[order[m]] = avg
+            j = k + 1
+        out[i] = (ranks[-1] - 1.0) / (w - 1.0)  # 当前观测 = 窗口最后一个
+    return pd.Series(out, index=vix.index)
 
 
 def f2_features(macro: dict[str, pd.Series], china_index: pd.DatetimeIndex) -> pd.DataFrame:
-    """F2 — Macro/Forward Risk（6 特征，外部数据契约）。
+    """F2 — Macro/Forward Risk（6 特征，外部数据契约，native-calendar-first）。
 
-    macro keys: vix / usd_cny / cgb10y / dr007 / a_share_turnover
-    每序列须按发布日索引；内部经 align_pit 对齐到 China 日历（strict PIT）。
+    P1/P2 契约：macro 每个源 = 原生观测 Series（index=源自身观测日/available_at）。
+    内部流程：源原生 Series → 在原生日历算窗口特征 → align_derived_to_china 对齐 China。
+
+    macro keys（每值 = native Series，index 即 available 时刻）:
+      vix / usd_cny / cgb10y / dr007 / a_share_turnover
+    VIX 强制 strict_prev_session（前一完成 US session）；其余 asof（≤t）。
     """
     required = {"vix", "usd_cny", "cgb10y", "dr007", "a_share_turnover"}
     missing = required - set(macro.keys())
@@ -120,25 +176,33 @@ def f2_features(macro: dict[str, pd.Series], china_index: pd.DatetimeIndex) -> p
         raise ValueError(f"macro missing keys: {sorted(missing)}")
     idx = pd.DatetimeIndex(china_index)
     out = pd.DataFrame(index=idx)
-    vix = align_pit(macro["vix"], idx)
-    usd = align_pit(macro["usd_cny"], idx)
-    cgb = align_pit(macro["cgb10y"], idx)
-    dr = align_pit(macro["dr007"], idx)
-    to = align_pit(macro["a_share_turnover"], idx)
 
-    # VIX：前一完成 US session 收盘（align_pit 已保证 as-of）
-    out["vix_prev_close_percentile_252"] = vix.rolling(252).rank(pct=True)
-    out["vix_prev_close_change_5"] = vix.pct_change(5)
-    # USD/CNY 直接标价：上升 = 人民币贬值 → 正
-    out["usd_cny_return_20"] = usd / usd.shift(20) - 1.0
-    # CGB10Y 存小数；Δ20 用水平差（百分点，0.01 单位）
-    out["cgb10y_yield_change_20"] = cgb - cgb.shift(20)
-    # DR007 z-score
-    dr_std = dr.rolling(60).std()
-    out["dr007_zscore_60"] = (dr - dr.rolling(60).mean()) / (dr_std + EPS)
-    # A 股全市场成交额 z-score
-    to_std = to.rolling(20).std()
-    out["a_share_turnover_zscore_20"] = (to - to.rolling(20).mean()) / (to_std + EPS)
+    # --- VIX（原生 US session 日历；前一完成 session）---
+    vix = macro["vix"].dropna().sort_index()
+    vix_pct_native = _vix_percentile_native(vix, 252)          # (rank-1)/(N-1)，native
+    vix_chg5_native = vix.pct_change(5)                         # 5 个 US session，native
+    out["vix_prev_close_percentile_252"] = align_derived_to_china(
+        vix_pct_native, idx, rule="strict_prev_session")
+    out["vix_prev_close_change_5"] = align_derived_to_china(
+        vix_chg5_native, idx, rule="strict_prev_session")
+
+    # --- 其余源：native 窗口 → asof 对齐 ---
+    usd = macro["usd_cny"].dropna().sort_index()
+    cgb = macro["cgb10y"].dropna().sort_index()
+    dr = macro["dr007"].dropna().sort_index()
+    to = macro["a_share_turnover"].dropna().sort_index()
+
+    usd_ret20 = usd / usd.shift(20) - 1.0                        # 20 个源观测
+    out["usd_cny_return_20"] = align_derived_to_china(usd_ret20, idx, rule="asof")
+
+    cgb_chg20 = cgb - cgb.shift(20)                              # 20 个源观测 level 差
+    out["cgb10y_yield_change_20"] = align_derived_to_china(cgb_chg20, idx, rule="asof")
+
+    dr_z = (dr - dr.rolling(60).mean()) / (dr.rolling(60).std() + EPS)
+    out["dr007_zscore_60"] = align_derived_to_china(dr_z, idx, rule="asof")
+
+    to_z = (to - to.rolling(20).mean()) / (to.rolling(20).std() + EPS)
+    out["a_share_turnover_zscore_20"] = align_derived_to_china(to_z, idx, rule="asof")
     return out
 
 

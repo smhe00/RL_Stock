@@ -1,8 +1,9 @@
-# Feature Ablation Spec — FROZEN（GATE_4_EVAL_FIX）
+# Feature Ablation Spec — FROZEN（GATE_4_FEATURE_ABLATION_PREP_CORRECTIONS）
 
-> 评审（`GATE_4_3_SEED_PILOT_REVIEWER_RESPONSE.md` §Feature-ablation preparation）：
-> **spec 冻结 now（在 Test 结果影响特征选择之前）**；ablation **runs NOT yet authorized**。
-> 本 spec 只定义候选集，不实现、不运行。授权需评审后续指令。
+> 评审（`GATE_4_3_SEED_PILOT_REVIEWER_RESPONSE.md` §Feature-ablation preparation +
+> `GATE_4_FEATURE_ABLATION_PREP_REVIEWER_RESPONSE.md` P1-P5）：
+> **spec 冻结 now**；ablation **runs NOT yet authorized**。
+> 本 spec 是 canonical formula source（评审 P4：spec 与代码不得不一致），实现以 spec 为准。
 
 ## 状态
 
@@ -91,48 +92,76 @@ equity_vol_ratio_20_60(t):
     ann_vol_w = std(log ret, w 日) × √252；eps = 1e-8
 
 equity_downside_semivol_60(t):
-    downside_ret = min(r_CN_LARGE, 0) over 60 日
-    = sqrt( Σ(downside_ret - mean_downside)^2 / (n_down - 1) ) × √252
-    若 n_down < 2 → NaN（missing-data 规则）
+    = sqrt(252 · mean( min(r_CN_LARGE, 0)^2 over 60 obs ))     # F-A1：LPM2 around zero
+    （评审 §5：lower partial second moment，非负收益子集标准差；
+     同时保留下行幅度与下行频率）
 ```
 
-### F2 公式
+### F2 公式（native-calendar-first；评审 P1/P2/P3）
+
+**架构（P1）**：每个源在**原生观测日历**上算窗口特征（rolling/shift 用源观测计数），
+再 PIT as-of 对齐到 China 决策日。**禁止**先 ffill 到 China 日历再算窗口（会改变 5/252 session 计数）。
 
 ```text
+通用流程（每源）:
+  native 源 Series（index = 源观测日/available_at）
+  → 在 native index 上算窗口特征（rolling/shift 用源观测计数）
+  → 得到 native 衍生 Series
+  → align_derived_to_china(derived_native, china_index, rule)
+
 vix_prev_close_percentile_252(t):
-    v = VIX 收盘，取 ≤ T-1 的最近一个已完成的 US 交易日收盘
-    = rank_pct(v 在最近 252 个 US 交易日中的分位，pct = (rank-1)/(252-1))
+    native：在 US session 日历上，最近 252 个 US 观测的 percentile
+    pct = (rank - 1) / (N - 1)      # N=252；rank=1-based average rank（ties 取平均）
+    rule = "strict_prev_session"    # 仅取 available_at < China 决策日 t（前一完成 US session）
+    （评审 P2/P3）
 
 vix_prev_close_change_5(t):
-    = (v_t - v_{t-5}) / v_{t-5}     # 5 个 US 交易日变化，pct 形式
+    native：vix.pct_change(5)       # 5 个 US session
+    rule = "strict_prev_session"
 
 usd_cny_return_20(t):
-    = usdcny_t / usdcny_{t-20} - 1   # 报价 convention：USD/CNY 直接标价（1 USD = X CNY）
-    # 上升 = 人民币贬值；符号方向冻结为「人民币贬值 → 正值」
+    native：usd / usd.shift(20) - 1   # 20 个源观测；直接标价（升=人民币贬值→正）
+    rule = "asof"（≤ t）
 
 cgb10y_yield_change_20(t):
-    = y_t - y_{t-20}                 # 收益率单位：小数（0.01 = 1pp），Δ20 用 level 差（bp 或 pct）
-    # 冻结为：yield 存小数，Δ 用「百分点」（0.01 单位）；上升 = 收益率上行
+    native：cgb - cgb.shift(20)       # 20 个源观测 level 差（yield 存小数，Δ 用百分点 0.01 单位）
+    rule = "asof"
 
 dr007_zscore_60(t):
-    z = (dr007_t - mean(dr007, 60 日)) / std(dr007, 60 日)
-    std=0 或 n<10 → NaN
+    native：(dr - roll60_mean) / (roll60_std + eps)   # 60 个源观测
+    rule = "asof"
 
 a_share_turnover_zscore_20(t):
-    z = (turnover_t - mean(turnover, 20 日)) / std(turnover, 20 日)
-    turnover = A 股全市场日成交额（亿元，统一单位）；std=0 或 n<10 → NaN
+    native：(to - roll20_mean) / (roll20_std + eps)   # 20 个源观测；成交额亿元
+    rule = "asof"
 ```
 
-### As-of / missing-data / normalization 统一规则
+**Availability-time PIT 契约（P2）**：
 
 ```text
-as-of：所有外部特征在 China EOD 决策日 T 使用 ≤T 已发布值；US 数据用 ≤T-1 完成 US session。
-rolling：window 用「截至 t 的最后 w 个可用观测」，无需连续交易日严格对齐。
-missing：无数据或不足 window → NaN，参与 obs 时**不得静默 ffill**；缺缺失政策冻结为：
-  - train 段缺失行排除出 scaler fit（同现 F0 warmup 语义）；
-  - eval 段遇 NaN → 该特征用 train-fit 的均值填充（显式，非静默 ffill 未来值）。
-  （评审 §13：无静默前向填充 unavailable publication dates。）
-normalization：新特征纳入现有 train-only scaler（与 F0 一致），eval 仅 transform。
+首选：每 macro 观测带 available_at 时间戳（timezone-aware）；China 决策有 decision_at；
+      as-of 要求 available_at <= decision_at。
+date-only 最低要求：US session date < China 决策日历日期（严格早于，非 <=）——
+      same-calendar-date US close 对 China close 不可见。
+测试覆盖：same-date US close 不可见 / US holiday / China holiday / weekend / DST 日期。
+```
+
+### As-of / missing-data / normalization 统一规则（评审 P5 更新）
+
+```text
+as-of：全部 F2 特征在 native 日历算好后再对齐；VIX 用 strict_prev_session，其余 asof。
+rolling：window = 源原生「最近 w 个可用观测」，不按 China 日数。
+missing：无数据或不足 window → NaN；任何模型观测（TRAIN/VALIDATION/TEST）进入模型前
+  必须 finite——用 F-A2 train-only imputation（评审 P4）：
+    1. impute 均值与 scaler 统计只从 TRAIN 估计（忽略 NaN）；
+    2. TRAIN 内零星 NaN：忽略于统计估计、以 TRAIN 均值 impute；
+    3. VALIDATION/TEST：只 transform（impute→scale），绝不更新统计；
+    4. imputed ≈ normalized 0；
+    5. 绝不用 val/test 统计、绝 backward-fill 未来发布值；
+    6. train 区某特征无可用观测 → fail-closed（raise），不制造值。
+normalization：新特征纳入 FeaturePreprocessor（train-only）。**ddof=1（sample std）**
+  与 legacy F0 pandas scaler 一致（评审 P5），保证 ablation 同 F0 transform + 额外特征，
+  不改变 F0 基线观测语义。常量特征保护（std≈0 → std=1，mean 中心）保留。
 ```
 
 ## 冻结声明
@@ -152,3 +181,8 @@ ablation 运行：NOT AUTHORIZED until reviewer directive。
 - 2026-08-09（GATE_4_EVAL_FIX_CORRECTIONS）：修正 F1 `corr_pc1_share_60` → **相关矩阵** PC1
   （非协方差）；`corr_change_20_60` 符号 → **corr20 - corr60**；新增全部 12 特征精确公式 +
   as-of / missing-data / normalization 规则表（评审 §11/§12/§13）。
+- 2026-08-09（GATE_4_FEATURE_ABLATION_PREP_CORRECTIONS）：同步已批准代码契约（评审 P1-P5）：
+  F-A1 `downside_semivol` = LPM2 around zero；F-A2 train-only imputation 覆盖所有模型观测；
+  F2 **native-calendar-first**（源日历算窗口 → as-of 对齐 China）+ availability-time PIT 契约 +
+  VIX 前一完成 US session（strict_prev）；VIX 分位 = **(rank-1)/(N-1)**（ties average rank）；
+  FeaturePreprocessor **ddof=1**（F0 legacy parity）。spec = canonical formula source。

@@ -29,15 +29,23 @@ from china_etf.features.ablation_features import (  # noqa: E402
 from china_etf.features.preprocessor import FeaturePreprocessor  # noqa: E402
 
 
-def _synthetic_macro(index):
-    dates = pd.DatetimeIndex(index)
-    n = len(dates)
+def _synthetic_macro(china_index):
+    """合成 macro（native-calendar-first，P1）：VIX 用 US native 日历（剔除 7/4），其余用 China 日历。
+
+    VIX 仅工作日且剔除 7/4（US 独立日）→ native 观测数 < China 日数，验证 native 窗口语义。
+    """
+    china = pd.DatetimeIndex(china_index)
     rng = np.random.default_rng(7)
-    vix = pd.Series(20 + 5 * np.sin(np.arange(n) / 20) + rng.normal(0, 1, n), index=dates)
-    usd = pd.Series(7.0 + 0.05 * np.arange(n) / n + rng.normal(0, 0.01, n), index=dates)
-    cgb = pd.Series(0.03 + 0.002 * np.sin(np.arange(n) / 40), index=dates)
-    dr = pd.Series(0.02 + 0.003 * np.sin(np.arange(n) / 25) + rng.normal(0, 0.0005, n), index=dates)
-    to = pd.Series(8000 + 3000 * np.sin(np.arange(n) / 60) + rng.normal(0, 300, n), index=dates)
+    us_dates = pd.DatetimeIndex(
+        [d for d in pd.bdate_range(china[0], china[-1]) if not (d.month == 7 and d.day == 4)]
+    )
+    n_us = len(us_dates)
+    vix = pd.Series(20 + 5 * np.sin(np.arange(n_us) / 20) + rng.normal(0, 1, n_us), index=us_dates)
+    n_cn = len(china)
+    usd = pd.Series(7.0 + 0.05 * np.arange(n_cn) / n_cn + rng.normal(0, 0.01, n_cn), index=china)
+    cgb = pd.Series(0.03 + 0.002 * np.sin(np.arange(n_cn) / 40), index=china)
+    dr = pd.Series(0.02 + 0.003 * np.sin(np.arange(n_cn) / 25) + rng.normal(0, 0.0005, n_cn), index=china)
+    to = pd.Series(8000 + 3000 * np.sin(np.arange(n_cn) / 60) + rng.normal(0, 300, n_cn), index=china)
     return {"vix": vix, "usd_cny": usd, "cgb10y": cgb, "dr007": dr, "a_share_turnover": to}
 
 

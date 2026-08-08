@@ -46,7 +46,9 @@ class FeaturePreprocessor:
                 )
             impute[j] = float(valid.mean())
             mean[j] = float(valid.mean())
-            std[j] = float(valid.std())
+            # P5（评审 §6）：ddof=1（sample std），与 legacy pandas `valid.std()` 一致，
+            # 保证 F0 基线标准化语义不变（ablation 必须同 F0 transform + 额外特征）。
+            std[j] = float(np.std(valid, ddof=1)) if len(valid) > 1 else 0.0
             if std[j] <= 1e-12:
                 std[j] = 1.0  # 常量特征 → 标准化后为 0（mean 中心）
         self._impute_mean = impute
