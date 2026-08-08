@@ -291,7 +291,7 @@ collected 88 items  →  88 passed in 24.4s
 
 # 12. Git Commit
 
-`GATE_4_PRECHECK` 实现提交 SHA：**（commit 后填写）**
+`GATE_4_PRECHECK` 实现提交 SHA：**`fefb1c7`**
 
 包含：
 

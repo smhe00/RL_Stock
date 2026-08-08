@@ -4,10 +4,17 @@
 
 ## Current Phase
 
-Phase 3 — First RL Sanity（Gate 3 final corrections 已完成，等待复核）
+Phase 4 — GATE_4_PRECHECK 已提交（C3/F1/F2/H1 闭环 + WalkForwardRunner/baselines + 机制冒烟），
+等待 Reviewer 批准 → 之后才可进入 G4.3 3-seed pilot（正式 one-fold TD3/SAC/PPO smoke）
 
 ## Last completed task
 
+- 2026-08-08：GATE_4_PRECHECK 完成 → `docs/review_packets/GATE_4_PRECHECK.md`
+  （obs index proof 闭环；C3 累计 split+raw+events TR；H1 03110 官方派息；
+  F1 南向分段费率修复 `_rate_on`；F2 conservative 万3 NOT ACCOUNT-VERIFIED；
+  新增 `evaluation/`（rollout 归一化 eval / EW-RP-MV-Momentum baselines / WalkForwardRunner 4-fold）；
+  机制冒烟 EW+TD3@2000（F3）无 NaN；修复 `.gitignore` 误忽略 `src/china_etf/data/`；
+  88 测试全过；commit `fefb1c7`）
 - 2026-08-08：Gate 3 final corrections 完成 → `docs/review_packets/GATE_3_FINAL_CORRECTIONS.md`
   （ActionTransform V2 零权重可表达、93 维外生归一化 V2 policy-independent、无重叠 interval、
   Track B 量化 +0.8 年；68 测试全过）
@@ -36,11 +43,11 @@ Phase 3 — First RL Sanity（Gate 3 final corrections 已完成，等待复核�
 
 ## Current branch / commit
 
-`main` @ `c4dd562`（Gate 2 实现；后续存档 `3ca7db4` / `948fae7`）
+`main` @ `fefb1c7`（GATE_4_PRECHECK；此前 Gate 3 final `0e5ae7f` 等）
 
 ## Tests
 
-尚未开始（Gate 0 为只读审计，上游仓库亦无 tests/ 目录）。
+88 全过（`python -m pytest tests/ -q`）。
 
 ## Current Gate
 
@@ -50,25 +57,27 @@ Gate 1 — **APPROVED**（`GATE_1_CORRECTIONS_REVIEWER_RESPONSE.md`）
 
 Gate 2 — **APPROVED**（`GATE_2_CORRECTIONS_REVIEWER_RESPONSE.md`）
 
-Gate 3 — FINAL_CORRECTIONS_COMPLETE（`GATE_3_FINAL_CORRECTIONS.md`），等待 Reviewer 确认才可进入 Gate 4
+Gate 3 — **APPROVED_WITH_PRE_GATE4_CONDITIONS**（`GATE_3_FINAL_REVIEWER_RESPONSE.md`）
+
+Gate 4 — PRECHECK_SUBMITTED（`GATE_4_PRECHECK.md`，commit `fefb1c7`），等待 Reviewer 批准后进入 G4.3
 
 ## Blockers
 
-等待 Reviewer 对 `GATE_3_FINAL_CORRECTIONS.md` 复核。
+等待 Reviewer 对 `GATE_4_PRECHECK.md` 批准（决定 3-seed pilot 是否可启动）。
 
 ## Deviations
 
 Carry-Forward 条件（详见 DECISIONS.md）：
 - C1: 03110 same-day trading rule — Gate 6 前验证（当前 UNKNOWN）
-- C2: proxy launch/backfill 审计 — Gate 3 前完成（当前未验证的 proxy 禁入严格 PIT 管线）
-- C3: adjusted price PIT 语义 — Gate 2 必须覆盖（test_adjustment_point_in_time_semantics）
-- F1: 历史费率规则 PIT（mainland/southbound 各费项生效日）— Gate 4 前
-- F2: 港股通券商佣金是否 0.00005 — Gate 4 真实成本比较 / Gate 6 执行前
+- C2: proxy launch/backfill 审计 — 未验证的 proxy 禁入严格 PIT 管线（Track B 使用前关闭）
+- C3: adjusted price PIT 语义 — ✅ CLOSED（`GATE_4_PRECHECK` §2；累计 split + raw+events TR）
+- F1: 历史费率规则 PIT — ✅ CLOSED（`GATE_4_PRECHECK` §4；南向分段 + 大陆保守假设）
+- F2: 港股通券商佣金 — ✅ CLOSED（conservative 万3 + min 5 HKD，NOT ACCOUNT-VERIFIED）
 
 ## Next intended step
 
-Reviewer 确认后进入 Gate 4 — Core Walk-Forward（Track A 主证据；先 1 seed fold runner →
-3-seed pilot → 10 seeds；baselines 先行；F1/H1/C3 前置）。
+Reviewer 批准 `GATE_4_PRECHECK.md` 后 → G4.3 3-seed pilot（先正式 one-fold TD3/SAC/PPO seed=42
+冒烟 runner，再 3 seeds × 4 folds × baselines；Track A 主证据，10 seeds 后续）。
 
 ## Reviewer approval
 
