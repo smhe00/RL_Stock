@@ -137,7 +137,7 @@ collected 68 items
 
 ## 13. Git commit
 
-（提交后填写）
+`3ed3733`
 
 ---
 
