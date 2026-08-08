@@ -101,7 +101,7 @@ tercile 边界/tie/短N、Spearman 单调/NaN/常量、判别 gap+MWp、决策�
 
 # 7. Git Commit
 
-`GATE_4_FEATURE_ABLATION_RUNS` 提交 SHA：**`PENDING_SHA`**
+`GATE_4_FEATURE_ABLATION_RUNS` 提交 SHA：**`f0d471c`**
 
 ```text
 src/china_etf/evaluation/factor_importance.py        ← 统计 helper（scipy-backed）
