@@ -53,7 +53,7 @@ Phase 4 — GATE_4_PILOT_READY_FINAL_FIX 已提交（P1/P2/P3 修复 + P4 术语
 
 ## Current branch / commit
 
-`main` @ `GATE_4_PILOT_READY_FINAL_FIX commit SHA（待 commit 后回填）`（此前 `5392fd4`）
+`main` @ `9bf9024`（GATE_4_PILOT_READY_FINAL_FIX；此前 `5392fd4`）
 
 ## Tests
 

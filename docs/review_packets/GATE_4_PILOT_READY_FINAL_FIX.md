@@ -169,7 +169,7 @@ TD3 test 收益 -2.22% 为 train_passes=2 机制冒烟的正常波动，**非训
 
 # 10. Git Commit
 
-`GATE_4_PILOT_READY_FINAL_FIX` 提交 SHA：**（commit 后填写）**
+`GATE_4_PILOT_READY_FINAL_FIX` 提交 SHA：**`9bf9024`**
 
 包含：
 
