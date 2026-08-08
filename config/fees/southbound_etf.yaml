@@ -1,0 +1,16 @@
+# EXECUTION_SPEC §24 港股通 ETF 成本模型配置（草案）
+# 状态：pending verification — 以港交所/结算所最新费率与券商实际结算为准。
+broker_commission_rate: 0.00005
+hkex_trading_fee_rate: 0.0000565     # 交易费 0.00565%（待核实）
+regulatory_levy_rate: 0.000027       # 交易征费 0.0027%（待核实）
+stamp_duty_rate: 0.001               # 印花税 0.1%（双边，待核实最新政策）
+settlement_fee:
+  rate: 0.00002
+  min_hkd: 2.0
+  max_hkd: 100.0
+fx_cost_model: pending
+spread_model: pending
+slippage_model: pending
+market_impact_model: pending
+effective_date: 2026-08-08
+source: hkex_ccass_rules_pending

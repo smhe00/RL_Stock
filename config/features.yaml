@@ -1,0 +1,24 @@
+# EXECUTION_SPEC §30/§31 特征 V1（保持克制，宏观因子留作 Ablation）
+per_asset_features:
+  - log_return_5
+  - log_return_20
+  - log_return_60
+  - log_return_120
+  - realized_vol_20
+  - realized_vol_60
+  - drawdown_60
+  - drawdown_250
+
+include_weights: true
+
+global_features:
+  - cross_sectional_return_dispersion_20
+  - equity_average_corr_60
+  - cn_large_vol_percentile_252
+  - gold_equity_corr_60
+  - bond_equity_corr_60
+
+macro_features: disabled_v1
+
+scaling:
+  fit_on: train_only_per_fold

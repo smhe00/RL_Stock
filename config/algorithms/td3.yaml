@@ -1,0 +1,12 @@
+# EXECUTION_SPEC §40：Gate 3 之前禁止大规模调参；以下为 SB3 默认+小幅适配候选。
+algorithm: TD3
+library: stable-baselines3
+policy: MlpPolicy
+learning_rate: 0.0003
+buffer_size: 1000000
+batch_size: 256
+tau: 0.005
+gamma: 0.99
+policy_kwargs:
+  net_arch: [256, 256]
+seed: 42

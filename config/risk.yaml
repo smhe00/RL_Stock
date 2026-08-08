@@ -1,0 +1,9 @@
+# EXECUTION_SPEC §59 初始风险限制（安全上限，不是目标权重）
+risk:
+  long_only: true
+  leverage_max: 1.0
+  single_core_max: 0.25
+  single_theme_max: 0.12
+  theme_sleeve_max: 0.25
+  hardtech_max: 0.30
+  china_growth_max: 0.50

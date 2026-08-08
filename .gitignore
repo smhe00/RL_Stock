@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+*.egg-info/
+
+# Data / experiment artifacts (EXECUTION_SPEC §55: runs 内容不入库)
+data/
+logs/
+runs/
+tmp/
+
+# Local secrets / overrides
+*.local.yaml
+*.local.json
+config.json
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

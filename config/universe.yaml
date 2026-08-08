@@ -1,0 +1,46 @@
+# EXECUTION_SPEC §88 初始 ETF Universe 配置草案（冻结日期 2026-08-08）
+# 注意：preferred 不是唯一 ETF；Gate 1 必须筛选同类 alternative instruments。
+core:
+  CN_LARGE:
+    preferred: ["510300"]
+  CN_SMALL:
+    preferred: ["512100"]
+  CN_DIVIDEND:
+    preferred: ["512890"]
+  CHINEXT:
+    preferred: ["159915"]
+  STAR:
+    preferred: ["588000"]
+  HK_TECH:
+    preferred: ["513180"]
+  HK_DIVIDEND:
+    preferred: ["03110.HK"]
+  US_BROAD:
+    preferred: ["513500"]
+  GOLD:
+    preferred: ["518880"]
+  CN_DURATION:
+    preferred: ["511260"]
+  CASH_LIKE:
+    preferred: ["511360"]
+
+themes:
+  SEMICONDUCTOR:
+    preferred: ["512480"]
+  AI:
+    preferred: ["515070"]
+  ROBOTICS:
+    preferred: ["159770"]
+  BIOTECH:
+    preferred: ["159992"]
+  AEROSPACE:
+    preferred: ["512660"]
+
+watchlist:
+  - 低空经济
+  - 商业航天
+  - 6G
+  - 量子科技
+  - 生物制造
+  - 脑机接口
+  - 未来能源

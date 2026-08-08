@@ -1,0 +1,11 @@
+# EXECUTION_SPEC §20/§23 大陆 ETF 成本模型配置（草案）
+# 状态：pending verification — Gate 1/Gate 6 前必须向券商与交易所核实。
+broker_commission_rate: 0.00005
+broker_min_commission_cash: null  # 未确认前不得假设为 0
+exchange_fee_rate: 0.0            # 待核实（上交所/深交所 ETF 相关费用）
+stamp_duty_rate: 0.0              # ETF 免印花税（待核实）
+spread_model: pending
+slippage_model: pending
+market_impact_model: pending
+effective_date: 2026-08-08
+source: user_provided + broker_rules_pending

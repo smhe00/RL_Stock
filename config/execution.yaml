@@ -1,0 +1,9 @@
+# EXECUTION_SPEC §6/§27/§32/§51 执行参数初始值
+execution:
+  decision_frequency: daily_after_close
+  fill_semantics: next_trading_session_open
+  same_close_fill: forbidden
+  broker_cash_buffer_pct: 0.01
+  max_order_adv_fraction: 0.01
+  weight_tolerance_bps: 20
+  min_order_notional_cny: 1000
