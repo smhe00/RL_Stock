@@ -2,6 +2,10 @@
 
 ## GATE_1_DATA_UNIVERSE
 
+> **勘误通知（2026-08-08）**：本文件部分数据定义已按 Reviewer 意见修正，
+> 以 `GATE_1_CORRECTIONS.md` 为准。受影响章节：附录 A（ADV 口径）、附录 B（proxy launch date）、
+> 附录 D（downside/tail 命名与定义）、附录 F（03110 lot/T+0）、附录 G（513500 溢价口径）。
+
 ## 1. Goal
 
 按 EXECUTION_SPEC §66 与 Reviewer §18-§20 授权范围，完成 **Data & Universe Audit**：
@@ -97,7 +101,7 @@ no-lookahead 测试。**Gate 1 不输出训练数据集的最终冻结**（指�
 
 # 附录 A：Universe 审计总表（数据截至 2026-08-07 收盘）
 
-| Slot | Preferred | 名称 | 交易所 | 币种 | 类型 | 上市日 | REAL_HISTORY_START | 日线行数 | ADV(元) | 总市值(元) | T+0/T+1 | QMT 行情 |
+| Slot | Preferred | 名称 | 交易所 | 币种 | 类型 | 上市日 | REAL_HISTORY_START | 日线行数 | turnover_value_1d(元) | 市值(元) | T+0/T+1 | QMT 行情 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | CN_LARGE | 510300 | 沪深300ETF华泰柏瑞 | SH | CNY | 股票 | 2012-05-28 | 2012-05-28 | 3451 | 44.7亿 | 1221亿 | T+1 | OK |
 | CN_SMALL | 512100 | 中证1000ETF南方 | SH | CNY | 股票 | 2016-11-04 | 2016-11-04 | 2370 | 67.9亿 | 328亿 | T+1 | OK |
@@ -105,7 +109,7 @@ no-lookahead 测试。**Gate 1 不输出训练数据集的最终冻结**（指�
 | CHINEXT | 159915 | 创业板ETF易方达 | SZ | CNY | 股票 | 2011-12-09 | 2011-12-09 | 3559 | 76.1亿 | 681亿 | T+1 | OK |
 | STAR | 588000 | 科创50ETF华夏 | SH | CNY | 股票 | 2020-11-16 | 2020-11-16 | 1390 | 77.4亿 | 925亿 | T+1 | OK |
 | HK_TECH | 513180 | 恒生科技ETF华夏 | SH | CNY | 跨境 | 2021-05-25 | 2021-05-25 | 1264 | 19.2亿 | 428亿 | T+0 | OK |
-| HK_DIVIDEND | 03110.HK | GX恒生股息(GX HS HIGHDIV) | HKEX | HKD | 跨境/港股通ETF | 2013-06-17 | 2013-06-17(sina) | 3084 | 见注1 | 约59亿HKD(注1) | T+0(注2) | **无**(全0) |
+| HK_DIVIDEND | 03110.HK | GX恒生股息(GX HS HIGHDIV) | HKEX | HKD | 港股通ETF | 2013-06-17 | 2013-06-17(sina) | 3084 | 见注1 | 约59亿HKD(注1) | 见注2 | **无**(全0) |
 | US_BROAD | 513500 | 标普500ETF博时 | SH | CNY | 跨境/QDII | 2014-01-15 | 2014-01-15 | 3053 | 4.7亿 | 273亿 | T+0 | OK |
 | GOLD | 518880 | 黄金ETF华安 | SH | CNY | 商品 | 2013-07-29 | 2013-07-29 | 3168 | 61.5亿 | 1001亿 | T+0 | OK |
 | CN_DURATION | 511260 | 十年国债ETF国泰 | SH | CNY | 债券 | 2017-08-24 | 2017-08-24 | 2172 | NA(spot) | NA | T+0 | OK |
@@ -118,7 +122,9 @@ no-lookahead 测试。**Gate 1 不输出训练数据集的最终冻结**（指�
 
 注1：03110.HK 成交额/AUM 以基金公司月报口径（2026-01：发行股数 1.96 亿份、NAV≈HKD 30.33 → 市值约 59 亿 HKD）；
 QMT/spot 无该数据。ADV 未在 Gate 1 获取（sina 日线有 volume/amount，见 `data/qmt/raw/HK_DIVIDEND_03110_HK_sina_qfq.csv`）。
-注2：港股通 ETF 参照跨境 ETF T+0（以券商实际规则为准）。
+注2：03110 为 HKEX 上市 + 港股通可交易；当日回转能力按 HKEX/Southbound 规则验证
+（非上交所跨境 ETF 规则）。Board lot=50（2026-07-24 生效），Broker 支持待 Gate 6。
+注4：本表 "turnover_value_1d" 为 2026-08-07 单日成交额；ADV20/ADV60 见 `GATE_1_CORRECTIONS.md §3`。
 注3：T+0/T+1 依据上交所《交易规则》3.1.5（债券/债券ETF/货币ETF/黄金ETF/跨境ETF 当日回转，股票ETF T+1）；
 Phase 1 `instrument_master` 逐只核实。
 
@@ -167,13 +173,14 @@ Phase 1 `instrument_master` 逐只核实。
 ## 定义（冻结）
 
 - `rho_120/rho_250`：最近 120/250 个交易日（truncate 到共同历史）日对数收益 Pearson 相关。
-- `downside`：限定 **CN_LARGE 日收益 < 0** 的交易日，Pearson 相关（市场代理 = CN_LARGE）。
-- `tail`：co-crash 相关——两序列**至少一个**处于自身全期收益分位 ≤10% 的日子，Pearson 相关。
+- `CN_LARGE_DOWNSIDE_CORR`：限定 **CN_LARGE 日收益 < 0** 的交易日，Pearson 相关（原名 downside，已更名）。
+- `CN_LARGE_STRESS_CORR` / co-exceedance / TailDepScore：原 union-tail Pearson **已废弃**（选择偏差）；
+  新定义见 `GATE_1_CORRECTIONS.md §6`。
 - 所有指标报告 overlap 的 `start / end / obs`（完整数据见 `data/qmt/meta/correlations.csv`）。
 
 ## 关键对结果（截至 2026-08-07）
 
-| 对 | ρ120 | ρ250 | downside | tail |
+| 对 | ρ120 | ρ250 | CN_LARGE_DOWNSIDE | CN_LARGE_STRESS(q10) |
 |---|---:|---:|---:|---:|
 | SEMICONDUCTOR\|STAR | 0.974 | **0.972** | 0.856 | 0.592 |
 | AI\|STAR | 0.897 | **0.897** | — | — |
@@ -237,7 +244,7 @@ Phase 1 `instrument_master` 逐只核实。
 | QMT quote 能力 | **NOT AVAILABLE**（当前券商/版本） |
 | QMT order 能力 | UNKNOWN_PENDING_BROKER_TEST（Gate 6 券商侧验证） |
 | 币种 | HKD（组合基币 CNY，需 FXModel；HKD/CNY 用 AkShare 中行牌价，父工程已实现） |
-| Lot size | UNKNOWN_PENDING_BROKER_TEST（QMT 合约接口对港股返回 None） |
+| Lot size | **官方 50（2026-07-24 生效，原100→50）**；Broker 元数据支持 = UNKNOWN_PENDING_GATE6 |
 | 费用 | SouthboundCostModel 待 Gate 6 按券商实际结算费率冻结 |
 | 建议 | 槽位保留；**实盘 Instrument 首选境内港股红利 ETF**（159691/513690/513950），
   03110.HK 作为港股通侧备选；需 RFC 后方可定实盘标的 |
@@ -247,13 +254,12 @@ Phase 1 `instrument_master` 逐只核实。
 | 项目 | 结论 |
 |---|---|
 | 历史 NAV | **可用**：sina 净值接口 2013-12-05 起，3025 条（`513500_nav_history.csv`） |
-| 历史溢价序列 | **可构造**：price（QMT raw）vs NAV（sina），2990 个 overlap 日（2014-01-15 → 2026-08-06） |
-| 溢价分布 | mean +1.34%；P90 +5.18%；**P95 +7.28%；P99 +13.98%**；min -7.25%；max +36.34% |
-| 当前溢价 | **+8.74%（2026-08-06）—— 已超历史 P95** |
+| close_to_official_nav_gap | **异步口径**（price/QMT raw vs NAV/sina）：2990 overlap 日（2014-01-15 → 2026-08-06）；mean +1.34%；P90 +5.18%；P95 +7.28%；P99 +13.98%；max +36.34%；latest +8.74% |
+| 实时可交易溢价 | **NOT_AVAILABLE**（历史 IOPV 不可得；正式名 `HISTORICAL_REALTIME_PREMIUM`） |
 | IOPV | 当前快照可用（spot `IOPV实时估值`）；**历史 IOPV 不可得（免费源）** |
-| PremiumGuard 阈值 | Gate 1 不设定（Reviewer 要求）；数据已足够 Phase 2 基于历史分布计算 P90/P95/P99 并仅在 Validation 期选择 |
+| PremiumGuard 阈值 | Gate 1 不设定；**禁止**用异步 close/NAV gap 的 P90/P95 直接调 Live 阈值（见 `GATE_1_CORRECTIONS.md §1`） |
 | 替代 S&P500 | 513650 南方（ADV 2.3亿）、159655 华夏（1.0亿）、159612 国泰（0.2亿） |
-| 风险提示 | 当前溢价 > P95：Gate 6/实盘买入必须受 PremiumGuard 约束，否则存在溢价回撤风险 |
+| 风险提示 | 官方公告已多次提示显著溢价风险；实盘买入必须受 PremiumGuard 约束（实时 IOPV 口径） |
 
 # 附录 H：数据可得性汇总（EXECUTION_SPEC §66 项目）
 

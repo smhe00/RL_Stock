@@ -63,3 +63,39 @@ class TargetAssetWeights:
   无法表达 ETF 未上市/港股休市/港股通 sell-only/停牌/QDII 溢价禁买/T+0/T+1/lot/next-open/cash 可用性。
 - Gate 2 之后中国 ETF 正式 OOS 以 `PortfolioAccounting + ExecutionSimulator/MockBroker +
   CostModel + TradabilityMask` 为准。
+
+### D-009 双价格体系（Gate 1 修正冻结）
+
+- `execution_price_series` = raw 可成交价（PnL/成交/溢价基准）。
+- `research_total_return_series` = 复权序列（收益/相关/特征）。
+- 依据：QMT front 对 515070(AI) 早期历史施加常数 0.5 因子（份额折算），raw 在折算日有假跳变；
+  QMT front 与 AkShare qfq 的调整语义须在 Phase 1 `instrument_master` 逐只审计。
+
+### D-010 规模口径
+
+- `aum_nav_based = TotalVolume(份额) × NAV`；`market_cap = TotalVolume × 收盘价`；两者分开。
+- QDII 溢价时 AUM≠市值（513500：AUM 250.31亿 vs 市值 272.70亿）；禁止用市值冒充基金规模。
+
+### D-011 513500 溢价口径
+
+- 历史 `close/NAV-1` 统一命名 `close_to_official_nav_gap`（异步口径），非 "premium"。
+- `HISTORICAL_REALTIME_PREMIUM = NOT_AVAILABLE`（历史 IOPV 不可得）。
+- 禁止用异步 gap 的 P90/P95 直接设定 Live PremiumGuard 阈值；实时阈值需 IOPV 对齐验证或
+  FairNAV 研究（`NAV_{t-1}×(1+SPX/FuturesMove_t)×FXMove_t`，单独 RFC）。
+
+### D-012 03110 官方元数据
+
+- board_lot=50（2026-07-24 生效，原 100→50；Global X/HKEX）；Broker 支持 = UNKNOWN_PENDING_GATE6。
+- T+0/当日回转能力按 HKEX/Southbound 规则验证，不以 SSE 跨境 ETF 规则为依据。
+
+### D-013 风险尾部指标定义
+
+- 废弃 union-tail Pearson（选择偏差）。
+- 冻结：`CN_LARGE_DOWNSIDE_CORR`（CN_LARGE<0）、`CN_LARGE_STRESS_CORR`（CN_LARGE≤q10）、
+  lower-tail co-exceedance（P(Ii|Ij)、P(Ij|Ii)）、`TailDependenceScore = P(Ii∩Ij)/0.1²`。
+- 旧 tail=-0.646 等数值不得再用于"极端暴跌对冲"结论。
+
+### D-014 CASH_LIKE 风险类别
+
+- 511360 = `risk_class=SHORT_CREDIT, cash_equivalent=false`；与 Broker Cash 分开。
+- preferred 暂不更换；切换 511880/511990 等货币 ETF 需 RFC。
