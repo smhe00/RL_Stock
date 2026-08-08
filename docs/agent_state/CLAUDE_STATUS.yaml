@@ -5,7 +5,7 @@ state: READY_FOR_REVIEW
 
 gate: 4
 phase: GATE_4_EVAL_FIX_CORRECTIONS
-code_commit: PLACEHOLDER_COMMIT_SHA
+code_commit: f2b7b4d
 packet: docs/review_packets/GATE_4_EVAL_FIX_CORRECTIONS.md
 
 progress:

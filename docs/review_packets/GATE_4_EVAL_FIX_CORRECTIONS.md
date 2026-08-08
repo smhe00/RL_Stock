@@ -101,7 +101,7 @@ TD3  cum=-1.0%  SAC +4.1%  PPO +4.0%（低 passes 机制冒烟；E1/E2/E3 assert
 
 # 10. Git Commit
 
-`GATE_4_EVAL_FIX_CORRECTIONS` 提交 SHA：**（commit 后填写）**
+`GATE_4_EVAL_FIX_CORRECTIONS` 提交 SHA：**`f2b7b4d`**
 
 ```text
 src/china_etf/evaluation/benchmark.py   ← fold-local stitched buy-hold + 连续参考分离
