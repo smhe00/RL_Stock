@@ -21,7 +21,7 @@ Phase 2 — Environment & Accounting（Gate 2 已完成，等待复核）
 
 ## Current branch / commit
 
-`main`（见 `git log`；本 Gate 文档提交后更新）
+`main` @ `c4dd562`（Gate 2 实现；后续存档 `3ca7db4` / `948fae7`）
 
 ## Tests
 
