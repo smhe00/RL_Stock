@@ -5,7 +5,7 @@ state: READY_FOR_REVIEW
 
 gate: 4
 phase: GATE_4_NON_RL_HORSE_RACE_FINALIZATION
-code_commit: PLACEHOLDER_COMMIT_SHA
+code_commit: 2a8ea68
 packet: docs/review_packets/GATE_4_NON_RL_HORSE_RACE_FINALIZATION.md
 
 progress:

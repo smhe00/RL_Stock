@@ -61,7 +61,7 @@ collected 162 items  →  162 passed
 
 # 6. Git Commit
 
-`GATE_4_NON_RL_HORSE_RACE_FINALIZATION` 提交 SHA：**（commit 后填写）**
+`GATE_4_NON_RL_HORSE_RACE_FINALIZATION` 提交 SHA：**`2a8ea68`**
 
 ```text
 src/china_etf/evaluation/baselines.py    ← F4A ERC/HRP 标注 + 投影语义
