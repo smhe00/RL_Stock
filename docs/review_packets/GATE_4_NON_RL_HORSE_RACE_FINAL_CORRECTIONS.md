@@ -81,7 +81,7 @@ collected 162 items  →  162 passed
 
 # 10. Git Commit
 
-`GATE_4_NON_RL_HORSE_RACE_FINAL_CORRECTIONS` 提交 SHA：**（commit 后填写）**
+`GATE_4_NON_RL_HORSE_RACE_FINAL_CORRECTIONS` 提交 SHA：**`4ace12f`**
 
 ```text
 src/china_etf/evaluation/baselines.py    ← F1 HRP 方向 / F2 MinCVaR / F3 ERC / F4 约束进优化器
