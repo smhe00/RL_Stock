@@ -19,3 +19,10 @@
 
 - `config/` 下 YAML 依据 EXECUTION_SPEC §59/§88/§89 冻结值建立；费用类参数标记为 `pending verification`，
   Gate 1（数据审计）与 Gate 6（QMT Paper）前必须核实，不得把草案当事实。
+
+### D-004 Gate 0 上游快照
+
+- 固定 FinRL-X upstream snapshot：AI4Finance-Foundation/FinRL-Trading，HEAD `e65d6f0`（2026-05-02）。
+- 审计结论：复用 weight contract 与 S/A/T/R 分层概念；中国 ETF 核心模块在 `src/china_etf/` 自建；
+  不深度依赖 upstream 运行时（其 requirements.txt 未声明 DRL 依赖）。
+- 详细证据见 `docs/review_packets/GATE_0_UPSTREAM_AUDIT.md`（待 Reviewer 批准）。
