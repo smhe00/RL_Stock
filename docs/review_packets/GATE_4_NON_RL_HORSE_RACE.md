@@ -87,7 +87,7 @@ collected 154 items  →  154 passed（新增 tests/test_non_rl_horse_race.py 8 
 
 # 6. Git Commit
 
-`GATE_4_NON_RL_HORSE_RACE` 提交 SHA：**（commit 后填写）**
+`GATE_4_NON_RL_HORSE_RACE` 提交 SHA：**`6ded3ac`**
 
 ```text
 src/china_etf/evaluation/baselines.py        ← +6 Tier A 方法（ERC/HRP/MaxDiv/TrendRP/MinCVaR/ShrinkMV）
