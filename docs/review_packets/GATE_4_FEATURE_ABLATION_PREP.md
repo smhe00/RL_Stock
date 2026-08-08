@@ -99,7 +99,7 @@ collected 138 items  →  138 passed（新增 tests/test_ablation_features.py 10
 
 # 11. Git Commit
 
-`GATE_4_FEATURE_ABLATION_PREP` 提交 SHA：**（commit 后填写）**
+`GATE_4_FEATURE_ABLATION_PREP` 提交 SHA：**`7267cb7`**
 
 ```text
 src/china_etf/features/ablation_features.py   ← F1/F2/F3 builders + align_pit + market_feature_frame(set)
