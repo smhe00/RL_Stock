@@ -65,8 +65,8 @@ def build_env(adj, opens, closes, corporate_actions=None) -> ChinaETFPortfolioEn
     )
 
 
-def check_ca_513690_in_fold(fold) -> bool:
-    """验证 F4 test 窗口内 513690 派息（2025-12-17）在 env step 中被计提。"""
+def check_ca_513690_in_fold(fold) -> dict:
+    """验证 runner 数据中 513690 2025-12-17 派息：ex 计提 + 官方 pay_date 2025-12-22 结算（FINAL_FIX P2）。"""
     env = build_env(
         load_research_adj().loc[:fold.test_end],
         {k: v[v.index <= fold.test_end] for k, v in load_execution_prices()[0].items()},
@@ -75,14 +75,19 @@ def check_ca_513690_in_fold(fold) -> bool:
     )
     env.reset()
     ex = pd.Timestamp("2025-12-17")
-    accrued = False
+    pay = pd.Timestamp("2025-12-22")
+    accrued_at_ex = False
+    settled_by_official_pay = False
     while env._i < len(env.calendar) - 1:
         t_next = env.calendar[env._i + 1]
         env.step(np.zeros(len(SLOTS)))
         if t_next == ex:
-            accrued = "513690.SH" in env.accounting.dividend_receivable
+            accrued_at_ex = "513690.SH" in env.accounting.dividend_receivable
+        if t_next == pay:
+            settled_by_official_pay = "513690.SH" not in env.accounting.dividend_receivable
+        if t_next >= pay:
             break
-    return accrued
+    return {"accrued_at_ex_2025-12-17": accrued_at_ex, "settled_by_official_pay_2025-12-22": settled_by_official_pay}
 
 
 def main() -> None:
@@ -95,10 +100,12 @@ def main() -> None:
         corporate_actions=CA,
     )
     folds = runner.make_folds(n_folds=4)  # train core 300 + val 60，新 513690 日历
+    calendar_rows = int((adj.index >= runner.decision_start).sum())
+    max_full_transitions = calendar_rows - 1  # 末行 = terminal mark，非决策（评审 §23/P4）
     print("== Track A decision region ==")
     print(f"decision_start = {runner.decision_start.date()}  "
           f"decision_end = {adj.index[-1].date()}  "
-          f"decision_days = {(adj.index >= runner.decision_start).sum()}")
+          f"calendar_rows = {calendar_rows}  max_full_transitions = {max_full_transitions}")
     print("\n== 4-fold expanding (train core + val 60 + test) ==")
     fold_rows = []
     for f in folds:
@@ -123,17 +130,18 @@ def main() -> None:
         "seed": SEED, "device": device,
         "track_a": {"decision_start": str(runner.decision_start.date()),
                     "decision_end": str(adj.index[-1].date()),
-                    "decision_days": int((adj.index >= runner.decision_start).sum())},
+                    "calendar_rows": calendar_rows,
+                    "max_full_transitions": max_full_transitions},
         "folds": fold_rows,
         "smoke_fold": smoke_fold.name,
-        "corporate_action_513690_accrued_in_test": None,
+        "corporate_action_513690_official_pay": None,
         "boundary": {},
         "smoke": {},
     }
 
-    # 真实 CA：513690 派息在 F4 test 窗口被计提
-    results["corporate_action_513690_accrued_in_test"] = check_ca_513690_in_fold(smoke_fold)
-    print(f"CA 513690 2025-12-17 派息计提: {results['corporate_action_513690_accrued_in_test']}")
+    # 真实 CA（FINAL_FIX P2）：513690 2025-12-17 计提 + 官方 2025-12-22 结算
+    results["corporate_action_513690_official_pay"] = check_ca_513690_in_fold(smoke_fold)
+    print(f"CA 513690 官方派息: {results['corporate_action_513690_official_pay']}")
 
     # EW baseline（F4，含 CA）
     m_ew = runner.run_fold_baseline(smoke_fold, equal_weight_policy)

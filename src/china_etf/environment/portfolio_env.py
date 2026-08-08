@@ -81,15 +81,14 @@ class ChinaETFPortfolioEnv:
         self._i = 0
         self._warmup_index = self._find_warmup_index()
         self._weights = pd.Series(np.zeros(len(slots)), index=slots)
-        # 公司行为事件索引（GATE_4_PILOT_READY CA1）：ex_date（计提/折算）+ pay_date（派息结算）
+        # 公司行为事件索引（CA1）：ex_date（计提/折算）+ settle_date（派息结算，官方或保守 fallback）
         self._ca_by_date: dict[pd.Timestamp, list[CorporateActionEvent]] = {}
-        self._ca_by_pay_date: dict[pd.Timestamp, list[CorporateActionEvent]] = {}
+        self._ca_by_settle_date: dict[pd.Timestamp, list[CorporateActionEvent]] = {}
         if corporate_actions:
             for evs in corporate_actions.values():
                 for ev in evs:
                     self._ca_by_date.setdefault(ev.ex_date, []).append(ev)
-                    if ev.pay_date is not None:
-                        self._ca_by_pay_date.setdefault(ev.pay_date, []).append(ev)
+                    self._ca_by_settle_date.setdefault(ev.settle_date, []).append(ev)
         self._active_instruments = set(self.slot_to_instrument.values())
 
     def reset(self) -> np.ndarray:
@@ -150,7 +149,7 @@ class ChinaETFPortfolioEnv:
         全部价值中性：折算不改变权益；应收款抵消 raw 价除息日机械下跌。
         """
         conv: dict[str, float] = {}
-        for ev in self._ca_by_pay_date.get(d, ()):
+        for ev in self._ca_by_settle_date.get(d, ()):
             if ev.instrument in self._active_instruments and ev.cash_per_share > 0:
                 self.accounting.settle_dividend(ev.instrument)
         for ev in self._ca_by_date.get(d, ()):

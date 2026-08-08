@@ -67,7 +67,13 @@ def _env(adj_A, raw_open, raw_close, events, initial_cash=1_000_000.0):
 
 
 def _cash_div_event(ex=EX, pay=PAY, cash=0.10):
-    return CorporateActionEvent(instrument="A", ex_date=ex, pay_date=pay, cash_per_share=cash, unit_factor=1.0)
+    settle = pay if pay is not None else ex + pd.offsets.BDay(5)
+    return CorporateActionEvent(
+        instrument="A", action_type="CASH_DIVIDEND", ex_date=ex,
+        unit_factor=1.0, cash_per_share=cash, pay_date=pay,
+        settle_date=settle,
+        source="official_fund_announcement" if pay is not None else "CONSERVATIVE_FALLBACK",
+    )
 
 
 def _flat(price=10.0):
@@ -192,7 +198,11 @@ def test_unit_conversion_preserves_portfolio_value() -> None:
     v_after = acc.snapshot(DATES[0], {"A": 20.0}, {}).portfolio_value
     assert v_after == pytest.approx(v_before)
     # 环境层：跨折算日 qty 改变、equity 连续
-    conv = CorporateActionEvent(instrument="A", ex_date=EX, pay_date=None, cash_per_share=0.0, unit_factor=0.5)
+    conv = CorporateActionEvent(
+        instrument="A", action_type="UNIT_CONSOLIDATION", ex_date=EX,
+        unit_factor=0.5, cash_per_share=0.0, pay_date=None, settle_date=EX,
+        source="official_fund_announcement",
+    )
     raw_close = _flat(10.0)
     raw_close[DATES.get_loc(EX)] = 20.0  # 折算后价格翻倍（raw）
     env = _env(_trendy(), _flat(10.0), raw_close, [conv])

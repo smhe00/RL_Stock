@@ -100,19 +100,26 @@ def total_return_index(raw_close: pd.Series, events: pd.DataFrame | None) -> pd.
 
 
 def _hk_cny_series() -> pd.DataFrame:
-    """03110 保留研究序列（H1 成果；Gate 4 已 defer，供 wrapper-equivalence audit 用）。"""
+    """03110 保留研究序列（H1 成果；Gate 4 已 defer，供 wrapper-equivalence audit 用）。
+
+    FINAL_FIX P1：CNY 总收益转换用归一化 FX，避免 FX 水平被二次计入（评审 §6）：
+        TR_CNY_t = TR_HKD_t × FX_t / FX_0
+    执行价仍为 raw 成交价 × FX（open/close 为 CNY 价格水平）。
+    """
     hk = _read_csv("HK_DIVIDEND_03110_HK_sina_qfq.csv")  # 03110 sina 收盘（qfq==raw，H1 已验证）
     fx = load_fx_hkd_cny()
     fx = fx.reindex(hk.index).ffill()
+    fx0 = float(fx.iloc[0])
     out = pd.DataFrame(index=hk.index)
-    # H1 修正：raw + 官方派息 → 总收益水平指数（HKD），再 × FX → CNY
+    # H1 修正：raw + 官方派息 → 总收益水平指数（HKD）
     events = _load_events("03110.HK")
     tr_idx_hkd = total_return_index(hk["close"], events)
-    # 执行价必须用 raw 成交价（×FX）；研究序列用总收益指数
+    # 归一化 FX：相对基准的汇率变动，避免与 TR 的 HKD 累计双计
     out["open"] = hk["open"] * fx
     out["close"] = hk["close"] * fx
-    out["close_tr_cny"] = tr_idx_hkd * fx
-    out["close_hkd"] = hk["close"]
+    out["close_tr_hkd"] = tr_idx_hkd  # HKD total-return index（含派息；供 wrapper audit 对照官方）
+    out["close_tr_cny"] = tr_idx_hkd * (fx / fx0)
+    out["close_hkd"] = hk["close"]  # HKD raw 收盘（执行价参考；不含分红）
     return out
 
 
