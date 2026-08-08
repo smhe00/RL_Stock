@@ -1,37 +1,55 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_FEATURE_ABLATION_PREP_002
-state: REVIEW_COMPLETE
+handoff_id: G4_FEATURE_ABLATION_RUNS_001
+state: REVISIONS_REQUIRED
 
 reviewed_packet:
-  path: docs/review_packets/GATE_4_FEATURE_ABLATION_PREP_002.md
-  commit: eb8128f
+  path: docs/review_packets/GATE_4_FEATURE_ABLATION_RUNS.md
+  commit: 70489e3dc0e86e5bb06996b5d00fd86fa0d9fd66
 
-code_commit: eb8128f
+code_commit: f0d471c81bae35bedc2a29a4172e31719f1550c2
 
-decision: APPROVED
+decision: REVISIONS_REQUIRED
 
 response:
-  path: docs/reviewer_responses/GATE_4_FEATURE_ABLATION_PREP_002_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/GATE_4_FEATURE_ABLATION_RUNS_REVIEWER_RESPONSE.md
+
+passed:
+  - NO_RL_RETRAINING
+  - NO_10_SEED
+  - CORRECTED_NON_RL_REFERENCE_PATH
+  - F1_FROZEN_FORMULAS_REUSED
+  - TRACKED_AUDITABLE_ARTIFACT
+  - BASIC_DECISION_DATE_ALIGNMENT
+
+blocked:
+  - A1_TEST_INFORMED_FEATURE_SCREENING
+  - A2_NOT_CANONICAL_FROZEN_ABLATION_COMPLETION
+  - A3_IID_SIGNIFICANCE_ON_DEPENDENT_TIME_SERIES
+  - A4_FULL_TEST_PANEL_F0_RESIDUALIZATION
+  - A5_UNFROZEN_COMPOSITE_IMPORTANCE_SCORE
 
 authorized_next:
-  - GATE_4_FEATURE_ABLATION_RUNS
+  - GATE_4_FEATURE_ABLATION_RUNS_CORRECTIONS
 
 forbidden_next:
   - RL_RETRAINING
   - GATE_4_10_SEED_FORMAL
   - OPTUNA
   - HYPERPARAMETER_SWEEP
+  - TEST_INFORMED_FEATURE_SELECTION
   - FEATURE_DATA_READY_EXPANSION
+  - F2_F3_REAL_MACRO_RUN
   - QMT_LIVE
   - SOUTHBOUND_EXECUTION
 
 notes:
-  - Feature ablation preparation reaffirmation approved.
-  - Prep assets have zero drift from prior approved state.
-  - Full pytest 162 passed and smoke validation are accepted.
-  - Feature ablation execution is authorized only under frozen FEATURE_ABLATION_SPEC.
-  - F2 real macro data remains an independent FEATURE_DATA_READY gate.
-  - RL remains historical reference only.
+  - Current 475-Test factor-importance artifact is exploratory/descriptive only and must not drive feature selection or RL observation/network changes.
+  - Frozen FEATURE_ABLATION_SPEC explicitly prevents changing F1/F2/F3 candidates because of Test performance.
+  - equity_vol_ratio_20_60 is the strongest raw exploratory association, but this is a hypothesis, not confirmatory feature-selection evidence.
+  - Mann-Whitney daily p-values do not account for overlapping rolling windows, serial dependence, or heteroskedasticity; add block-bootstrap/permutation uncertainty and multiple-testing adjustment.
+  - F0 residualization is fit on the full Test panel and therefore does not establish out-of-sample incremental predictive information; redo screening on TRAIN/VALIDATION with fold-local or time-ordered cross-fitting.
+  - Do not use the composite signed rho_ret + rho_risk importance score for selection unless frozen before confirmatory data.
+  - No canonical RL F0-vs-F1 model ablation is authorized; RL retraining remains forbidden.
 
-updated_at: 2026-08-09T08:20:00+08:00
+updated_at: 2026-08-09T08:32:00+08:00
