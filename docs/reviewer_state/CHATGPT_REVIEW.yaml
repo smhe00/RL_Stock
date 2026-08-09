@@ -1,47 +1,40 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_LONG_HORIZON_PROXY_RUN_FX_FIX_RERUN_001
-state: REVIEW_COMPLETE
+handoff_id: G4_L2_CLOSED_POST_L2_ARCH_PREP_001
+state: REVISIONS_REQUIRED
 
 reviewed_packet:
   path: docs/review_packets/GATE_4_LONG_HORIZON_PROXY_RUN.md
-  commit: 97fc857e863a06e14035d996d0dc146d5ba576d0
+  commit: f7385be5496eaba420582910e6493c2d5d0c91eb
 
 code_commit: 7781800d4ce996a216aa1e08f1346504c2628b66
 
-decision: L2_PROXY_SCENARIO_ACCEPTED_GATE4_LONG_HORIZON_CLOSED
+decision: POST_L2_ARCH_PREP_ACK_ONLY_ACTUAL_PREP_PACKET_REQUIRED
 
 response:
-  path: docs/reviewer_responses/GATE_4_LONG_HORIZON_PROXY_RUN_FX_FIX_RERUN_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/POST_L2_DETERMINISTIC_ARCHITECTURE_PREP_ACK_REVIEWER_RESPONSE.md
 
 passed:
-  - TRACK_C_SCENARIO_LABELING_CORRECT
-  - WINDOW_2800_PARITY_CONFIRMED
-  - SIX_METHOD_SET_AND_CANONICAL_PARAMS_PRESERVED
-  - SIGNAL_PANEL_AND_REALIZED_RETURN_PANEL_SEPARATED
-  - NON_A_SIGNAL_TMINUS1_TIMING_PRESERVED
-  - HKD_CNY_CONVERSION_IMPLEMENTED_FOR_HK_TECH_AND_HK_DIVIDEND
-  - HK_SIGNAL_USES_TMINUS1_CNY_CONVERTED_LEVEL
-  - HK_REALIZED_RETURN_USES_CNY_T_TO_TPLUS1_LEVELS
-  - CN_DURATION_UNIT_SAFE_FORMULA_PRESERVED
-  - CASH_LIKE_CARRY_ONLY_PRESERVED
-  - COMMON_RISK_OVERLAY_APPLIED_TO_ALL_FIVE_METHODS
-  - POST_OVERLAY_VIOLATIONS_ZERO
-  - NUMERIC_COST_SENSITIVITY_REPORTED
-  - STAR_POST2020_CALIBRATION_REPORTED
-  - RAW_REPRODUCIBILITY_ARTIFACT_POPULATED
-  - FULL_TEST_SUITE_REPORTED_273_PASS
-  - PPO_SAC_TD3_EXCLUDED
-  - L2_FINAL_RESULTS_ACCEPTED
-  - GATE4_LONG_HORIZON_CLOSED
+  - L2_ACCEPTANCE_CONSUMED
+  - GATE4_LONG_HORIZON_CLOSURE_ACKNOWLEDGED
+  - BOC_FX_QUOTE_DIRECTION_DOC_FIX_APPLIED
+  - POST_L2_ARCH_PREP_PHASE_DECLARED
+  - PPO_SAC_TD3_REMAIN_EXCLUDED
 
-non_blocking_documentation_correction:
-  - Packet wording should state BOC quote direction unambiguously as CNY per 100 HKD; load_fx_hkd_cny implementation /100 is accepted and no rerun is required.
+revision_required:
+  - DEDICATED_POST_L2_ARCHITECTURE_PREP_PACKET_MISSING
+  - EXACT_MAXDIV_MOMENTUM_CANDIDATE_SET_NOT_FROZEN
+  - BLENDING_ORDER_AND_FINAL_OVERLAY_SEMANTICS_NOT_FROZEN
+  - REBALANCE_AND_TIMING_CONTRACT_NOT_RESTATED_FOR_ARCHITECTURE
+  - EX_ANTE_ARCHITECTURE_SUCCESS_CRITERIA_NOT_FROZEN
+  - COMBINED_RUN_EVALUATION_TABLE_AND_COST_RULES_NOT_FROZEN
 
 authorized_next:
   - POST_L2_DETERMINISTIC_ARCHITECTURE_PREP
 
 forbidden_next:
+  - POST_L2_DETERMINISTIC_ARCHITECTURE_RUN
+  - RESULT_INFORMED_BLEND_WEIGHT_SEARCH
   - PPO
   - SAC
   - TD3
@@ -51,12 +44,11 @@ forbidden_next:
   - QMT_LIVE
 
 notes:
-  - Accepted final L2 MaxDiv: calendar CAGR about 6.0%, active-day annualized return about 6.2%, Sharpe 1.024, MaxDD about -10.4%, Calmar 0.595.
-  - Accepted final L2 Momentum: calendar CAGR about 8.4%, active-day annualized return about 8.7%, Sharpe 0.571, MaxDD about -44.3%; 1x approximate cost reduces active-day annualized return to about 8.08%.
-  - MaxDiv is the accepted risk-control/core-allocation candidate; Momentum remains a distinct long-horizon return-engine candidate rather than being rejected on Sharpe alone.
-  - STAR 000986 vs 科创50 post-2020 correlation about 0.1475 is a significant Track-C basis-risk warning; no proxy change is authorized from observed results.
-  - Both earlier L2 generations remain quarantined history; gen3 FX-corrected output is the accepted record.
-  - Next phase is PREP-only: freeze any MaxDiv+Momentum architecture/rules and evaluation criteria before running combined-strategy results.
-  - L1 remains frozen; QMT live remains forbidden.
+  - Current handoff is an acknowledgement/phase transition only; it is not an architecture PREP submission because it still points to the old L2 run packet.
+  - Submit a dedicated docs/review_packets/POST_L2_DETERMINISTIC_ARCHITECTURE_PREP.md before computing any MaxDiv+Momentum combined result.
+  - Freeze a small finite rationale-driven candidate architecture set; pure MaxDiv and pure Momentum remain controls; dense alpha sweeps are forbidden.
+  - Freeze exact blending semantics, final RiskOverlayV0 application, timing, turnover/cost computation, stress regimes, evaluation metrics and ex-ante success criteria before the run.
+  - Parent strategy parameters, 11-slot universe, FX/timing contract, accepted 2800-interval L2 panel and STAR basis-risk warning remain fixed.
+  - L2 remains closed and accepted; this revision applies only to the next architecture PREP submission.
 
-updated_at: 2026-08-09T23:55:00+08:00
+updated_at: 2026-08-10T00:14:00+08:00
