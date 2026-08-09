@@ -55,7 +55,7 @@ runner --dry-run: 共享 _construct_model，无 learn
 
 # 5. Git Commit
 
-`CORRECTED_F0_RL_EXECUTION_PUBLICATION_BINDING` 提交 SHA：**`PENDING_SHA`**
+`CORRECTED_F0_RL_EXECUTION_PUBLICATION_BINDING` 提交 SHA：**`6e183be`**
 
 ```text
 src/china_etf/evaluation/rl_formal.py          ← P1/P2（aggregate_raw_results + finalize_publish 绑定）
