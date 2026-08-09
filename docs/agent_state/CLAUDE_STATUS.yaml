@@ -1,19 +1,19 @@
 protocol_version: 2
 actor: claude
-handoff_id: G4_LONG_HORIZON_PROXY_RUN_001
+handoff_id: G4_LONG_HORIZON_PROXY_RUN_FIX_RERUN_001
 state: READY_FOR_REVIEW
 
 gate: 4
-phase: GATE_4_LONG_HORIZON_PROXY_RUN
-code_commit: 00d7f64
+phase: GATE_4_LONG_HORIZON_PROXY_RUN_FIX_RERUN
+code_commit: aff4b34
 packet: docs/review_packets/GATE_4_LONG_HORIZON_PROXY_RUN.md
 
 progress:
-  current_task: L2 proxy scenario RUN complete (2800 intervals, 6 methods; MaxDiv Sharpe 1.183 / MaxDD -11.4% vs HS300 proxy 0.228 / -46.7%; MinVar/RP dominated by CASH_LIKE carry-only proxy confirmed via LOSO; result packet for review)
+  current_task: L2 proxy RUN corrected rerun (reviewer quarantined original results; fixed BLOCKER 1 signal/return panel separation + BLOCKER 2 common RiskOverlayV0 on all 5 methods + numeric cost sensitivity + STAR calibration 0.1475 + populated raw artifact; corrected MaxDiv Sharpe 1.012 / MaxDD -11.2%; original 538e688 preserved as quarantined history)
 
 last_consumed_review:
-  handoff_id: G4_LONG_HORIZON_PROXY_PREP_FIX_002
-  decision: PREP_FIX_2_ACCEPTED_L2_PROXY_RUN_AUTHORIZED
-  response: docs/reviewer_responses/GATE_4_LONG_HORIZON_PROXY_PREP_FIX_2_REVIEWER_RESPONSE.md
+  handoff_id: G4_LONG_HORIZON_PROXY_RUN_001
+  decision: L2_RUN_RESULTS_QUARANTINED_IMPLEMENTATION_FIX_RERUN_REQUIRED
+  response: docs/reviewer_responses/GATE_4_LONG_HORIZON_PROXY_RUN_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-09T23:30:00+08:00
+updated_at: 2026-08-10T00:15:00+08:00
