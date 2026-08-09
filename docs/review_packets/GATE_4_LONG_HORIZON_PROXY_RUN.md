@@ -22,8 +22,9 @@ quarantined_history:
 > 修正：`HK_TECH`/`HK_DIVIDEND` 的 return level = `raw_hk_index_hkd(t) × hkd_cny(t)`（hkd_cny_boc
 > 中行折算价 /100，2013-01-04 起，日频 ffill）；signal 层对 HK 额外 shift(1) → 决策 T 用 T-1 FX。
 > signal/return 分离与 T->T+1 已实现收益对齐保留。**未改变**任何其他实验维度。
-> FX 方向显式：hkd_cny_boc 折算价单位 = HKD 每 100 CNY → `/100` 得 HKD/CNY（1 HKD = 0.8x CNY），
-> 与现有 `load_fx_hkd_cny` 一致（非静默推断列名）。
+> FX 方向显式（评审非阻断修正）：hkd_cny_boc `中行折算价` 单位为 **CNY per 100 HKD**（≈80-90 CNY/100 HKD），
+> `/100` → CNY per HKD（≈0.8-0.9）。`load_fx_hkd_cny()` 即读该列 `/100`，与本项目其他处一致
+> （非静默推断列名）。HK return level = raw_hk_index_hkd(t) × hkd_cny(t) 即 CNY 经济水平。
 
 ---
 
@@ -212,7 +213,7 @@ status: READY_FOR_REVIEW
 fx_fix_applied:
   HK_TECH/HK_DIVIDEND return levels = raw_hk_index_hkd(t) * hkd_cny(t)   # hkd_cny_boc /100, ffill
   signal: decision T uses T-1 FX (HK shift(1)); return: CNY T->T+1 realized
-  fx_direction: documented (HKD per 100 CNY -> /100 -> HKD/CNY); no silent column inference
+  fx_direction: documented (CNY per 100 HKD -> /100 -> CNY per HKD, ~0.8-0.9); no silent column inference
   fx_tests: 5 regression tests pass (perturbation, constant-index==FX return, T-1 signal,
             T->T+1 realized, 2800 parity + overlay zero-violation)
 
