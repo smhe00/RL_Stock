@@ -1,36 +1,39 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_FEATURE_ABLATION_RUNS_001
+handoff_id: G4_FEATURE_ABLATION_RUNS_CORRECTIONS_001
 state: REVISIONS_REQUIRED
 
 reviewed_packet:
-  path: docs/review_packets/GATE_4_FEATURE_ABLATION_RUNS.md
-  commit: 70489e3dc0e86e5bb06996b5d00fd86fa0d9fd66
+  path: docs/review_packets/GATE_4_FEATURE_ABLATION_RUNS_CORRECTIONS.md
+  commit: 0dfc536b8728605f42b81007e72f0d17256e3822
 
-code_commit: f0d471c81bae35bedc2a29a4172e31719f1550c2
+code_commit: 520d13ad1252d7ef73b57ec6175b349bd06b6510
 
-decision: REVISIONS_REQUIRED
+decision: TARGETED_STATISTICAL_FINALIZATION_REQUIRED
 
 response:
-  path: docs/reviewer_responses/GATE_4_FEATURE_ABLATION_RUNS_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/GATE_4_FEATURE_ABLATION_RUNS_CORRECTIONS_REVIEWER_RESPONSE.md
 
 passed:
+  - A2_NON_RL_DIAGNOSTIC_SCOPE
+  - A5_COMPOSITE_IMPORTANCE_SCORE_REMOVED
   - NO_RL_RETRAINING
   - NO_10_SEED
-  - CORRECTED_NON_RL_REFERENCE_PATH
-  - F1_FROZEN_FORMULAS_REUSED
-  - TRACKED_AUDITABLE_ARTIFACT
-  - BASIC_DECISION_DATE_ALIGNMENT
+  - NO_OPTUNA_OR_SWEEP
+
+partial_pass:
+  - TRAIN_FIT_VALIDATION_APPLY_MECHANICS
+  - TIME_SERIES_RESAMPLING_INFRASTRUCTURE
 
 blocked:
-  - A1_TEST_INFORMED_FEATURE_SCREENING
-  - A2_NOT_CANONICAL_FROZEN_ABLATION_COMPLETION
-  - A3_IID_SIGNIFICANCE_ON_DEPENDENT_TIME_SERIES
-  - A4_FULL_TEST_PANEL_F0_RESIDUALIZATION
-  - A5_UNFROZEN_COMPOSITE_IMPORTANCE_SCORE
+  - B1_GLOBAL_475_TEST_QUARANTINE_SEMANTICS
+  - B2_INVALID_MEDIAN_P_THEN_HOLM_BH
+  - B3_INVALID_AGGREGATE_BOOTSTRAP_CI_LABEL
+  - B4_INVALID_BOOTSTRAP_NULL_P_VALUE
+  - B5_REDUCED_F0_PROXY_OVERCLAIM
 
 authorized_next:
-  - GATE_4_FEATURE_ABLATION_RUNS_CORRECTIONS
+  - GATE_4_FEATURE_ABLATION_RUNS_STAT_FINALIZATION
 
 forbidden_next:
   - RL_RETRAINING
@@ -40,16 +43,18 @@ forbidden_next:
   - TEST_INFORMED_FEATURE_SELECTION
   - FEATURE_DATA_READY_EXPANSION
   - F2_F3_REAL_MACRO_RUN
+  - FEATURE_SET_CHANGE_FROM_CURRENT_TEST_RESULTS
   - QMT_LIVE
   - SOUTHBOUND_EXECUTION
 
 notes:
-  - Current 475-Test factor-importance artifact is exploratory/descriptive only and must not drive feature selection or RL observation/network changes.
-  - Frozen FEATURE_ABLATION_SPEC explicitly prevents changing F1/F2/F3 candidates because of Test performance.
-  - equity_vol_ratio_20_60 is the strongest raw exploratory association, but this is a hypothesis, not confirmatory feature-selection evidence.
-  - Mann-Whitney daily p-values do not account for overlapping rolling windows, serial dependence, or heteroskedasticity; add block-bootstrap/permutation uncertainty and multiple-testing adjustment.
-  - F0 residualization is fit on the full Test panel and therefore does not establish out-of-sample incremental predictive information; redo screening on TRAIN/VALIDATION with fold-local or time-ordered cross-fitting.
-  - Do not use the composite signed rho_ret + rho_risk importance score for selection unless frozen before confirmatory data.
-  - No canonical RL F0-vs-F1 model ablation is authorized; RL retraining remains forbidden.
+  - Later expanding folds reuse earlier frozen Test dates in train, so current packet cannot claim the union 475-day Test panel is globally quarantined.
+  - Median of per-fold Mann-Whitney p-values is not a calibrated p-value; Holm/BH on that median does not provide valid family-wise/FDR control.
+  - Median lower/upper endpoints of per-fold bootstrap intervals are not an aggregate 95% confidence interval.
+  - block_bootstrap_ci p_bs compares the empirical bootstrap distribution to the observed statistic rather than a null-centered distribution and should be removed or replaced.
+  - BLOCK_LEN=20 is incorrectly described as the longest rolling window; F1 contains 60-day windows. Add block-length sensitivity or a justified automatic rule.
+  - Residualization uses only a 10-variable reduced F0 market proxy, not the full 104-dimensional F0 observation contract; conclusions must be narrowed accordingly.
+  - Current evidence can support only a descriptive statement that F1 lacks a strong stable monotonic association in development data; it cannot prove no F1 predictive value or refute the previously observed Test association independently.
+  - Frozen F1 candidate set remains unchanged; no feature may be added/removed because of current Test results.
 
-updated_at: 2026-08-09T08:32:00+08:00
+updated_at: 2026-08-09T09:03:00+08:00
