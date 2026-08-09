@@ -73,7 +73,7 @@ collected 210 items  →  210 passed（新增 tests/test_rl_formal_protocol.py 1
 
 # 7. Git Commit
 
-`RL_FORMAL_PROTOCOL_PREP` 提交 SHA：**`PENDING_SHA`**
+`RL_FORMAL_PROTOCOL_PREP` 提交 SHA：**`707bbe3`**
 
 ```text
 docs/features/RL_FORMAL_PROTOCOL.md              ← 冻结协议（canonical source）
