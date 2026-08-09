@@ -1,64 +1,53 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_FEATURE_ABLATION_RUNS_STAT_FINALIZATION_CORRECTIONS_001
-state: REVISIONS_REQUIRED
+handoff_id: G4_FEATURE_ABLATION_DIAGNOSTIC_CLOSEOUT_001
+state: REVIEW_COMPLETE
 
 reviewed_packet:
-  path: docs/review_packets/GATE_4_FEATURE_ABLATION_RUNS_STAT_FINALIZATION_CORRECTIONS.md
-  commit: b1f94520dce22c1bcccab7c0f2cb8f117a4af6b8
+  path: docs/review_packets/GATE_4_FEATURE_ABLATION_DIAGNOSTIC_CLOSEOUT.md
+  commit: c78a2151bf2f85ffa94e577d2eb7261f56e22304
 
-code_commit: 4cc590f0e729ea1581445c5c82bf1fd4d219110b
+code_commit: cad0d4bd1c3b1b070f7b9a7aa65b7de64f130a03
 
-decision: TARGETED_RESAMPLING_CLOSEOUT_REQUIRED
+decision: APPROVED
 
 response:
-  path: docs/reviewer_responses/GATE_4_FEATURE_ABLATION_RUNS_STAT_FINALIZATION_CORRECTIONS_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/GATE_4_FEATURE_ABLATION_DIAGNOSTIC_CLOSEOUT_REVIEWER_RESPONSE.md
 
 passed:
-  - C1_TEST_TRANSITION_QUARANTINE
-  - C4_NESTED_PANEL_CI_WORDING
-  - C5_PRIMARY_DEPENDENCE_SCALE_PREDECLARED_IN_DESIGN
-  - B4_BOOTSTRAP_NULL_P_REMOVED
-  - B5_REDUCED_F0_PROXY_LABEL_AND_NARROWED_CLAIM
+  - D1_CONFIRMATORY_INFERENCE_RETIRED
+  - D2_BOOTSTRAP_CI_EVIDENCE_REMOVED
+  - D3_DESCRIPTIVE_CONCLUSION_NARROWED
+  - TEST_TRANSITION_QUARANTINE
+  - PER_SEGMENT_DESCRIPTIVE_REPORTING
+  - REDUCED_F0_PROXY_LABEL_AND_NARROWED_INTERPRETATION
+  - FROZEN_F1_CANDIDATE_SET_UNCHANGED
   - NO_RL_RETRAINING
   - NO_10_SEED
   - NO_OPTUNA_OR_SWEEP
-  - FROZEN_F1_CANDIDATE_SET_UNCHANGED
-
-partial_pass:
-  - C2_SEGMENT_AWARE_NULL_DIRECTION
-  - C3_SEGMENT_AWARE_RESAMPLING_DIRECTION
-
-blocked:
-  - D1_PRIMARY_60_DAY_BLOCK_PERMUTATION_DEGENERATE_ON_THREE_60_DAY_SEGMENTS
-  - D2_FOLD_BOOTSTRAP_STILL_CROSSES_QUARANTINED_GAPS
-  - D3_CONFIRMATORY_SIGNIFICANCE_WORDING_TOO_STRONG_UNTIL_D1_RESOLVED
 
 authorized_next:
-  - GATE_4_FEATURE_ABLATION_DIAGNOSTIC_CLOSEOUT
+  - RL_FORMAL_PROTOCOL_PREP
 
 forbidden_next:
-  - RL_FORMAL_PROTOCOL_PREP
   - RL_RETRAINING
   - CORRECTED_F0_RL_3SEED
   - GATE_4_10_SEED_FORMAL
   - OPTUNA
   - HYPERPARAMETER_SWEEP
   - TEST_INFORMED_FEATURE_SELECTION
+  - FEATURE_SET_CHANGE_FROM_CURRENT_TEST_RESULTS
   - FEATURE_DATA_READY_EXPANSION
   - F2_F3_REAL_MACRO_RUN
-  - FEATURE_SET_CHANGE_FROM_CURRENT_TEST_RESULTS
   - QMT_LIVE
   - SOUTHBOUND_EXECUTION
 
 notes:
-  - Canonical 475 Test execution dates are now correctly mapped to preceding decision dates; the transition invariant proves no diagnostic t->t+1 outcome lands on the frozen Test execution mask.
-  - The admissible panel consists of contiguous segments [359, 60, 60, 60]. With primary block_len=60, each 60-day segment is a single block, so those three segments are unchanged in every block permutation; only the 359-day segment is meaningfully randomized.
-  - Therefore p(60)/Holm/BH cannot yet be called a valid full-panel segment-aware confirmatory null test.
-  - The fold-specific bootstrap path still compacts dates after Test exclusion and uses moving blocks on the compact array, allowing blocks to cross quarantined gaps in later expanding folds.
-  - Preferred closeout is to retire formal p/Holm/BH and bootstrap-CI inferential claims and retain transition-quarantined descriptive point estimates/per-segment summaries, since this diagnostic must not drive feature selection.
-  - Alternatively, implement a genuinely non-degenerate per-segment null mechanism (for example segment-wise circular shift/random lag) and segment-aware bootstrap with tests.
-  - Final supported conclusion is descriptive negative evidence only: no large stable monotonic F1 association is seen on transition-quarantined development data, and the prior Test vol-ratio association does not reproduce with the same sign.
-  - Frozen F1 candidate set remains unchanged.
+  - Feature-diagnostic closeout is descriptive only; confirmatory p/Holm/BH and bootstrap-CI claims are retired.
+  - The canonical 475 Test execution dates are mapped to preceding decision dates and excluded; the transition invariant is retained.
+  - Supported conclusion is limited to descriptive negative evidence: no large stable monotonic F1 association is seen on transition-quarantined development data, and the prior Test vol-ratio association does not reproduce with the same sign.
+  - This does not prove absence of F1 predictive value and does not authorize deleting F1 features or changing RL observation/network.
+  - mann_whitney_p_exploratory_only remains non-confirmatory and must not be consumed for model/feature decisions.
+  - RL_FORMAL_PROTOCOL_PREP is protocol-freeze/preparation only; it must not launch RL training or corrected F0 3-seed runs.
 
-updated_at: 2026-08-09T09:31:00+08:00
+updated_at: 2026-08-09T09:53:00+08:00
