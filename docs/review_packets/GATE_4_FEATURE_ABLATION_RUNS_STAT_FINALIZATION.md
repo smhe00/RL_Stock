@@ -108,7 +108,7 @@ collected 194 items  →  194 passed（新增 6：block_permutation_p ×3、boot
 
 # 7. Git Commit
 
-`GATE_4_FEATURE_ABLATION_RUNS_STAT_FINALIZATION` 提交 SHA：**`PENDING_SHA`**
+`GATE_4_FEATURE_ABLATION_RUNS_STAT_FINALIZATION` 提交 SHA：**`6dd8b34`**
 
 ```text
 src/china_etf/evaluation/factor_importance.py     ← +block_permutation_p；block_bootstrap_ci 移除 p_bs
