@@ -1,39 +1,32 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_LONG_HORIZON_NON_RL_RUN_001
-state: REVISIONS_REQUIRED
+handoff_id: G4_LONG_HORIZON_NON_RL_RUN_DOC_FIX_001
+state: REVIEW_COMPLETE
 
 reviewed_packet:
   path: docs/review_packets/GATE_4_LONG_HORIZON_NON_RL_RUN.md
-  commit: 85163026aa0098f710d0b21f978879da2f59e83c
+  commit: 067ff6bd364bfa9ea51758b73fd6bb12733e546d
 
 code_commit: f039d369d94295433132e17cf981b2eb6243c17a
 
-decision: L1_RESULTS_ACCEPTED_DOC_CORRECTION_REQUIRED
+decision: DOC_FIX_ACCEPTED_L1_CLOSED_L2_PROXY_PREP_AUTHORIZED
 
 response:
-  path: docs/reviewer_responses/GATE_4_LONG_HORIZON_NON_RL_RUN_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/GATE_4_LONG_HORIZON_NON_RL_RUN_DOC_FIX_REVIEWER_RESPONSE.md
 
 passed:
   - L1_EXECUTION_TECHNICALLY_VALID
-  - FROZEN_1011_DAY_WINDOW_PARITY
-  - SIX_METHOD_SET_AND_CANONICAL_PARAMS_PRESERVED
-  - CAUSAL_T_TO_TPLUS1_SEMANTICS
-  - NO_OLD_475_MASK_FOR_EVAL_DATES
-  - NO_DATA_REFETCH_OR_PRELAUNCH_BACKFILL
-  - PPO_SAC_TD3_EXCLUDED
-  - L2_NOT_EXECUTED
+  - L1_RESULTS_ACCEPTED
+  - DOCUMENTATION_CORRECTION_ACCEPTED
+  - NO_L1_RERUN_OR_ARTIFACT_CHANGE
   - MAXDIV_LONG_WINDOW_RISK_ADJUSTED_ADVANTAGE_SUPPORTED
-
-revision_required:
-  - RESULT_PACKET_OVERSTATES_MAXDIV_UNIQUENESS_IN_2022H2_2023
-  - MOMENTUM_12_1_IS_ALSO_POSITIVE_IN_WEAK_PHASE
+  - L1_FORMALLY_CLOSED
 
 authorized_next:
-  - GATE_4_LONG_HORIZON_NON_RL_RUN_DOC_FIX
+  - GATE_4_LONG_HORIZON_PROXY_PREP
 
 forbidden_next:
-  - L2_PROXY_SCENARIO_PREP
+  - GATE_4_LONG_HORIZON_PROXY_RUN
   - L2_PROXY_SCENARIO_EXECUTION
   - PPO
   - SAC
@@ -44,10 +37,12 @@ forbidden_next:
   - QMT_LIVE
 
 notes:
-  - Do not rerun L1 or alter artifacts, code, parameters, or numeric results.
-  - Correct only the result packet and any summary text that says MaxDiv was the only positive executable method in the 2022H2-2023 weak phase.
-  - Correct interpretation: MaxDiv weak-phase Sharpe ~0.86 is highest; Momentum_12_1 is also positive at ~+3.0% cumulative return and Sharpe ~0.31.
-  - Return a documentation-only handoff, suggested G4_LONG_HORIZON_NON_RL_RUN_DOC_FIX_001.
-  - L2 remains unauthorized until the documentation correction is reviewed and L1 is formally closed.
+  - L1 is frozen and closed: 1011 real-instrument execution days, MaxDiv Sharpe ~1.655 and MaxDD ~-4.0%.
+  - The weak-phase wording is corrected: MaxDiv Sharpe ~0.86 is highest; Momentum_12_1 Sharpe ~0.31 is also positive.
+  - Next scope is PREP only for Track C long-history proxy/scenario research targeting approximately 2015 through 2026-08-07.
+  - Public-market proxy/index data acquisition is authorized during PREP with full provenance and explicit backfill/pre-launch labeling.
+  - L2 must be labeled SCENARIO_NOT_STRICT_PIT_OOS; backfilled proxy history may not be represented as real-instrument OOS.
+  - Same six deterministic comparison rows and canonical parameters remain frozen; PPO/SAC/TD3 remain excluded.
+  - Claude must return GATE_4_LONG_HORIZON_PROXY_PREP for review before any L2 execution.
 
-updated_at: 2026-08-09T20:35:00+08:00
+updated_at: 2026-08-09T21:40:00+08:00
