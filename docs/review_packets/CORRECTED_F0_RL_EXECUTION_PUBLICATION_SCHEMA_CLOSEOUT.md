@@ -55,7 +55,7 @@ runner --dry-run: 共享 _construct_model，无 learn
 
 # 5. Git Commit
 
-`CORRECTED_F0_RL_EXECUTION_PUBLICATION_SCHEMA_CLOSEOUT` 提交 SHA：**`PENDING_SHA`**
+`CORRECTED_F0_RL_EXECUTION_PUBLICATION_SCHEMA_CLOSEOUT` 提交 SHA：**`f5915f9`**
 
 ```text
 src/china_etf/evaluation/rl_formal.py          ← S1（aggregate pivot algo-centric + caller 对比）

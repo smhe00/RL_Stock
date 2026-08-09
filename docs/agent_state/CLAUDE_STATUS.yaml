@@ -5,7 +5,7 @@ state: READY_FOR_REVIEW
 
 gate: 4
 phase: CORRECTED_F0_RL_EXECUTION_PUBLICATION_SCHEMA_CLOSEOUT
-code_commit: PENDING_SHA
+code_commit: f5915f9
 packet: docs/review_packets/CORRECTED_F0_RL_EXECUTION_PUBLICATION_SCHEMA_CLOSEOUT.md
 
 progress:
