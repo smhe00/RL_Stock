@@ -94,7 +94,7 @@ collected 188 items  →  188 passed（新增 10：bootstrap CI ×3、Holm/BH ×
 
 # 7. Git Commit
 
-`GATE_4_FEATURE_ABLATION_RUNS_CORRECTIONS` 提交 SHA：**`PENDING_SHA`**
+`GATE_4_FEATURE_ABLATION_RUNS_CORRECTIONS` 提交 SHA：**`520d13a`**
 
 ```text
 src/china_etf/evaluation/factor_importance.py     ← +block_bootstrap_ci / holm_adjust / bh_fdr

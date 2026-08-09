@@ -5,7 +5,7 @@ state: READY_FOR_REVIEW
 
 gate: 4
 phase: GATE_4_FEATURE_ABLATION_RUNS_CORRECTIONS
-code_commit: PENDING_SHA
+code_commit: 520d13a
 packet: docs/review_packets/GATE_4_FEATURE_ABLATION_RUNS_CORRECTIONS.md
 
 progress:
