@@ -76,7 +76,7 @@ PPO/SAC/TD3 缺席所有代码路径与输出表
 
 # 8. Git Commit
 
-`GATE_4_LONG_HORIZON_NON_RL_PREP` 提交 SHA：**`PENDING_SHA`**
+`GATE_4_LONG_HORIZON_NON_RL_PREP` 提交 SHA：**`8cd3659`**
 
 ```text
 docs/review_packets/GATE_4_LONG_HORIZON_NON_RL_PREP.md  ← 本 packet
