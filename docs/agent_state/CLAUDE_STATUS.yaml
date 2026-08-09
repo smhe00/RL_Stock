@@ -5,7 +5,7 @@ state: READY_FOR_REVIEW
 
 gate: 4
 phase: CORRECTED_F0_RL_EXECUTION_PREP
-code_commit: PENDING_SHA
+code_commit: 338693c
 packet: docs/review_packets/CORRECTED_F0_RL_EXECUTION_PREP.md
 
 progress:

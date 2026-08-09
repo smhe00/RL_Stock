@@ -68,7 +68,7 @@ collected 227 items  →  227 passed（test_rl_formal_protocol.py 27 个）
 
 # 7. Git Commit
 
-`CORRECTED_F0_RL_EXECUTION_PREP` 提交 SHA：**`PENDING_SHA`**
+`CORRECTED_F0_RL_EXECUTION_PREP` 提交 SHA：**`338693c`**
 
 ```text
 src/china_etf/evaluation/rl_formal.py          ← E1/E2/E4 harness（config 绑定、invariants、GO/NO-GO evaluator）
