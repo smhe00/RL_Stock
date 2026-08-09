@@ -10,6 +10,20 @@ result_artifact_manifest_commit: f039d36
 handoff: G4_LONG_HORIZON_NON_RL_RUN_001
 ```
 
+> ## Documentation Correction Record（G4_LONG_HORIZON_NON_RL_RUN_DOC_FIX_001）
+>
+> 评审（`GATE_4_LONG_HORIZON_NON_RL_RUN_REVIEWER_RESPONSE.md`，decision `L1_RESULTS_ACCEPTED_DOC_CORRECTION_REQUIRED`）
+> 指出本 packet §7 弱股期"唯一正"表述与 artifact 不符：**Momentum_12_1 在 2022H2-2023 弱股期
+> 亦为正**（cum +3.0%，Sharpe +0.31）。已修正为与 artifact 一致的正确解读：
+>
+> - MaxDiv 弱股期 Sharpe **最高**（≈+0.86），非"唯一正"；
+> - Momentum +0.31 亦为正；EW / MinVar / RP 平至负；
+> - MaxDiv 弱股期**回撤优势**依然突出（MaxDD -3.4% vs 其余 -5.9%~-10.2%）。
+>
+> 本次为**纯文档修正**：未重跑实验、未改动 artifacts / 实现代码 / 测试 / 参数 / 任何数值结果
+> （评审 authorized fix scope #1/#2/#3，leave-artifacts-unchanged #4）。
+> 提交：见下方 Approval Record（doc_fix_commit）。
+
 ---
 
 # 1. 窗口与日期计数证据（hard guard #1 fail-closed）
@@ -128,18 +142,21 @@ MaxDD -3.4% → -4.0%（仅小幅扩张），仍远低于 HS300（-26.9%）/ EW�
    是。L1 MaxDiv MaxDD -4.0%，为 HS300（-26.9%）的 1/6.7、EW（-14.0%）的 1/3.5。
 
 3. 优势是否跨多个子期，而非几乎全部由 2024-2026 生成？
-   是，且是唯一跨双期稳健的方法：
-     - 弱股期 2022H2-2023：MaxDiv Sharpe +0.86（唯一正），其余全负
-       （EW -0.15 / MinVar -0.03 / RP -0.00 / Momentum +0.31 / HS300 -0.65）
+   是，MaxDiv 为弱股期 Sharpe 最高、回撤控制最强的可执行方法：
+     - 弱股期 2022H2-2023：MaxDiv Sharpe +0.86（最高；Momentum +0.31 亦为正，
+       EW -0.15 / MinVar -0.03 / RP -0.00 平至负，HS300 -0.65）
      - 强股期 2024-2026：MaxDiv Sharpe +2.01（最高）
+     - 回撤优势在弱股期尤为突出：MaxDiv MaxDD -3.4% vs 其余可执行方法
+       -5.9%（Momentum）~ -10.2%（MinVar）
    MaxDiv 最差日历年（2022）-0.4%，最差 12m 滚动 +2.3%（全程未负）。
 
 4. Sharpe 2.77 / MaxDD -3.4% 压缩了多少？
    Sharpe -40%（1.655），MaxDD 仅 -4.0%（扩张 0.6pct）；两者相对 HS300 的边际仍巨大。
 
-结论：MaximumDiversification 在长窗下保留实质性风险调整与回撤优势，且为唯一在弱股期
-取得正 Sharpe 的可执行方法。本研究为 robustness diagnostic（历史数据已被研究观察），
-非 pristine OOS 声明。
+结论：MaximumDiversification 在长窗下保留实质性风险调整与回撤优势：弱股期 Sharpe 最高
+（+0.86，Momentum +0.31 亦为正）、回撤控制显著领先（弱股期 MaxDD -3.4% vs 其余可执行
+方法 -5.9%~-10.2%），强股期 Sharpe 亦最高（+2.01）。本研究为 robustness diagnostic
+（历史数据已被研究观察），非 pristine OOS 声明。
 ```
 
 # 8. 明确声明
@@ -163,6 +180,9 @@ gate: 4
 handoff_id: G4_LONG_HORIZON_NON_RL_RUN_001
 packet: GATE_4_LONG_HORIZON_NON_RL_RUN
 status: READY_FOR_REVIEW
+
+doc_fix_handoff: G4_LONG_HORIZON_NON_RL_RUN_DOC_FIX_001
+doc_fix_commit: 待填   # 提交后回填（仅文档修正，不动 artifacts/代码/结果）
 
 executed:
   window: {decision_start: 2022-06-09, first_execution: 2022-06-10, last_decision: 2026-08-06, last_execution: 2026-08-07, n_decision_days: 1011, n_execution_dates: 1011}

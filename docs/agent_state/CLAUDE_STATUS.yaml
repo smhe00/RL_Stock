@@ -1,19 +1,19 @@
 protocol_version: 2
 actor: claude
-handoff_id: G4_LONG_HORIZON_NON_RL_RUN_001
+handoff_id: G4_LONG_HORIZON_NON_RL_RUN_DOC_FIX_001
 state: READY_FOR_REVIEW
 
 gate: 4
-phase: GATE_4_LONG_HORIZON_NON_RL_RUN
+phase: GATE_4_LONG_HORIZON_NON_RL_RUN_DOC_FIX
 code_commit: f039d36
 packet: docs/review_packets/GATE_4_LONG_HORIZON_NON_RL_RUN.md
 
 progress:
-  current_task: L1 real-instrument long-horizon non-RL RUN complete (single L1 execution, 1011 days, 6 methods; MaxDiv Sharpe 1.655 / MaxDD -4.0% vs HS300 0.384 / -26.9%; result packet for review)
+  current_task: L1 run doc correction (reviewer accepted L1_RESULTS, required documentation-only fix: correct weak-phase uniqueness overstatement to match artifact — MaxDiv is highest weak-phase Sharpe 0.86, not the only positive one; Momentum +0.31 also positive. No rerun / no artifact / no code changes)
 
 last_consumed_review:
-  handoff_id: G4_LONG_HORIZON_NON_RL_PREP_001
-  decision: PREP_APPROVED_L1_RUN_AUTHORIZED
-  response: docs/reviewer_responses/GATE_4_LONG_HORIZON_NON_RL_PREP_REVIEWER_RESPONSE.md
+  handoff_id: G4_LONG_HORIZON_NON_RL_RUN_001
+  decision: L1_RESULTS_ACCEPTED_DOC_CORRECTION_REQUIRED
+  response: docs/reviewer_responses/GATE_4_LONG_HORIZON_NON_RL_RUN_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-09T20:05:00+08:00
+updated_at: 2026-08-09T20:15:00+08:00
