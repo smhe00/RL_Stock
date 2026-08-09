@@ -62,7 +62,12 @@ def _algorithm_kwargs(algo_name: str, cfg: dict) -> dict:
 
 
 def _construct_model(algo_cls, algo_name: str, seed: int, cfg: dict, gym_tr) -> object:
-    """H1：单一共享构造路径——显式传 config 冻结超参 + net + device + seed（非 SB3 默认）。"""
+    """H1/F1：单一共享构造路径——显式传 config 冻结超参 + net + device + seed（非 SB3 默认）。
+
+    F1：校验 algo_cls 身份与 canonical algo_name 匹配，不匹配 → FormalConfigError（构造前）。
+    """
+    if algo_cls.__name__.upper() != algo_name.upper():
+        raise FormalConfigError(f"algo_name '{algo_name}' != algo_cls '{algo_cls.__name__}'")
     kwargs = _algorithm_kwargs(algo_name, cfg)
     net = list(cfg["net_arch"])
     device = cfg["device"][algo_name]
@@ -163,7 +168,10 @@ def validate_runtime_invariants(results: dict, mask_dates, cfg: dict = None) -> 
                 fold_len = FOLD_TEST_LENS[fold_name]
                 if len(exec_dates) != fold_len:
                     problems.append(f"{algo}|{seed_key}|{fold_name}: len(execution_dates) {len(exec_dates)} != {fold_len}")
-                if n_eval is not None and n_eval != fold_len:
+                # F2：缺失 n_eval_steps 即 fail-closed
+                if n_eval is None:
+                    problems.append(f"{algo}|{seed_key}|{fold_name}: n_eval_steps missing")
+                elif n_eval != fold_len:
                     problems.append(f"{algo}|{seed_key}|{fold_name}: n_eval_steps {n_eval} != {fold_len}")
                 stitched_dates.extend(exec_dates)
                 # H4 cost reconciliation：sum(series.costs) == test.total_cost（证据缺失 fail-closed）
@@ -173,14 +181,21 @@ def validate_runtime_invariants(results: dict, mask_dates, cfg: dict = None) -> 
                     problems.append(f"{algo}|{seed_key}|{fold_name}: cost reconciliation evidence missing")
                 elif abs(sum(float(c) for c in costs) - float(total_cost)) > 1e-6 * max(1.0, abs(float(total_cost))):
                     problems.append(f"{algo}|{seed_key}|{fold_name}: sum(costs) != total_cost")
-                # H5 raw 完整性：长度兼容
-                for key, need in (("net_returns", fold_len), ("cash", fold_len),
-                                  ("actual_weights", None)):
+                # F3：raw 完整性——7 数组长度兼容 + weight row shape == action_dim
+                for key in ("execution_dates", "net_returns", "costs", "cash"):
                     val = series.get(key)
                     if val is None:
                         problems.append(f"{algo}|{seed_key}|{fold_name}: raw {key} missing")
-                    elif need is not None and len(val) != need:
-                        problems.append(f"{algo}|{seed_key}|{fold_name}: raw {key} len {len(val)} != {need}")
+                    elif len(val) != fold_len:
+                        problems.append(f"{algo}|{seed_key}|{fold_name}: raw {key} len {len(val)} != {fold_len}")
+                for key in ("actual_weights", "raw_weights", "post_risk_weights"):
+                    val = series.get(key)
+                    if val is None:
+                        problems.append(f"{algo}|{seed_key}|{fold_name}: raw {key} missing")
+                    elif len(val) != fold_len:
+                        problems.append(f"{algo}|{seed_key}|{fold_name}: raw {key} len {len(val)} != {fold_len}")
+                    elif val and any(len(row) != 11 for row in val):
+                        problems.append(f"{algo}|{seed_key}|{fold_name}: raw {key} row width != 11")
                 n_total += 1
             # H3 stitched 级：F1→F4 有序拼接 == 475 ordered mask
             if stitched_dates != ordered_mask:
@@ -211,15 +226,24 @@ def evaluate_go_nogo(per_algo_stitched: dict, cfg: dict) -> dict:
     req_pass = max(2, int(np.ceil(2 / 3 * len(expected_seeds))))  # H6：从 config 派生 ≥2/3
 
     per_algorithm: dict[str, dict] = {}
+    expected_seeds_set = set(expected_seeds)
     for algo, st in per_algo_stitched.items():
         seed_keys = set(st.get("seed_keys", st.get("active_day_annualized_return", {}).keys()))
         reasons: list[str] = []
-        # H6：精确 seed 集
-        if seed_keys != set(expected_seeds):
+        # H6/F4：精确 seed 集 + 每 metric map 精确 seed keys
+        if seed_keys != expected_seeds_set:
             reasons.append(f"INCOMPLETE: seeds {sorted(seed_keys)} != {expected_seeds}")
-        rets = list(st.get("active_day_annualized_return", {}).values())
-        sharpes = list(st.get("sharpe", {}).values())
-        mdds = list(st.get("max_drawdown", {}).values())
+        metric_maps = {
+            "active_day_annualized_return": st.get("active_day_annualized_return", {}),
+            "sharpe": st.get("sharpe", {}),
+            "max_drawdown": st.get("max_drawdown", {}),
+        }
+        for mname, mmap in metric_maps.items():
+            if set(mmap.keys()) != expected_seeds_set:
+                reasons.append(f"INCOMPLETE: metric {mname} seed keys {sorted(mmap.keys())} != {expected_seeds}")
+        rets = [metric_maps["active_day_annualized_return"].get(s, float("nan")) for s in expected_seeds]
+        sharpes = [metric_maps["sharpe"].get(s, float("nan")) for s in expected_seeds]
+        mdds = [metric_maps["max_drawdown"].get(s, float("nan")) for s in expected_seeds]
         if not all(np.isfinite(v) for v in rets + sharpes + mdds) or not (rets and sharpes and mdds):
             reasons.append("non-finite/missing decision metrics")
         med_ret, med_sharpe, med_mdd = _median(rets), _median(sharpes), _median(mdds)
@@ -251,9 +275,16 @@ def evaluate_go_nogo(per_algo_stitched: dict, cfg: dict) -> dict:
         }
 
     n_go = sum(1 for v in per_algorithm.values() if v["decision"] == "GO")
-    project_level = "PROMISING" if n_go >= 1 else "NO_GO"
+    # F4：project-level 仅当算法集 == config algos（缺 algo → INCOMPLETE，不当作有意缺席）
+    expected_algos_set = set(cfg["algorithms"].keys())
+    actual_algos_set = set(per_algo_stitched.keys())
+    algos_complete = actual_algos_set == expected_algos_set
+    if algos_complete:
+        project_level = "PROMISING" if n_go >= 1 else "NO_GO"
+    else:
+        project_level = "INCOMPLETE"
 
-    # H7：真 Pareto dominance vs MaxDiv（Sharpe/Calmar 高好；MaxDD 高好=更浅）
+    # H7/F5：真 Pareto dominance vs MaxDiv；F5 要求全部冻结维度 finite 否则 UNAVAILABLE
     f_sharpe, f_mdd, f_calmar = frontier["sharpe"], frontier["max_drawdown"], frontier["calmar"]
     pareto: dict[str, dict] = {}
     for algo, v in per_algorithm.items():
@@ -265,13 +296,21 @@ def evaluate_go_nogo(per_algo_stitched: dict, cfg: dict) -> dict:
             "max_drawdown": (med_mdd, f_mdd, True),     # 高好（更浅）
             "calmar": (med_calmar, f_calmar, True),     # 高好
         }
-        finite_dims = {k for k, (rl, mx, _) in dims.items() if np.isfinite(rl) and np.isfinite(mx)}
+        all_finite = all(np.isfinite(rl) and np.isfinite(mx) for rl, mx, _ in dims.values())
+        if not all_finite:
+            pareto[algo] = {
+                "vs_max_div": "UNAVAILABLE/INCOMPLETE",
+                "pareto_dominated": None,
+                "underperforms_maxdiv_dimensions": [],
+                "max_div": {"sharpe": f_sharpe, "max_drawdown": f_mdd, "calmar": f_calmar},
+                "rl_median": {"sharpe": med_sharpe, "max_drawdown": med_mdd, "calmar": med_calmar},
+            }
+            continue
         # 真 Pareto（H7）：RL 被 MaxDiv 主导 ⟺ RL 全部目标 ≤ MaxDiv 且至少一严格 <
-        # （高好方向：rl >= mx 为 RL 更优；RL 被主导 = rl <= mx 全部且一严格 <）
-        le_all = all(dims[k][0] <= dims[k][1] for k in finite_dims)
-        strict_lt_any = any(dims[k][0] < dims[k][1] for k in finite_dims)
-        dominated = bool(finite_dims) and le_all and strict_lt_any
-        underperf = [k for k, (rl, mx, _) in dims.items() if np.isfinite(rl) and rl < mx]
+        le_all = all(dims[k][0] <= dims[k][1] for k in dims)
+        strict_lt_any = any(dims[k][0] < dims[k][1] for k in dims)
+        dominated = bool(dims) and le_all and strict_lt_any
+        underperf = [k for k, (rl, mx, _) in dims.items() if rl < mx]
         pareto[algo] = {
             "vs_max_div": "dominated" if dominated else "not_dominated",
             "pareto_dominated": dominated,
@@ -283,7 +322,47 @@ def evaluate_go_nogo(per_algo_stitched: dict, cfg: dict) -> dict:
     return {
         "per_algorithm": per_algorithm,
         "project_level": project_level,
+        "algos_complete": algos_complete,
         "pareto_vs_maxdiv": pareto,
         "hurdle": hurdle,
         "note": "deterministic config-driven evaluation; no Test-based algorithm ranking",
+    }
+
+
+def finalize_publish(results: dict, config_envelope: dict, mask_dates, per_algo_stitched: dict) -> dict:
+    """F6：artifact 级 config provenance + publication 顺序（fail-closed）。
+
+    1. 顶层 config_sha256 == config_envelope digest；
+    2. 校验每 run config_sha256 == 顶层 == 当前 frozen digest（mismatch → 不 publish）；
+    3. validate_runtime_invariants（失败 → raise，不 publish）；
+    4. 仅 invariant 通过后跑 evaluate_go_nogo；
+    5. 任何失败 → 不写最终 tracked artifact（本函数不写盘，返回可写 payload）。
+
+    返回 {config_sha256, go_nogo, results}（publish-ready）。
+    """
+    cfg = config_envelope["config"]
+    top_sha = config_envelope["config_sha256"]
+
+    # 校验每 run config_sha256 == 顶层
+    for algo, ag in results.get("per_algorithm", {}).items():
+        for seed_key, seed_res in ag.items():
+            for fold_name, fm in seed_res.items():
+                run_sha = fm.get("config_sha256")
+                if run_sha is None:
+                    raise InvariantViolation(f"{algo}|{seed_key}|{fold_name}: run config_sha256 missing")
+                if run_sha != top_sha:
+                    raise InvariantViolation(
+                        f"{algo}|{seed_key}|{fold_name}: run sha {run_sha[:8]} != top {top_sha[:8]}")
+
+    # invariant 校验（失败 raise）
+    validate_runtime_invariants(results, mask_dates, cfg)
+
+    # 仅 invariant 通过后跑 GO/NO-GO
+    go_nogo = evaluate_go_nogo(per_algo_stitched, cfg)
+
+    return {
+        "config_sha256": top_sha,
+        "go_nogo": go_nogo,
+        "results": results,
+        "published": True,
     }

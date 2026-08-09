@@ -218,6 +218,14 @@ class TestConfigBindingE1:
         assert captured["PPO"]["policy_kwargs"] == {"net_arch": [256, 256]}
         assert captured["PPO"]["seed"] == 42
 
+    def test_algo_name_class_mismatch_rejected(self):
+        """F1: algo_name/algo_cls 不匹配 → FormalConfigError（构造前）。"""
+        from china_etf.evaluation.rl_formal import load_protocol_config, _construct_model, FormalConfigError
+        from stable_baselines3 import TD3
+        cfg = load_protocol_config()["config"]
+        with pytest.raises(FormalConfigError):
+            _construct_model(TD3, "PPO", seed=42, cfg=cfg, gym_tr=object())  # TD3 但 name=PPO
+
 
 class TestRuntimeInvariantsE2:
     FOLD_LENS = {"F1": 118, "F2": 118, "F3": 118, "F4": 121}
@@ -242,7 +250,9 @@ class TestRuntimeInvariantsE2:
                         "test": {"n_eval_steps": n, "total_cost": sum(costs),
                                  "series": {"execution_dates": list(seg), "costs": list(costs),
                                             "net_returns": [0.0] * n, "cash": [1e6] * n,
-                                            "actual_weights": [[0.1] * 11] * n}}}
+                                            "actual_weights": [[0.1] * 11] * n,
+                                            "raw_weights": [[0.1] * 11] * n,
+                                            "post_risk_weights": [[0.1] * 11] * n}}}
         return {"per_algorithm": per_algo}, mask_str
 
     def test_invariants_pass_real_fold_lengths(self):
@@ -297,7 +307,8 @@ class TestGoNoGoEvaluatorE4:
         from china_etf.evaluation.rl_formal import evaluate_go_nogo
         cfg = _cfg()
         st = self._stitched([0.30, 0.28, 0.27], [1.7, 1.9, 1.5], [-0.06, -0.05, -0.08], [3.0, 3.5, 2.8])
-        out = evaluate_go_nogo({"PPO": st}, cfg)
+        st_nogo = self._stitched([0.20, 0.22, 0.21], [1.2, 1.3, 1.4], [-0.10, -0.09, -0.11], [2.0, 2.1, 2.2])
+        out = evaluate_go_nogo({"PPO": st, "SAC": st_nogo, "TD3": st_nogo}, cfg)
         assert out["per_algorithm"]["PPO"]["decision"] == "GO"
         assert out["project_level"] == "PROMISING"
 
@@ -305,7 +316,7 @@ class TestGoNoGoEvaluatorE4:
         from china_etf.evaluation.rl_formal import evaluate_go_nogo
         cfg = _cfg()
         st = self._stitched([0.20, 0.22, 0.21], [1.2, 1.3, 1.4], [-0.10, -0.09, -0.11], [2.0, 2.1, 2.2])
-        out = evaluate_go_nogo({"PPO": st}, cfg)
+        out = evaluate_go_nogo({"PPO": st, "SAC": st, "TD3": st}, cfg)
         assert out["per_algorithm"]["PPO"]["decision"] == "NO_GO"
         assert out["project_level"] == "NO_GO"
 
@@ -343,3 +354,117 @@ class TestGoNoGoEvaluatorE4:
         for a in ("PPO", "SAC", "TD3"):
             assert out["per_algorithm"][a]["decision"] == "NO_GO"
         assert out["project_level"] == "NO_GO"
+
+
+class TestHarnessFinalizationF1_F6:
+    FOLD_LENS = {"F1": 118, "F2": 118, "F3": 118, "F4": 121}
+
+    def _pass_results(self, sha="a" * 64):
+        """合成通过结构（含 config_sha256 每 run）。"""
+        per_algo = {}
+        import pandas as pd
+        mask_dates = pd.bdate_range("2023-11-24", periods=475, freq="B")
+        mask_str = [str(d.date()) for d in mask_dates]
+        offset = 0
+        for a in ("PPO", "SAC", "TD3"):
+            per_algo[a] = {}
+            for seed in (42, 2026, 7):
+                per_algo[a][seed] = {}
+                for fold in ("F1", "F2", "F3", "F4"):
+                    n = self.FOLD_LENS[fold]
+                    seg = mask_str[offset:offset + n]
+                    offset = (offset + n) % 475
+                    costs = [0.001] * n
+                    per_algo[a][seed][fold] = {
+                        "config_sha256": sha,
+                        "test": {"n_eval_steps": n, "total_cost": sum(costs),
+                                 "series": {"execution_dates": list(seg), "costs": list(costs),
+                                            "net_returns": [0.0] * n, "cash": [1e6] * n,
+                                            "actual_weights": [[0.1] * 11] * n,
+                                            "raw_weights": [[0.1] * 11] * n,
+                                            "post_risk_weights": [[0.1] * 11] * n}}}
+        return {"per_algorithm": per_algo}, mask_str
+
+    def test_f2_missing_n_eval_fails(self):
+        """F2: 缺失 n_eval_steps → invariant 失败。"""
+        from china_etf.evaluation.rl_formal import validate_runtime_invariants, InvariantViolation
+        results, mask = self._pass_results()
+        del results["per_algorithm"]["PPO"][42]["F1"]["test"]["n_eval_steps"]
+        with pytest.raises(InvariantViolation):
+            validate_runtime_invariants(results, mask, _cfg())
+
+    def test_f3_weight_shape_fails(self):
+        """F3: weight row width != 11 → fail。"""
+        from china_etf.evaluation.rl_formal import validate_runtime_invariants, InvariantViolation
+        results, mask = self._pass_results()
+        n = self.FOLD_LENS["F2"]
+        results["per_algorithm"]["SAC"][2026]["F2"]["test"]["series"]["actual_weights"] = \
+            [[0.1] * 10] * n  # width 10 != 11
+        with pytest.raises(InvariantViolation):
+            validate_runtime_invariants(results, mask, _cfg())
+
+    def test_f3_raw_missing_fails(self):
+        from china_etf.evaluation.rl_formal import validate_runtime_invariants, InvariantViolation
+        results, mask = self._pass_results()
+        del results["per_algorithm"]["TD3"][7]["F3"]["test"]["series"]["cash"]
+        with pytest.raises(InvariantViolation):
+            validate_runtime_invariants(results, mask, _cfg())
+
+    def _stitched(self, rets, sharpes, mdds, calmars, seed_keys=(42, 2026, 7)):
+        return {
+            "seed_keys": list(seed_keys),
+            "active_day_annualized_return": {s: r for s, r in zip(seed_keys, rets)},
+            "sharpe": {s: x for s, x in zip(seed_keys, sharpes)},
+            "max_drawdown": {s: x for s, x in zip(seed_keys, mdds)},
+            "calmar_median": float(np.median(calmars)),
+            "stop_violations": 0,
+        }
+
+    def test_f4_metric_map_missing_seed_no_go(self):
+        """F4: metric map 缺 seed key → NO_GO/INCOMPLETE。"""
+        from china_etf.evaluation.rl_formal import evaluate_go_nogo
+        cfg = _cfg()
+        st = self._stitched([0.30, 0.28], [1.7, 1.9], [-0.06, -0.05], [3.0, 3.5], seed_keys=(42, 2026))
+        out = evaluate_go_nogo({"PPO": st}, cfg)
+        assert out["per_algorithm"]["PPO"]["status"] == "INCOMPLETE"
+        assert out["per_algorithm"]["PPO"]["decision"] == "NO_GO"
+
+    def test_f4_project_incomplete_missing_algo(self):
+        """F4: 缺算法 → project_level INCOMPLETE。"""
+        from china_etf.evaluation.rl_formal import evaluate_go_nogo
+        cfg = _cfg()
+        st = self._stitched([0.30, 0.28, 0.27], [1.7, 1.9, 1.5], [-0.06, -0.05, -0.08], [3.0, 3.5, 2.8])
+        out = evaluate_go_nogo({"PPO": st}, cfg)  # 只给 PPO
+        assert out["project_level"] == "INCOMPLETE"
+        assert out["algos_complete"] is False
+
+    def test_f5_pareto_unavailable_if_nonfinite(self):
+        """F5: Calmar 非 finite → Pareto UNAVAILABLE/INCOMPLETE。"""
+        from china_etf.evaluation.rl_formal import evaluate_go_nogo
+        cfg = _cfg()
+        st = self._stitched([0.30, 0.28, 0.27], [3.0, 3.1, 2.9], [-0.05, -0.04, -0.06], [float("nan")] * 3)
+        out = evaluate_go_nogo({"PPO": st}, cfg)
+        assert out["pareto_vs_maxdiv"]["PPO"]["vs_max_div"] == "UNAVAILABLE/INCOMPLETE"
+        assert out["pareto_vs_maxdiv"]["PPO"]["pareto_dominated"] is None
+
+    def test_f6_publish_hash_mismatch_fails(self):
+        """F6: run sha != top sha → 不 publish。"""
+        from china_etf.evaluation.rl_formal import finalize_publish, load_protocol_config, InvariantViolation
+        loaded = load_protocol_config()
+        top_sha = loaded["config_sha256"]
+        results, mask = self._pass_results(sha="b" * 64)  # run sha 与顶层不同
+        with pytest.raises(InvariantViolation):
+            finalize_publish(results, loaded, mask,
+                             {a: {} for a in ("PPO", "SAC", "TD3")})
+
+    def test_f6_publish_passes(self):
+        """F6: hash 一致 + invariants + GO/NO-GO → published payload。"""
+        from china_etf.evaluation.rl_formal import finalize_publish, load_protocol_config
+        loaded = load_protocol_config()
+        top_sha = loaded["config_sha256"]
+        results, mask = self._pass_results(sha=top_sha)
+        stitched = {a: self._stitched([0.30, 0.28, 0.27], [1.7, 1.9, 1.5], [-0.06, -0.05, -0.08],
+                                      [3.0, 3.5, 2.8]) for a in ("PPO", "SAC", "TD3")}
+        payload = finalize_publish(results, loaded, mask, stitched)
+        assert payload["published"] is True
+        assert payload["config_sha256"] == top_sha

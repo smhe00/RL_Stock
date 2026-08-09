@@ -18,8 +18,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from china_etf.evaluation.rl_formal import (  # noqa: E402
+    FOLD_TEST_LENS,
     _construct_model,
     check_no_forbidden_overrides,
+    finalize_publish,
     load_protocol_config,
 )
 from china_etf.evaluation.benchmark import exact_test_mask  # noqa: E402
@@ -65,16 +67,66 @@ def dry_run_constructor_spy(cfg: dict) -> dict:
     return {"ok": ok, "per_algo": details}
 
 
+def publish_synthetic(loaded: dict) -> dict:
+    """F6：synthetic no-training 结果走 finalize_publish（验证 publication 路径，不真实 publish）。"""
+    import pandas as pd
+    cfg = loaded["config"]
+    sha = loaded["config_sha256"]
+    mask_dates = pd.bdate_range("2023-11-24", periods=475, freq="B")
+    mask_str = [str(d.date()) for d in mask_dates]
+    per_algo = {}
+    offset = 0
+    for a in cfg["algorithms"]:
+        per_algo[a] = {}
+        for seed in cfg["seeds"]:
+            per_algo[a][seed] = {}
+            for fold in ("F1", "F2", "F3", "F4"):
+                n = FOLD_TEST_LENS[fold]
+                seg = mask_str[offset:offset + n]
+                offset = (offset + n) % 475
+                costs = [0.001] * n
+                per_algo[a][seed][fold] = {
+                    "config_sha256": sha,
+                    "test": {"n_eval_steps": n, "total_cost": sum(costs),
+                             "series": {"execution_dates": list(seg), "costs": list(costs),
+                                        "net_returns": [0.0] * n, "cash": [1e6] * n,
+                                        "actual_weights": [[0.1] * 11] * n,
+                                        "raw_weights": [[0.1] * 11] * n,
+                                        "post_risk_weights": [[0.1] * 11] * n}}}
+    results = {"per_algorithm": per_algo}
+    stitched = {a: {"seed_keys": list(cfg["seeds"]),
+                    "active_day_annualized_return": {s: 0.20 for s in cfg["seeds"]},
+                    "sharpe": {s: 1.2 for s in cfg["seeds"]},
+                    "max_drawdown": {s: -0.10 for s in cfg["seeds"]},
+                    "calmar_median": 2.0, "stop_violations": 0} for a in cfg["algorithms"]}
+    payload = finalize_publish(results, loaded, mask_str, stitched)
+    print(f"--publish-synthetic: published=True config_sha256={payload['config_sha256'][:12]} "
+          f"project_level={payload['go_nogo']['project_level']}")
+    return payload
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true", help="constructor spy, no training")
     ap.add_argument("--check", action="store_true", help="mask + benchmark + config hash")
+    ap.add_argument("--publish-synthetic", action="store_true", help="synthetic publication path (F6)")
     args = ap.parse_args()
 
     check_no_forbidden_overrides()
     loaded = load_protocol_config()
     cfg = loaded["config"]
     sha = loaded["config_sha256"]
+
+    if args.publish_synthetic:
+        payload = publish_synthetic(loaded)
+        out = ROOT / "runs" / "gate4_rl_formal_publish_synthetic.json"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps({"config_sha256": payload["config_sha256"],
+                                   "project_level": payload["go_nogo"]["project_level"],
+                                   "published": payload["published"]}, indent=2),
+                       encoding="utf-8")
+        print(f"  -> {out}  (synthetic, no training)")
+        return
 
     if args.check:
         adj = load_research_adj()
