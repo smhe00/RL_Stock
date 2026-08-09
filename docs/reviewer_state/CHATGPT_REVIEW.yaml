@@ -1,39 +1,35 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: CORRECTED_F0_RL_EXECUTION_PREP_CORRECTIONS_001
+handoff_id: CORRECTED_F0_RL_EXECUTION_HARNESS_FINALIZATION_001
 state: REVISIONS_REQUIRED
 
 reviewed_packet:
-  path: docs/review_packets/CORRECTED_F0_RL_EXECUTION_PREP_CORRECTIONS.md
-  commit: 832c70c40cd3051a87cac9a5ec609e8d56a60cf8
+  path: docs/review_packets/CORRECTED_F0_RL_EXECUTION_HARNESS_FINALIZATION.md
+  commit: 361dbe535db2b5d647c143cc93bc06800f974956
 
-code_commit: b17fe19d77d25b691a5c41556d52bd6446db0c0f
+code_commit: 765ccacb8350e35efc25721f74f465e3be4a6f7d
 
-decision: TARGETED_HARNESS_FINALIZATION_REQUIRED
+decision: TARGETED_PUBLICATION_METRIC_BINDING_REQUIRED
 
 response:
-  path: docs/reviewer_responses/CORRECTED_F0_RL_EXECUTION_PREP_CORRECTIONS_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/CORRECTED_F0_RL_EXECUTION_HARNESS_FINALIZATION_REVIEWER_RESPONSE.md
 
 passed:
-  - H1_SHARED_CONSTRUCTOR_PATH_CORE
-  - H2_TRUE_CONFIG_DIGEST_RUN_LEVEL
-  - H3_FOLD_AND_STITCHED_MASK_CORE
-  - H4_COST_EVIDENCE_CORE
-  - H5_EXACT_ALGO_SEED_IDENTITY_CORE
-  - H6_INCOMPLETE_SEED_STATUS_CORE
-  - H7_TRUE_PARETO_DIRECTIONALITY_CORE
+  - F1_ALGO_NAME_CLASS_MISMATCH_REJECTED
+  - F2_MISSING_N_EVAL_STEPS_FAIL_CLOSED
+  - F3_RAW_SERIES_LENGTH_AND_WEIGHT_SHAPE
+  - F4_METRIC_SEED_KEYS_AND_PROJECT_ALGO_COMPLETENESS_IN_EVALUATOR
+  - F5_PARETO_ALL_FINITE_REQUIREMENT
+  - F6_RUN_LEVEL_CONFIG_SHA_AND_INVARIANT_BEFORE_EVALUATION_CORE
   - NO_RL_TRAINING
 
 blocked:
-  - F1_ALGO_NAME_CLASS_MISMATCH_NOT_REJECTED
-  - F2_MISSING_N_EVAL_STEPS_NOT_FAIL_CLOSED
-  - F3_RAW_SERIES_LENGTH_AND_WEIGHT_SHAPE_COMPLETENESS
-  - F4_GO_NO_GO_METRIC_SEED_KEYS_AND_PROJECT_ALGO_COMPLETENESS
-  - F5_PARETO_REQUIRES_ALL_FINITE_FROZEN_DIMENSIONS
-  - F6_ARTIFACT_LEVEL_CONFIG_PROVENANCE_AND_PUBLICATION_ORDER_NOT_BOUND
+  - P1_GO_NO_GO_METRICS_NOT_DERIVED_FROM_VALIDATED_RAW_RUN_RESULTS
+  - P2_STOP_CONDITIONS_NOT_DERIVED_FROM_ACTUAL_RUN_RECORDS
+  - P3_SYNTHETIC_PUBLICATION_PROOF_NOT_USING_REAL_CANONICAL_TEST_MASK
 
 authorized_next:
-  - CORRECTED_F0_RL_EXECUTION_HARNESS_FINALIZATION
+  - CORRECTED_F0_RL_EXECUTION_PUBLICATION_BINDING
 
 forbidden_next:
   - RL_RETRAINING
@@ -50,13 +46,12 @@ forbidden_next:
   - SOUTHBOUND_EXECUTION
 
 notes:
-  - Frozen research protocol remains accepted; only final execution-harness fail-closed details remain.
-  - Reject algo_name/algo_cls mismatch before any training.
-  - Missing n_eval_steps must fail closed.
-  - Raw execution_dates/net_returns/costs/cash/actual_weights/raw_weights/post_risk_weights must have fold-compatible lengths; weight rows must match action_dim=11.
-  - GO/NO-GO must require exact configured seed keys in every decision metric map and a complete configured algorithm set for a complete project-level status.
-  - Pareto status requires all frozen dimensions finite; otherwise report unavailable/incomplete.
-  - Final publication path must verify top-level config SHA equals all run SHAs, validate runtime invariants before publication, then run GO/NO-GO; any failure must prevent final artifact publication.
-  - CORRECTED_F0_RL_EXECUTION_HARNESS_FINALIZATION is dry/synthetic prep only; no RL training is authorized.
+  - F1-F6 are substantially closed; the remaining issue is publication integrity rather than research design.
+  - finalize_publish currently validates raw results but evaluates an independently supplied per_algo_stitched object. A passing test uses zero raw net_returns while supplying positive stitched return/Sharpe and still publishes, proving the disconnect.
+  - Canonical stitched active_day_annualized_return, Sharpe, MaxDD, Calmar and seed-level decision inputs must be recomputed directly from ordered F1-F4 raw net_returns inside the publication path.
+  - Stop violations must be derived from actual run evidence (save/load determinism, NaN/Inf, negative cash, finite series/metrics); missing evidence must fail closed.
+  - Caller-supplied stitched summaries may be diagnostic only; if retained, mismatch to canonical recomputation must fail closed and they must never be authoritative for GO/NO-GO.
+  - The final synthetic publication proof should use the repository's real folds and exact_test_mask rather than an arbitrary continuous business-day calendar.
+  - CORRECTED_F0_RL_EXECUTION_PUBLICATION_BINDING is no-training closeout only. If it passes without a new material defect, intended next gate is CORRECTED_F0_RL_3SEED.
 
-updated_at: 2026-08-09T11:23:00+08:00
+updated_at: 2026-08-09T11:41:00+08:00
