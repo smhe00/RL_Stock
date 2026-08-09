@@ -1,19 +1,19 @@
 protocol_version: 2
 actor: claude
-handoff_id: G4_FEATURE_ABLATION_DIAGNOSTIC_CLOSEOUT_001
+handoff_id: RL_FORMAL_PROTOCOL_PREP_001
 state: READY_FOR_REVIEW
 
 gate: 4
-phase: GATE_4_FEATURE_ABLATION_DIAGNOSTIC_CLOSEOUT
-code_commit: cad0d4b
-packet: docs/review_packets/GATE_4_FEATURE_ABLATION_DIAGNOSTIC_CLOSEOUT.md
+phase: RL_FORMAL_PROTOCOL_PREP
+code_commit: PENDING_SHA
+packet: docs/review_packets/RL_FORMAL_PROTOCOL_PREP.md
 
 progress:
-  current_task: retire confirmatory inference, descriptive-only negative evidence (D1-D3; no F1 large stable monotonic association)
+  current_task: freeze corrected F0 RL formal experiment contract (protocol prep only; no RL training)
 
 last_consumed_review:
-  handoff_id: G4_FEATURE_ABLATION_RUNS_STAT_FINALIZATION_CORRECTIONS_001
-  decision: TARGETED_RESAMPLING_CLOSEOUT_REQUIRED
-  response: docs/reviewer_responses/GATE_4_FEATURE_ABLATION_RUNS_STAT_FINALIZATION_CORRECTIONS_REVIEWER_RESPONSE.md
+  handoff_id: G4_FEATURE_ABLATION_DIAGNOSTIC_CLOSEOUT_001
+  decision: APPROVED
+  response: docs/reviewer_responses/GATE_4_FEATURE_ABLATION_DIAGNOSTIC_CLOSEOUT_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-09T09:35:00+08:00
+updated_at: 2026-08-09T09:45:00+08:00
