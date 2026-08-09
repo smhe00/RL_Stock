@@ -1,37 +1,49 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: CORRECTED_F0_RL_EXECUTION_PUBLICATION_SCHEMA_CLOSEOUT_001
+handoff_id: CORRECTED_F0_RL_3SEED_001
 state: REVIEW_COMPLETE
 
 reviewed_packet:
-  path: docs/review_packets/CORRECTED_F0_RL_EXECUTION_PUBLICATION_SCHEMA_CLOSEOUT.md
-  commit: fe7e7f926c4e992f4d8d38b5636f86515307afdd
+  path: docs/review_packets/CORRECTED_F0_RL_3SEED.md
+  commit: 991cf7c8b8b5f60d4655f3d7a74fdc425b676e58
 
-code_commit: f5915f9b11a05dc8c564d50c788a4b21d9b7e305
+code_commit: de621a6ab080da871829d7c009184fad47b3fbaa
 
-decision: APPROVED_FOR_CORRECTED_F0_RL_3SEED_EXECUTION
+decision: FORMAL_NO_GO_ACCEPTED_RL_ROBUSTNESS_NOT_AUTHORIZED
 
 response:
-  path: docs/reviewer_responses/CORRECTED_F0_RL_EXECUTION_PUBLICATION_SCHEMA_CLOSEOUT_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/CORRECTED_F0_RL_3SEED_REVIEWER_RESPONSE.md
 
 passed:
-  - S1_CANONICAL_SCHEMA_BRIDGE
-  - S2_POSITIVE_RAW_TO_GO_END_TO_END
-  - S3_RAW_STOP_FLIPS_OTHERWISE_GO_ALGORITHM_TO_NO_GO
-  - CANONICAL_METRIC_NUMERIC_BINDING
-  - P1_P3_PUBLICATION_BINDING_RETAINED
-  - F1_F6_HARNESS_FINALIZATION_RETAINED
-  - H1_H7_EXECUTION_PREP_RETAINED
-  - REAL_ORDERED_475_TEST_MASK_PROOF
-  - CONFIG_SHA_AND_PUBLICATION_ORDER
-  - NO_RL_TRAINING_IN_CLOSEOUT
+  - COMPLETE_36_OF_36_FORMAL_RUNS
+  - FORMAL_CONFIG_DRIVEN_RUNTIME_PATH
+  - FROZEN_F0_104_DIM_PROTOCOL
+  - FINALIZE_PUBLISH_AND_RUNTIME_INVARIANTS
+  - ZERO_STOP_VIOLATIONS
+  - CONFIG_SHA_BINDING
+  - PPO_NO_GO_UNDER_FROZEN_HURDLE
+  - SAC_NO_GO_UNDER_FROZEN_HURDLE
+  - TD3_NO_GO_UNDER_FROZEN_HURDLE
+  - PROJECT_LEVEL_NO_GO
+  - MAXDIV_PARETO_DOMINANCE_REPORTED
+  - NO_TEST_INFORMED_WINNER_SELECTION
+
+blocked:
+  - CONDITIONAL_FORMAL_ROBUSTNESS_NOT_ELIGIBLE
+  - TEN_SEED_NOT_AUTHORIZED
+  - TEST_INFORMED_RL_ITERATION_FORBIDDEN
+  - LIVE_EXECUTION_NOT_AUTHORIZED
 
 authorized_next:
-  - CORRECTED_F0_RL_3SEED
+  - GATE_4_RL_NO_GO_CLOSEOUT
 
 forbidden_next:
   - GATE_4_10_SEED_FORMAL
   - CONDITIONAL_FORMAL_ROBUSTNESS_EXECUTION
+  - RL_RETRAINING_ON_RESEARCH_BENCHMARK_TEST
+  - PPO_ONLY_ADVANCEMENT_FROM_TEST
+  - SAC_ONLY_ADVANCEMENT_FROM_TEST
+  - TD3_ONLY_ADVANCEMENT_FROM_TEST
   - OPTUNA
   - HYPERPARAMETER_SWEEP
   - TEST_INFORMED_ALGO_SELECTION
@@ -43,11 +55,11 @@ forbidden_next:
   - SOUTHBOUND_EXECUTION
 
 notes:
-  - The long execution-prep/publication-binding chain is closed sufficiently to authorize the frozen corrected F0 3-seed benchmark.
-  - Execute only canonical F0 dim 104, PPO/SAC/TD3, seeds [42,2026,7], folds F1-F4, train_passes 20, net [256,256], final endpoint only, using configs/rl_formal_protocol.yaml and the formal run_fold_rl_config/shared-constructor path.
-  - Nominal execution is 36 RL trainings. Any hard-stop, invariant failure, or execution exception must fail closed and be reported rather than repaired by Test-informed tuning.
-  - Preserve the exact configured algorithm x seed x fold raw result tree and all required series/evidence; final publication and GO/NO-GO must go through finalize_publish().
-  - Report all seed metrics and dispersion, EqualWeight hurdle result, MaxDiv Pareto reference, and stop/invariant status. Do not rank or select an algorithm from Test.
-  - A project PROMISING result does not authorize 10-seed robustness, live trading, Optuna, or any feature change. Stop for reviewer after the corrected F0 3-seed result packet.
+  - The corrected F0 3-seed result is accepted as a valid strategy-performance NO_GO, not an execution failure: 36/36 runs completed, stop/invariant checks passed, and publication used finalize_publish().
+  - PPO is closest on return but fails the frozen Sharpe, MaxDD, and 2-of-3 seed consistency requirements; this does not authorize PPO-only advancement from Test.
+  - SAC and TD3 fail the EqualWeight hurdle by wider margins. PPO/SAC/TD3 are all reported Pareto-dominated by the frozen MaximumDiversification Sharpe/MaxDD/Calmar reference.
+  - Because project_level is NO_GO, the conditional 10-seed robustness stage is not authorized.
+  - GATE_4_RL_NO_GO_CLOSEOUT is documentation/decision closeout only: archive exact artifacts/config hash, summarize economic comparison, mark the current F0 PPO/SAC/TD3 branch closed for formal robustness, and record future hypotheses only as new pre-registered experiments requiring a new untouched forward period or separately authorized data regime.
+  - No new training, tuning, feature change, robustness execution, QMT live, or southbound execution is authorized.
 
-updated_at: 2026-08-09T12:08:00+08:00
+updated_at: 2026-08-09T14:32:00+08:00
