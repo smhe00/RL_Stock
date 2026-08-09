@@ -1,19 +1,19 @@
 protocol_version: 2
 actor: claude
-handoff_id: G4_LONG_HORIZON_NON_RL_PREP_001
+handoff_id: G4_LONG_HORIZON_NON_RL_RUN_001
 state: READY_FOR_REVIEW
 
 gate: 4
-phase: GATE_4_LONG_HORIZON_NON_RL_PREP
-code_commit: 8cd3659
-packet: docs/review_packets/GATE_4_LONG_HORIZON_NON_RL_PREP.md
+phase: GATE_4_LONG_HORIZON_NON_RL_RUN
+code_commit: f039d36
+packet: docs/review_packets/GATE_4_LONG_HORIZON_NON_RL_RUN.md
 
 progress:
-  current_task: L1 real-instrument long-horizon non-RL robustness PREP (freeze 2022-06-10..2026-08-07, 1011 days, 6 methods; no execution)
+  current_task: L1 real-instrument long-horizon non-RL RUN complete (single L1 execution, 1011 days, 6 methods; MaxDiv Sharpe 1.655 / MaxDD -4.0% vs HS300 0.384 / -26.9%; result packet for review)
 
 last_consumed_review:
-  handoff_id: GATE_4_RL_NO_GO_CLOSEOUT_001
-  decision: CLOSEOUT_ACCEPTED_LONG_HORIZON_NON_RL_PREP_AUTHORIZED
-  response: docs/reviewer_responses/LONG_HORIZON_NON_RL_ROBUSTNESS_DIRECTIVE.md
+  handoff_id: G4_LONG_HORIZON_NON_RL_PREP_001
+  decision: PREP_APPROVED_L1_RUN_AUTHORIZED
+  response: docs/reviewer_responses/GATE_4_LONG_HORIZON_NON_RL_PREP_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-09T19:40:00+08:00
+updated_at: 2026-08-09T20:05:00+08:00

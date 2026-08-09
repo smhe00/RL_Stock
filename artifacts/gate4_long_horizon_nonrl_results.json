@@ -1,0 +1,604 @@
+{
+  "manifest": {
+    "gate": "4_LONG_HORIZON_NON_RL",
+    "label": "REAL_INSTRUMENT_LONG_HORIZON_DIAGNOSTIC",
+    "window": {
+      "decision_start": "2022-06-09",
+      "first_execution": "2022-06-10",
+      "last_decision": "2026-08-06",
+      "last_execution": "2026-08-07",
+      "n_decision_days": 1011,
+      "n_execution_dates": 1011,
+      "first_all_finite": "2021-05-25",
+      "warmup_lookback": 252,
+      "contract_parity": "ok"
+    },
+    "methods_frozen": [
+      "HS300_ref",
+      "EqualWeight",
+      "MaximumDiversification",
+      "MinimumVariance",
+      "RiskParity_IVOL",
+      "Momentum_12_1"
+    ],
+    "canonical_params": {
+      "MaximumDiversification": {
+        "lookback": 120,
+        "shrinkage": 0.5
+      },
+      "MinimumVariance": {
+        "lookback": 120,
+        "shrinkage": 0.5
+      },
+      "RiskParity_IVOL": {
+        "lookback": 60
+      },
+      "Momentum_12_1": {
+        "lookback": 252,
+        "skip": 21
+      }
+    },
+    "semantics": "T->T+1 causal; 1x MainlandETFCostModel; RiskOverlay; corporate actions; continuous single-segment (reset at decision_start, no cross-segment reset)",
+    "cost_model_label": "current project 1x MainlandETFCostModel simplification; NOT a claim of fully realistic cross-market/Southbound fee modeling",
+    "hs300_label": "research-adjusted no-cost reference (CN_LARGE total-return); separate from executable net strategy returns",
+    "sub_period_label": "calendar-year breakdown required; 2022H2-2023 vs 2024-2026 = pre-frozen descriptive phase split, not an objective market-regime classifier",
+    "no_rl": true,
+    "no_l2": true,
+    "no_old_475_mask_as_eval_dates": true,
+    "data_provenance": "existing research-adjusted adj + execution prices + CA; no re-fetch/repair needed in L1; no pre-launch backfill",
+    "started_at": "2026-08-09 19:59:10",
+    "commit": "f039d36"
+  },
+  "methods": {
+    "EqualWeight": {
+      "metrics": {
+        "n_steps": 1011,
+        "cum_return": 0.496881,
+        "active_day_annualized_return": 0.105775,
+        "calendar_cagr": 0.101785,
+        "annualized_vol": 0.134431,
+        "sharpe": 0.815233,
+        "sortino": 1.184259,
+        "max_drawdown": -0.139916,
+        "calmar": 0.755991,
+        "worst_calendar_year": 2022,
+        "worst_calendar_year_return": -0.035174,
+        "worst_rolling_12m_return": -0.117346,
+        "mean_turnover": 0.010971,
+        "total_turnover": 11.08048,
+        "actual_traded_notional": 7866109.51001,
+        "total_cost": 2753.138329,
+        "total_cost_over_traded_notional": 0.00035,
+        "cost_over_initial_value": 0.002753,
+        "mean_active_assets": 11.0,
+        "max_single_asset_weight": 0.102551,
+        "mean_hhi": 0.08703,
+        "risk_overlay_intervention_rate": 0.0,
+        "overlay_mean_l1_raw_to_post": 0.0,
+        "fallback_count": 0
+      },
+      "sub_periods": {
+        "calendar_years": {
+          "2022": {
+            "n_days": 140,
+            "cum_return": -0.03517434175350398,
+            "sharpe": -0.47332090418976536,
+            "max_drawdown": -0.1261348019499985
+          },
+          "2023": {
+            "n_days": 242,
+            "cum_return": 0.0050727454936208005,
+            "sharpe": 0.10343874129918078,
+            "max_drawdown": -0.08606296040816885
+          },
+          "2024": {
+            "n_days": 242,
+            "cum_return": 0.20119320148662423,
+            "sharpe": 1.2175393245260049,
+            "max_drawdown": -0.08965676992096816
+          },
+          "2025": {
+            "n_days": 243,
+            "cum_return": 0.22825231849151328,
+            "sharpe": 1.7723241623494574,
+            "max_drawdown": -0.09381385790978436
+          },
+          "2026": {
+            "n_days": 144,
+            "cum_return": 0.04626197709532387,
+            "sharpe": 0.5828800181859133,
+            "max_drawdown": -0.08761506196585778
+          }
+        },
+        "phases": {
+          "2022H2-2023_weak_equity": {
+            "n_days": 382,
+            "cum_return": -0.030280026743504385,
+            "sharpe": -0.14608807447361014,
+            "max_drawdown": -0.1261348019499985
+          },
+          "2024-2026_strong_equity": {
+            "n_days": 629,
+            "cum_return": 0.5436217907884233,
+            "sharpe": 1.2330371648883476,
+            "max_drawdown": -0.09381385790978436
+          },
+          "split_label": "calendar-year breakdown required; 2022H2-2023 vs 2024-2026 = pre-frozen descriptive phase split, not an objective market-regime classifier"
+        }
+      },
+      "rollout_audit": {
+        "n_eval_steps": 1011,
+        "execution_dates_match_contract": true,
+        "first_execution": "2022-06-10",
+        "last_execution": "2026-08-07",
+        "nan_obs_or_reward": 0,
+        "negative_cash_count": 0
+      },
+      "seconds": 15.9
+    },
+    "MaximumDiversification": {
+      "metrics": {
+        "n_steps": 1011,
+        "cum_return": 0.454206,
+        "active_day_annualized_return": 0.097832,
+        "calendar_cagr": 0.094154,
+        "annualized_vol": 0.05742,
+        "sharpe": 1.654531,
+        "sortino": 2.194924,
+        "max_drawdown": -0.040172,
+        "calmar": 2.435343,
+        "worst_calendar_year": 2022,
+        "worst_calendar_year_return": -0.003933,
+        "worst_rolling_12m_return": 0.023062,
+        "mean_turnover": 0.011407,
+        "total_turnover": 11.521027,
+        "actual_traded_notional": 10747178.034875,
+        "total_cost": 3761.512312,
+        "total_cost_over_traded_notional": 0.00035,
+        "cost_over_initial_value": 0.003762,
+        "mean_active_assets": 11.0,
+        "max_single_asset_weight": 0.253999,
+        "mean_hhi": 0.166379,
+        "risk_overlay_intervention_rate": 0.0,
+        "overlay_mean_l1_raw_to_post": 0.0,
+        "fallback_count": 0
+      },
+      "sub_periods": {
+        "calendar_years": {
+          "2022": {
+            "n_days": 140,
+            "cum_return": -0.003932768427204247,
+            "sharpe": -0.12430781872867007,
+            "max_drawdown": -0.03370589292784487
+          },
+          "2023": {
+            "n_days": 242,
+            "cum_return": 0.0586915670819641,
+            "sharpe": 1.597054842239726,
+            "max_drawdown": -0.026195360912839694
+          },
+          "2024": {
+            "n_days": 242,
+            "cum_return": 0.1882856626883207,
+            "sharpe": 2.620444795546256,
+            "max_drawdown": -0.03418675875880883
+          },
+          "2025": {
+            "n_days": 243,
+            "cum_return": 0.12517948051815742,
+            "sharpe": 2.170909941618304,
+            "max_drawdown": -0.04017169950760069
+          },
+          "2026": {
+            "n_days": 144,
+            "cum_return": 0.03139528488253629,
+            "sharpe": 0.8146976938488317,
+            "max_drawdown": -0.039467895691569166
+          }
+        },
+        "phases": {
+          "2022H2-2023_weak_equity": {
+            "n_days": 382,
+            "cum_return": 0.054527978312796765,
+            "sharpe": 0.8604560289360909,
+            "max_drawdown": -0.03370589292784487
+          },
+          "2024-2026_strong_equity": {
+            "n_days": 629,
+            "cum_return": 0.37901122821745226,
+            "sharpe": 2.0129113868087054,
+            "max_drawdown": -0.0401716995076008
+          },
+          "split_label": "calendar-year breakdown required; 2022H2-2023 vs 2024-2026 = pre-frozen descriptive phase split, not an objective market-regime classifier"
+        }
+      },
+      "rollout_audit": {
+        "n_eval_steps": 1011,
+        "execution_dates_match_contract": true,
+        "first_execution": "2022-06-10",
+        "last_execution": "2026-08-07",
+        "nan_obs_or_reward": 0,
+        "negative_cash_count": 0
+      },
+      "seconds": 82.2
+    },
+    "MinimumVariance": {
+      "metrics": {
+        "n_steps": 1011,
+        "cum_return": 0.438725,
+        "active_day_annualized_return": 0.094907,
+        "calendar_cagr": 0.091343,
+        "annualized_vol": 0.108085,
+        "sharpe": 0.893011,
+        "sortino": 1.281802,
+        "max_drawdown": -0.102412,
+        "calmar": 0.926714,
+        "worst_calendar_year": 2022,
+        "worst_calendar_year_return": -0.026531,
+        "worst_rolling_12m_return": -0.06259,
+        "mean_turnover": 0.011458,
+        "total_turnover": 11.572441,
+        "actual_traded_notional": 8306888.394585,
+        "total_cost": 2907.410938,
+        "total_cost_over_traded_notional": 0.00035,
+        "cost_over_initial_value": 0.002907,
+        "mean_active_assets": 11.0,
+        "max_single_asset_weight": 0.257476,
+        "mean_hhi": 0.116672,
+        "risk_overlay_intervention_rate": 1.0,
+        "overlay_mean_l1_raw_to_post": 1.414616,
+        "fallback_count": 0
+      },
+      "sub_periods": {
+        "calendar_years": {
+          "2022": {
+            "n_days": 140,
+            "cum_return": -0.02653057620310495,
+            "sharpe": -0.4447812306682297,
+            "max_drawdown": -0.10241246302935203
+          },
+          "2023": {
+            "n_days": 242,
+            "cum_return": 0.018188460861914058,
+            "sharpe": 0.30729127316093807,
+            "max_drawdown": -0.05954351814980374
+          },
+          "2024": {
+            "n_days": 242,
+            "cum_return": 0.17286086724398464,
+            "sharpe": 1.3078323435352723,
+            "max_drawdown": -0.07335777097134155
+          },
+          "2025": {
+            "n_days": 243,
+            "cum_return": 0.18928880831614947,
+            "sharpe": 1.80055508732476,
+            "max_drawdown": -0.0774283917310068
+          },
+          "2026": {
+            "n_days": 144,
+            "cum_return": 0.04062317904223112,
+            "sharpe": 0.6055389948031958,
+            "max_drawdown": -0.07210686100850305
+          }
+        },
+        "phases": {
+          "2022H2-2023_weak_equity": {
+            "n_days": 382,
+            "cum_return": -0.008824665688105138,
+            "sharpe": -0.03206015279849138,
+            "max_drawdown": -0.10241246302935203
+          },
+          "2024-2026_strong_equity": {
+            "n_days": 629,
+            "cum_return": 0.4515343691897922,
+            "sharpe": 1.289114879155999,
+            "max_drawdown": -0.0774283917310068
+          },
+          "split_label": "calendar-year breakdown required; 2022H2-2023 vs 2024-2026 = pre-frozen descriptive phase split, not an objective market-regime classifier"
+        }
+      },
+      "rollout_audit": {
+        "n_eval_steps": 1011,
+        "execution_dates_match_contract": true,
+        "first_execution": "2022-06-10",
+        "last_execution": "2026-08-07",
+        "nan_obs_or_reward": 0,
+        "negative_cash_count": 0
+      },
+      "seconds": 17.4
+    },
+    "RiskParity_IVOL": {
+      "metrics": {
+        "n_steps": 1011,
+        "cum_return": 0.431458,
+        "active_day_annualized_return": 0.093526,
+        "calendar_cagr": 0.090016,
+        "annualized_vol": 0.096597,
+        "sharpe": 0.973961,
+        "sortino": 1.400449,
+        "max_drawdown": -0.087627,
+        "calmar": 1.067318,
+        "worst_calendar_year": 2022,
+        "worst_calendar_year_return": -0.023123,
+        "worst_rolling_12m_return": -0.060891,
+        "mean_turnover": 0.011565,
+        "total_turnover": 11.680819,
+        "actual_traded_notional": 8892051.51974,
+        "total_cost": 3112.218032,
+        "total_cost_over_traded_notional": 0.00035,
+        "cost_over_initial_value": 0.003112,
+        "mean_active_assets": 11.0,
+        "max_single_asset_weight": 0.253757,
+        "mean_hhi": 0.12065,
+        "risk_overlay_intervention_rate": 1.0,
+        "overlay_mean_l1_raw_to_post": 1.077871,
+        "fallback_count": 0
+      },
+      "sub_periods": {
+        "calendar_years": {
+          "2022": {
+            "n_days": 140,
+            "cum_return": -0.02312275506690875,
+            "sharpe": -0.46448265875006495,
+            "max_drawdown": -0.08762706372691009
+          },
+          "2023": {
+            "n_days": 242,
+            "cum_return": 0.01972179372580163,
+            "sharpe": 0.3795495665774409,
+            "max_drawdown": -0.05303426455717497
+          },
+          "2024": {
+            "n_days": 242,
+            "cum_return": 0.17785210666418694,
+            "sharpe": 1.4431982453333374,
+            "max_drawdown": -0.06337840971846975
+          },
+          "2025": {
+            "n_days": 243,
+            "cum_return": 0.17495715438518755,
+            "sharpe": 1.8747806110149885,
+            "max_drawdown": -0.06687196510850779
+          },
+          "2026": {
+            "n_days": 144,
+            "cum_return": 0.03835076310120278,
+            "sharpe": 0.6301988361786274,
+            "max_drawdown": -0.06499496758156931
+          }
+        },
+        "phases": {
+          "2022H2-2023_weak_equity": {
+            "n_days": 382,
+            "cum_return": -0.0038569835469087765,
+            "sharpe": -0.0031353522621911448,
+            "max_drawdown": -0.08762706372691009
+          },
+          "2024-2026_strong_equity": {
+            "n_days": 629,
+            "cum_return": 0.43700036848624446,
+            "sharpe": 1.3744626351278966,
+            "max_drawdown": -0.06687196510850779
+          },
+          "split_label": "calendar-year breakdown required; 2022H2-2023 vs 2024-2026 = pre-frozen descriptive phase split, not an objective market-regime classifier"
+        }
+      },
+      "rollout_audit": {
+        "n_eval_steps": 1011,
+        "execution_dates_match_contract": true,
+        "first_execution": "2022-06-10",
+        "last_execution": "2026-08-07",
+        "nan_obs_or_reward": 0,
+        "negative_cash_count": 0
+      },
+      "seconds": 16.6
+    },
+    "Momentum_12_1": {
+      "metrics": {
+        "n_steps": 1011,
+        "cum_return": 0.717464,
+        "active_day_annualized_return": 0.144321,
+        "calendar_cagr": 0.138787,
+        "annualized_vol": 0.144781,
+        "sharpe": 1.004194,
+        "sortino": 1.191986,
+        "max_drawdown": -0.169912,
+        "calmar": 0.849385,
+        "worst_calendar_year": 2022,
+        "worst_calendar_year_return": -0.016045,
+        "worst_rolling_12m_return": 0.011,
+        "mean_turnover": 0.066427,
+        "total_turnover": 67.091045,
+        "actual_traded_notional": 77924150.24775,
+        "total_cost": 27273.452587,
+        "total_cost_over_traded_notional": 0.00035,
+        "cost_over_initial_value": 0.027273,
+        "mean_active_assets": 10.586548,
+        "max_single_asset_weight": 0.26035,
+        "mean_hhi": 0.157192,
+        "risk_overlay_intervention_rate": 0.631058,
+        "overlay_mean_l1_raw_to_post": 0.205781,
+        "fallback_count": 0
+      },
+      "sub_periods": {
+        "calendar_years": {
+          "2022": {
+            "n_days": 140,
+            "cum_return": -0.016044562311712918,
+            "sharpe": -0.42319125910768396,
+            "max_drawdown": -0.05083739638430429
+          },
+          "2023": {
+            "n_days": 242,
+            "cum_return": 0.0464777548233728,
+            "sharpe": 0.6729621729886266,
+            "max_drawdown": -0.05861636268474124
+          },
+          "2024": {
+            "n_days": 242,
+            "cum_return": 0.23125844181325683,
+            "sharpe": 2.244541750525379,
+            "max_drawdown": -0.06146335398366376
+          },
+          "2025": {
+            "n_days": 243,
+            "cum_return": 0.25450667192549914,
+            "sharpe": 1.5008261806595802,
+            "max_drawdown": -0.12464261245130714
+          },
+          "2026": {
+            "n_days": 144,
+            "cum_return": 0.07984170946203095,
+            "sharpe": 0.639074788329928,
+            "max_drawdown": -0.16991171407695116
+          }
+        },
+        "phases": {
+          "2022H2-2023_weak_equity": {
+            "n_days": 382,
+            "cum_return": 0.0296874772782878,
+            "sharpe": 0.30799793858128854,
+            "max_drawdown": -0.05861636268474135
+          },
+          "2024-2026_strong_equity": {
+            "n_days": 629,
+            "cum_return": 0.6679471854925931,
+            "sharpe": 1.260422579796603,
+            "max_drawdown": -0.16991171407695127
+          },
+          "split_label": "calendar-year breakdown required; 2022H2-2023 vs 2024-2026 = pre-frozen descriptive phase split, not an objective market-regime classifier"
+        }
+      },
+      "rollout_audit": {
+        "n_eval_steps": 1011,
+        "execution_dates_match_contract": true,
+        "first_execution": "2022-06-10",
+        "last_execution": "2026-08-07",
+        "nan_obs_or_reward": 0,
+        "negative_cash_count": 0
+      },
+      "seconds": 18.5
+    }
+  },
+  "references": {
+    "HS300_ref": {
+      "metrics": {
+        "n_steps": 1011,
+        "cum_return": 0.233429,
+        "active_day_annualized_return": 0.053685,
+        "calendar_cagr": 0.051706,
+        "annualized_vol": 0.17704,
+        "sharpe": 0.383743,
+        "sortino": 0.575017,
+        "max_drawdown": -0.268835,
+        "calmar": 0.199696,
+        "worst_calendar_year": 2023,
+        "worst_calendar_year_return": -0.097752,
+        "worst_rolling_12m_return": -0.221404
+      },
+      "sub_periods": {
+        "calendar_years": {
+          "2022": {
+            "n_days": 140,
+            "cum_return": -0.060143198090691574,
+            "sharpe": -0.5575025360496231,
+            "max_drawdown": -0.21145764211457607
+          },
+          "2023": {
+            "n_days": 242,
+            "cum_return": -0.09775224647250802,
+            "sharpe": -0.7362379273934953,
+            "max_drawdown": -0.19881093935790695
+          },
+          "2024": {
+            "n_days": 242,
+            "cum_return": 0.173741019903221,
+            "sharpe": 0.8541416771528509,
+            "max_drawdown": -0.12443336355394385
+          },
+          "2025": {
+            "n_days": 243,
+            "cum_return": 0.20838818873246256,
+            "sharpe": 1.387952193192364,
+            "max_drawdown": -0.10075444146994395
+          },
+          "2026": {
+            "n_days": 144,
+            "cum_return": 0.025528610176843047,
+            "sharpe": 0.3243797895966659,
+            "max_drawdown": -0.09860538204674829
+          }
+        },
+        "phases": {
+          "2022H2-2023_weak_equity": {
+            "n_days": 382,
+            "cum_return": -0.15201631183979347,
+            "sharpe": -0.6540111758683765,
+            "max_drawdown": -0.24329939244023446
+          },
+          "2024-2026_strong_equity": {
+            "n_days": 629,
+            "cum_return": 0.4545429009104578,
+            "sharpe": 0.8791529608510609,
+            "max_drawdown": -0.1625113327289205
+          },
+          "split_label": "calendar-year breakdown required; 2022H2-2023 vs 2024-2026 = pre-frozen descriptive phase split, not an objective market-regime classifier"
+        }
+      },
+      "note": "research-adjusted no-cost reference (CN_LARGE total-return); separate from executable net strategy returns",
+      "semantics": "no cost / no overlay / no accounting — research-adjusted CN_LARGE TR aligned to the same 1011 execution dates"
+    }
+  },
+  "old_475_comparison": {
+    "note": "old 475-day stitched (2023-11-24..2026-08-07) metrics — historical comparison only",
+    "methods": {
+      "EqualWeight": {
+        "cum_return": 0.56615,
+        "active_day_annualized_return": 0.26872,
+        "sharpe": 1.64403,
+        "sortino": 2.60093,
+        "max_drawdown": -0.08809,
+        "calmar": 3.05061,
+        "mean_turnover": 0.01272
+      },
+      "MaximumDiversification": {
+        "cum_return": 0.37302,
+        "active_day_annualized_return": 0.18315,
+        "sharpe": 2.77464,
+        "sortino": 4.32813,
+        "max_drawdown": -0.03403,
+        "calmar": 5.38197,
+        "mean_turnover": 0.01185
+      },
+      "MinimumVariance": {
+        "cum_return": 0.4733,
+        "active_day_annualized_return": 0.22824,
+        "sharpe": 1.75288,
+        "sortino": 2.74612,
+        "max_drawdown": -0.0599,
+        "calmar": 3.81055,
+        "mean_turnover": 0.01218
+      },
+      "RiskParity_IVOL": {
+        "cum_return": 0.44553,
+        "active_day_annualized_return": 0.2159,
+        "sharpe": 1.82107,
+        "sortino": 2.90185,
+        "max_drawdown": -0.05396,
+        "calmar": 4.00126,
+        "mean_turnover": 0.01302
+      },
+      "Momentum_12_1": {
+        "cum_return": 0.63895,
+        "active_day_annualized_return": 0.29967,
+        "sharpe": 1.62917,
+        "sortino": 2.09308,
+        "max_drawdown": -0.16995,
+        "calmar": 1.76326,
+        "mean_turnover": 0.05112
+      }
+    }
+  },
+  "no_go_threshold": null
+}
