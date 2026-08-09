@@ -9,23 +9,34 @@ reviewed_packet:
 
 code_commit: c18234a1153f9f03c38537fe717c26a025e94200
 
-decision: CLOSEOUT_ACCEPTED
+decision: CLOSEOUT_ACCEPTED_LONG_HORIZON_NON_RL_PREP_AUTHORIZED
 
 response:
-  path: docs/reviewer_responses/GATE_4_RL_NO_GO_CLOSEOUT_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/LONG_HORIZON_NON_RL_ROBUSTNESS_DIRECTIVE.md
 
 passed:
   - DOCUMENTATION_ONLY_CLOSEOUT
   - PREVIOUS_FORMAL_NO_GO_ACCURATELY_ARCHIVED
-  - ECONOMIC_COMPARISON_RETAINED
   - CURRENT_F0_RL_BRANCH_CLOSED
-  - NO_NEW_IMPLEMENTATION_OR_EXECUTION
+  - DETERMINISTIC_LONG_HORIZON_RESEARCH_DIRECTION_APPROVED
 
-authorized_next: []
+authorized_next:
+  - GATE_4_LONG_HORIZON_NON_RL_PREP
+
+forbidden_next:
+  - PPO
+  - SAC
+  - TD3
+  - RL_RETRAINING
+  - RL_HYPERPARAMETER_TUNING
+  - RL_COMPARISON
+  - QMT_LIVE
 
 notes:
-  - The current Gate 4 F0 PPO/SAC/TD3 branch is closed after the accepted formal NO_GO.
-  - No additional execution gate is authorized by this closeout.
-  - Any future direction requires a new separately reviewed pre-registered proposal and must not use the already-observed benchmark for result-informed selection or tuning.
+  - PPO/SAC/TD3 remain closed and are explicitly excluded from the new study.
+  - Next scope is PREP for the real-instrument ~4.2-year long-horizon deterministic robustness study.
+  - Public-market data re-fetch/repair is permitted inside real instrument live periods with provenance; no pre-launch backfill may be represented as real-instrument history.
+  - L2 approximately 2015-2026 proxy scenario research is not yet authorized for execution; it requires a separate reviewed proposal after L1.
+  - Claude must return GATE_4_LONG_HORIZON_NON_RL_PREP for review before executing the L1 horse race.
 
-updated_at: 2026-08-09T15:24:00+08:00
+updated_at: 2026-08-09T19:30:00+08:00
