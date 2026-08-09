@@ -121,7 +121,13 @@ def build_panel() -> tuple[pd.DataFrame, pd.DataFrame, pd.DatetimeIndex]:
     cash = _cash_like_series(y)
     dur = _cn_duration_series(y)
 
-    # 原始经济水平（return_panel 用；无信号 lag）
+    # FX：HKD->CNY（hkd_cny_boc，中行折算价 /100，日频 ffill）。
+    # 冻结契约：决策 T 使用 T-1 FX（与 HK 输入一致的保守可用规则，PREP_FIX_2）。
+    from china_etf.data.loader import load_fx_hkd_cny
+    fx_hkd_cny = load_fx_hkd_cny().reindex(cal).ffill()
+
+    # 原始经济水平（return_panel 用；无信号 lag）。
+    # HK 槽位 = raw HKD 指数点数 × HKD/CNY FX（CNY 计价跨资产面板，评审 FX BLOCKER 修正）。
     return_levels: dict[str, pd.Series] = {}
     for slot in SLOT_ORDER:
         if slot == "CN_DURATION":
@@ -130,7 +136,15 @@ def build_panel() -> tuple[pd.DataFrame, pd.DataFrame, pd.DatetimeIndex]:
             return_levels[slot] = cash
         else:
             s = _load_close(slot)
-            return_levels[slot] = s.reindex(cal).ffill()
+            s = s.reindex(cal).ffill()
+            if slot in ("HK_TECH", "HK_DIVIDEND"):
+                # 冻结契约：raw_hk_level_cny(t) = raw_hk_index_hkd(t) * hkd_cny(t)
+                # FX 序列以决策 T 可用（T-1）——但 return_levels 为原始经济水平（无 lag），
+                # 用 T 日 FX（fx 已 reindex 到 cal + ffill；hkd_cny 收盘晚于上海，见 signal 层 T-1）。
+                # 冻结要求 return_level_cny(T) 与 signal 解耦；此处 return 用 T 日 FX，
+                # signal 层对 HK 额外 shift(1) 实现 FX T-1（见下）。
+                s = s * fx_hkd_cny
+            return_levels[slot] = s
     return_levels = pd.DataFrame(return_levels)
 
     # 信号水平（signal_panel 用；HK/US/GOLD/FX lag 1）

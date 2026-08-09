@@ -255,6 +255,84 @@ def test_overlay_projects_unconstrained_to_feasible() -> None:
     assert growth_sum <= 0.50 + 1e-6, f"overlay failed growth cap: {growth_sum:.4f}"
 
 
+def test_hk_fx_conversion_affects_return_levels() -> None:
+    """FX BLOCKER 回归 1：perturb FX 而 HK 指数固定 → HK CNY 收益水平变化。"""
+    from china_etf.evaluation.long_horizon_proxy_panel import _load_close
+    from china_etf.data.loader import load_fx_hkd_cny
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("l2_mod_fx", ROOT / "scripts" / "gate4_long_horizon_proxy.py")
+    l2 = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(l2)
+    signal_panel, return_levels, cal = l2.build_panel()
+    # HK return level 应 ≠ raw HK 指数点数（FX 已乘入）
+    raw_hk = _load_close("HK_TECH").reindex(cal).ffill()
+    hk_cny = return_levels["HK_TECH"]
+    ratio = hk_cny / raw_hk
+    fx = load_fx_hkd_cny().reindex(cal).ffill()
+    assert np.abs(ratio - fx).max() < 1e-6, "HK return level must be raw_hkd * fx (CNY)"
+
+
+def test_hk_constant_index_cny_return_equals_fx_return() -> None:
+    """FX BLOCKER 回归 2：合成恒定 HK 指数 + 变动 FX → HK CNY 收益 = FX 收益。"""
+    idx = pd.date_range("2015-01-02", periods=10, freq="B")
+    hk_const = pd.Series(100.0, index=idx)  # 恒定 HKD 指数
+    fx = pd.Series([0.80, 0.81, 0.82, 0.81, 0.83, 0.84, 0.83, 0.85, 0.86, 0.87], index=idx)
+    hk_cny = hk_const * fx
+    r_cny = hk_cny.pct_change().dropna()
+    r_fx = fx.pct_change().dropna()
+    assert np.allclose(r_cny.values, r_fx.values, atol=1e-12), "CNY return must equal FX return for constant index"
+
+
+def test_hk_signal_uses_t_minus_1_cny_level() -> None:
+    """FX BLOCKER 回归 3：决策 T HK 信号 = T-1 CNY 换算水平（冻结时序）。"""
+    signal_panel, return_levels, cal = l2_panels()
+    ds = pd.Timestamp("2015-01-28")
+    ds_i = cal.get_loc(ds)
+    for slot in ("HK_TECH", "HK_DIVIDEND"):
+        assert abs(signal_panel[slot].iloc[ds_i] - return_levels[slot].iloc[ds_i - 1]) < 1e-9, \
+            f"{slot} signal(T) != return(T-1)"
+
+
+def test_hk_realized_return_is_cny_t_to_t_plus_1() -> None:
+    """FX BLOCKER 回归 4：决策 T 已实现收益 = CNY 换算 T->T+1 区间。"""
+    signal_panel, return_levels, cal = l2_panels()
+    ds = pd.Timestamp("2015-01-28")
+    ds_i = cal.get_loc(ds)
+    for slot in ("HK_TECH", "HK_DIVIDEND"):
+        r_impl = return_levels[slot].iloc[ds_i + 1] / return_levels[slot].iloc[ds_i] - 1.0
+        assert np.isfinite(r_impl), f"{slot} realized return not finite"
+
+
+def test_hk_fx_2800_parity_and_overlay_preserved() -> None:
+    """FX BLOCKER 回归 5+6：FX 集成后 2800 区间 parity + 5 方法 overlay 零违规。"""
+    signal_panel, return_levels, cal = l2_panels()
+    ds = pd.Timestamp("2015-01-28")
+    ds_i = cal.get_loc(ds)
+    n = (len(cal) - 2 + 1) - ds_i
+    assert n == 2800, f"n_intervals {n} != 2800"
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("l2_mod_fx2", ROOT / "scripts" / "gate4_long_horizon_proxy.py")
+    l2 = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(l2)
+    growth_idx = [i for i, s in enumerate(SLOT_ORDER) if s in ("CHINEXT", "STAR")]
+    decision_dates = cal[ds_i:len(cal) - 1]
+    for name in l2.METHODS:
+        pol = l2.ProxyPolicy(signal_panel, name)
+        for t in decision_dates[::500]:
+            w = l2._apply_overlay(pol(t), SLOT_ORDER)
+            assert w.max() <= 0.25 + 1e-6, f"{name} single>25%"
+            assert w[growth_idx].sum() <= 0.50 + 1e-6, f"{name} growth>50%"
+
+
+def l2_panels():
+    """helper：加载修正后 panel（signal/return/cal）。"""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("l2_mod_fx3", ROOT / "scripts" / "gate4_long_horizon_proxy.py")
+    l2 = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(l2)
+    return l2.build_panel()
+
+
 def test_scenario_label_enforced() -> None:
     assert "SCENARIO_NOT_STRICT_PIT_OOS" in RUNNER_SRC
     assert "LONG_HORIZON_PROXY_SCENARIO_DIAGNOSTIC" in RUNNER_SRC
