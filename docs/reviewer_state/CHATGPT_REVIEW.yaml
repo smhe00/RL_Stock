@@ -1,29 +1,37 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_LONG_HORIZON_NON_RL_RUN_DOC_FIX_001
-state: REVIEW_COMPLETE
+handoff_id: G4_LONG_HORIZON_PROXY_PREP_001
+state: REVISIONS_REQUIRED
 
 reviewed_packet:
-  path: docs/review_packets/GATE_4_LONG_HORIZON_NON_RL_RUN.md
-  commit: 067ff6bd364bfa9ea51758b73fd6bb12733e546d
+  path: docs/review_packets/GATE_4_LONG_HORIZON_PROXY_PREP.md
+  commit: 41ce4dd36ac1264a28755b2f46cd4c97d895e5df
 
 code_commit: f039d369d94295433132e17cf981b2eb6243c17a
 
-decision: DOC_FIX_ACCEPTED_L1_CLOSED_L2_PROXY_PREP_AUTHORIZED
+decision: PREP_REVISIONS_REQUIRED_L2_RUN_NOT_AUTHORIZED
 
 response:
-  path: docs/reviewer_responses/GATE_4_LONG_HORIZON_NON_RL_RUN_DOC_FIX_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/GATE_4_LONG_HORIZON_PROXY_PREP_REVIEWER_RESPONSE.md
 
 passed:
-  - L1_EXECUTION_TECHNICALLY_VALID
-  - L1_RESULTS_ACCEPTED
-  - DOCUMENTATION_CORRECTION_ACCEPTED
-  - NO_L1_RERUN_OR_ARTIFACT_CHANGE
-  - MAXDIV_LONG_WINDOW_RISK_ADJUSTED_ADVANTAGE_SUPPORTED
-  - L1_FORMALLY_CLOSED
+  - TRACK_C_SCENARIO_LABELING_CORRECT
+  - TARGET_HISTORY_SPANS_2015_TO_2026
+  - SIX_METHOD_SET_AND_CANONICAL_PARAMS_PRESERVED
+  - PRE_FROZEN_REGIME_REPORTING_DEFINED
+  - PROXY_PROVENANCE_FIELDS_PRESENT
+  - PPO_SAC_TD3_EXCLUDED
+  - L2_NOT_EXECUTED
+
+revision_required:
+  - STAR_PRE2020_DUPLICATES_CHINEXT_RETURN_STREAM
+  - CASH_LIKE_2Y_DURATION_PROXY_NOT_CASH_LIKE
+  - EQUITY_RETURN_BASIS_MIXES_PRICE_RETURN_AND_TOTAL_RETURN
+  - CROSS_MARKET_INFORMATION_AND_RETURN_TIMING_NOT_UNAMBIGUOUS
+  - WINDOW_MUST_BE_REDERIVED_AFTER_PROXY_AND_TIMING_FIXES
 
 authorized_next:
-  - GATE_4_LONG_HORIZON_PROXY_PREP
+  - GATE_4_LONG_HORIZON_PROXY_PREP_FIX
 
 forbidden_next:
   - GATE_4_LONG_HORIZON_PROXY_RUN
@@ -37,12 +45,12 @@ forbidden_next:
   - QMT_LIVE
 
 notes:
-  - L1 is frozen and closed: 1011 real-instrument execution days, MaxDiv Sharpe ~1.655 and MaxDD ~-4.0%.
-  - The weak-phase wording is corrected: MaxDiv Sharpe ~0.86 is highest; Momentum_12_1 Sharpe ~0.31 is also positive.
-  - Next scope is PREP only for Track C long-history proxy/scenario research targeting approximately 2015 through 2026-08-07.
-  - Public-market proxy/index data acquisition is authorized during PREP with full provenance and explicit backfill/pre-launch labeling.
-  - L2 must be labeled SCENARIO_NOT_STRICT_PIT_OOS; backfilled proxy history may not be represented as real-instrument OOS.
-  - Same six deterministic comparison rows and canonical parameters remain frozen; PPO/SAC/TD3 remain excluded.
-  - Claude must return GATE_4_LONG_HORIZON_PROXY_PREP for review before any L2 execution.
+  - Do not execute L2 yet.
+  - Replace the 2015-2019 STAR mapping so it does not duplicate CHINEXT as an identical multi-year return series; find a distinct auditable technology/innovation proxy or return an alternative design for review.
+  - Make CASH_LIKE carry-dominated with near-zero duration; 2Y-duration construction may only be a sensitivity.
+  - Freeze a consistent equity return basis before results are observed; probe total-return variants first, otherwise define a uniform and explicitly labeled alternative.
+  - Freeze an exact causal market-time convention, including HK close/FX availability and the return interval to which T information applies.
+  - Re-derive the first/last usable dates and day count after the corrected proxy/timing design rather than assuming 2801 remains valid.
+  - L1 remains frozen and closed; no L1 artifacts/results may change.
 
-updated_at: 2026-08-09T21:40:00+08:00
+updated_at: 2026-08-09T21:56:00+08:00
