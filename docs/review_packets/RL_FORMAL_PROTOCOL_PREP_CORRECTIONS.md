@@ -78,7 +78,7 @@ collected 215 items  →  215 passed（test_rl_formal_protocol.py 15 个：confi
 
 # 6. Git Commit
 
-`RL_FORMAL_PROTOCOL_PREP_CORRECTIONS` 提交 SHA：**`PENDING_SHA`**
+`RL_FORMAL_PROTOCOL_PREP_CORRECTIONS` 提交 SHA：**`943f92c`**
 
 ```text
 configs/rl_formal_protocol.yaml                    ← P7 机器可读冻结配置（canonical）
