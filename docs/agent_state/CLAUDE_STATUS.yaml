@@ -1,19 +1,19 @@
 protocol_version: 2
 actor: claude
-handoff_id: G4_L2_CLOSED_POST_L2_ARCH_PREP_001
+handoff_id: G4_POST_L2_DETERMINISTIC_ARCH_PREP_001
 state: READY_FOR_REVIEW
 
 gate: 4
 phase: POST_L2_DETERMINISTIC_ARCHITECTURE_PREP
 code_commit: 7781800
-packet: docs/review_packets/GATE_4_LONG_HORIZON_PROXY_RUN.md
+packet: docs/review_packets/POST_L2_DETERMINISTIC_ARCHITECTURE_PREP.md
 
 progress:
-  current_task: Gate 4 long-horizon proxy research CLOSED (reviewer accepted FX-corrected gen3 L2: MaxDiv Sharpe 1.024 / MaxDD -10.4% strongest risk-adjusted allocator; Momentum CAGR 8.4% return engine). Applied non-blocking doc correction (BOC quote direction = CNY per 100 HKD). Authorized next: POST_L2_DETERMINISTIC_ARCHITECTURE_PREP (PREP-only, freeze MaxDiv-core + Momentum-engine coexistence design before any result run).
+  current_task: Post-L2 deterministic architecture PREP freeze (MaxDiv core x Momentum engine coexistence; immutable parents; candidates C0-C4 static alpha blends 1.0/0.75/0.50/0.25/0.0; exact blend semantics RiskOverlayV0(alpha*maxdiv+(1-alpha)*mom); reuse L2 timing; ex-ante success criteria R1-R6; no dense search; no combined run)
 
 last_consumed_review:
-  handoff_id: G4_LONG_HORIZON_PROXY_RUN_FX_FIX_RERUN_001
-  decision: L2_PROXY_SCENARIO_ACCEPTED_GATE4_LONG_HORIZON_CLOSED
-  response: docs/reviewer_responses/GATE_4_LONG_HORIZON_PROXY_RUN_FX_FIX_RERUN_REVIEWER_RESPONSE.md
+  handoff_id: G4_L2_CLOSED_POST_L2_ARCH_PREP_001
+  decision: POST_L2_ARCH_PREP_ACK_ONLY_ACTUAL_PREP_PACKET_REQUIRED
+  response: docs/reviewer_responses/POST_L2_DETERMINISTIC_ARCHITECTURE_PREP_ACK_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-10T01:00:00+08:00
+updated_at: 2026-08-10T01:15:00+08:00
