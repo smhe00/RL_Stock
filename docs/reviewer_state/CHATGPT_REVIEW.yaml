@@ -1,36 +1,45 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_L2_CLOSED_POST_L2_ARCH_PREP_001
+handoff_id: G4_POST_L2_DETERMINISTIC_ARCH_PREP_001
 state: REVISIONS_REQUIRED
 
 reviewed_packet:
-  path: docs/review_packets/GATE_4_LONG_HORIZON_PROXY_RUN.md
-  commit: f7385be5496eaba420582910e6493c2d5d0c91eb
+  path: docs/review_packets/POST_L2_DETERMINISTIC_ARCHITECTURE_PREP.md
+  commit: 0710c54adbd1ad23dc923d1dfb0d2d5a1c0d4f8d
 
 code_commit: 7781800d4ce996a216aa1e08f1346504c2628b66
 
-decision: POST_L2_ARCH_PREP_ACK_ONLY_ACTUAL_PREP_PACKET_REQUIRED
+decision: ARCH_PREP_SUBSTANTIALLY_CORRECT_THRESHOLD_SEMANTICS_FIX_REQUIRED
 
 response:
-  path: docs/reviewer_responses/POST_L2_DETERMINISTIC_ARCHITECTURE_PREP_ACK_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/POST_L2_DETERMINISTIC_ARCHITECTURE_PREP_REVIEWER_RESPONSE.md
 
 passed:
-  - L2_ACCEPTANCE_CONSUMED
-  - GATE4_LONG_HORIZON_CLOSURE_ACKNOWLEDGED
-  - BOC_FX_QUOTE_DIRECTION_DOC_FIX_APPLIED
-  - POST_L2_ARCH_PREP_PHASE_DECLARED
+  - DEDICATED_POST_L2_ARCHITECTURE_PREP_PACKET_PRESENT
+  - PARENT_STRATEGIES_IMMUTABLE
+  - MAXDIV_120_0P5_CONFIRMED
+  - MOMENTUM_252_21_CONFIRMED
+  - CANDIDATE_SET_C0_C4_FROZEN
+  - PURE_PARENT_CONTROLS_RETAINED
+  - NO_DENSE_ALPHA_SEARCH
+  - STATIC_BLEND_ORDER_FROZEN
+  - FINAL_RISK_OVERLAY_SPECIFIED
+  - TURNOVER_COST_ON_FINAL_EXECUTABLE_PATH
+  - ACCEPTED_L2_TIMING_PRESERVED
+  - HK_CNY_FX_TREATMENT_PRESERVED
+  - T_TO_TPLUS1_REALIZED_RETURN_PRESERVED
+  - FULL_EVALUATION_TABLE_FROZEN
+  - PREFROZEN_STRESS_REGIMES_REUSED
+  - R3_R5_R6_SEMANTICS_ACCEPTABLE
   - PPO_SAC_TD3_REMAIN_EXCLUDED
+  - QMT_LIVE_REMAINS_FORBIDDEN
 
 revision_required:
-  - DEDICATED_POST_L2_ARCHITECTURE_PREP_PACKET_MISSING
-  - EXACT_MAXDIV_MOMENTUM_CANDIDATE_SET_NOT_FROZEN
-  - BLENDING_ORDER_AND_FINAL_OVERLAY_SEMANTICS_NOT_FROZEN
-  - REBALANCE_AND_TIMING_CONTRACT_NOT_RESTATED_FOR_ARCHITECTURE
-  - EX_ANTE_ARCHITECTURE_SUCCESS_CRITERIA_NOT_FROZEN
-  - COMBINED_RUN_EVALUATION_TABLE_AND_COST_RULES_NOT_FROZEN
+  - R4_COST_INEQUALITY_REVERSED_MUST_BE_CUM_DELTA_GTE_MINUS_3PCT
+  - R1_R2_MUST_USE_EXACT_SAME_RUN_C0_VALUES_NOT_ROUNDED_DISPLAY_VALUES
 
 authorized_next:
-  - POST_L2_DETERMINISTIC_ARCHITECTURE_PREP
+  - POST_L2_DETERMINISTIC_ARCHITECTURE_PREP_CORRECTION
 
 forbidden_next:
   - POST_L2_DETERMINISTIC_ARCHITECTURE_RUN
@@ -44,11 +53,11 @@ forbidden_next:
   - QMT_LIVE
 
 notes:
-  - Current handoff is an acknowledgement/phase transition only; it is not an architecture PREP submission because it still points to the old L2 run packet.
-  - Submit a dedicated docs/review_packets/POST_L2_DETERMINISTIC_ARCHITECTURE_PREP.md before computing any MaxDiv+Momentum combined result.
-  - Freeze a small finite rationale-driven candidate architecture set; pure MaxDiv and pure Momentum remain controls; dense alpha sweeps are forbidden.
-  - Freeze exact blending semantics, final RiskOverlayV0 application, timing, turnover/cost computation, stress regimes, evaluation metrics and ex-ante success criteria before the run.
-  - Parent strategy parameters, 11-slot universe, FX/timing contract, accepted 2800-interval L2 panel and STAR basis-risk warning remain fixed.
-  - L2 remains closed and accepted; this revision applies only to the next architecture PREP submission.
+  - PREP is otherwise substantively correct and close to RUN authorization.
+  - Correct R4 from <= -3.0pct to >= -3.0pct under net-minus-gross cum-delta convention.
+  - Freeze machine-evaluable R1 as candidate_calendar_cagr - C0_calendar_cagr >= 0.005.
+  - Freeze machine-evaluable R2 as candidate_maxdd >= C0_maxdd - 0.05.
+  - These are specification corrections only; do not alter candidate weights, parent parameters, panel, timing, FX, stress regimes, or threshold magnitudes.
+  - No combined strategy result may be run before corrected PREP review.
 
-updated_at: 2026-08-10T00:14:00+08:00
+updated_at: 2026-08-10T00:26:00+08:00
