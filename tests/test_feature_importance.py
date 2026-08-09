@@ -7,7 +7,11 @@ import pandas as pd
 import pytest
 
 from china_etf.evaluation.factor_importance import (
+    bh_fdr,
+    block_bootstrap_ci,
+    cross_fit_residual_spearman,
     decision_dates,
+    holm_adjust,
     ols_residual,
     spearman,
     tercile_discrimination,
@@ -132,3 +136,105 @@ class TestKnownMonotoneSignal:
         assert spearman(f, np.abs(fwd)) > 0.5
         res = tercile_discrimination(f, np.abs(fwd))
         assert res["high"]["mean_fwd_ret"] > res["low"]["mean_fwd_ret"]
+
+
+class TestBlockBootstrapCi:
+    def test_known_difference_ci_excludes_zero(self):
+        rng = np.random.default_rng(5)
+        # 真实依赖：feature 高 → |outcome| 高（差距显著）
+        f = np.repeat([0.0, 1.0, 2.0], 100)
+        o = np.abs(rng.normal(0, 0.1 + 0.5 * f, len(f)))
+        gap = lambda x, y: tercile_discrimination(x, y)["low_minus_high_mean"]  # noqa: E731
+        ci = block_bootstrap_ci(f, o, gap, n_boot=200, block_len=20, seed=0)
+        assert ci["ci_low"] < 0 and ci["ci_high"] < 0  # 显著负 gap → CI 排除 0
+
+    def test_no_difference_ci_contains_zero(self):
+        rng = np.random.default_rng(6)
+        f = rng.normal(0, 1, 400)
+        o = rng.normal(0, 1, 400)  # 无关联
+        gap = lambda x, y: tercile_discrimination(x, y)["low_minus_high_mean"]  # noqa: E731
+        ci = block_bootstrap_ci(f, o, gap, n_boot=200, block_len=20, seed=1)
+        assert ci["ci_low"] < 0 < ci["ci_high"]
+
+    def test_block_length_clamped(self):
+        n = 10
+        x = np.arange(float(n))
+        y = x
+        ci = block_bootstrap_ci(x, y, spearman, n_boot=50, block_len=100, seed=0)
+        assert np.isfinite(ci["ci_low"]) and np.isfinite(ci["ci_high"])
+
+
+class TestMultipleTesting:
+    def test_holm_manual(self):
+        # Holm (n=4): p=[.01,.04,.04,.05] → running max of (n-j+1)*p_j
+        #   rank1 .01 → 4*.01=.04; rank2 .04 → max(.04, 3*.04=.12)=.12;
+        #   rank3 .04 → max(.12, 2*.04=.08)=.12; rank4 .05 → max(.12, 1*.05)=.12
+        adj = holm_adjust(np.array([0.01, 0.04, 0.04, 0.05]))
+        assert adj[0] == pytest.approx(0.04, abs=1e-12)
+        assert adj[1] == pytest.approx(0.12, abs=1e-12)
+        assert adj[2] == pytest.approx(0.12, abs=1e-12)
+        assert adj[3] == pytest.approx(0.12, abs=1e-12)
+
+    def test_holm_clamped_to_one(self):
+        adj = holm_adjust(np.array([0.3, 0.8]))
+        assert adj.max() <= 1.0
+
+    def test_bh_fdr_manual(self):
+        # BH (n=4): p=[.01,.03,.04,.05] → q by backward min of p*n/(rank)
+        #   rank4 .05 → .05*4/4=.05; rank3 .04 → min(.05, .04*4/3=.0533)=.05;
+        #   rank2 .03 → min(.05, .03*4/2=.06)=.05; rank1 .01 → min(.05, .01*4/1=.04)=.04
+        q = bh_fdr(np.array([0.01, 0.03, 0.04, 0.05]))
+        assert q[0] == pytest.approx(0.04, abs=1e-12)
+        assert q[1] == pytest.approx(0.05, abs=1e-12)
+        assert q[2] == pytest.approx(0.05, abs=1e-12)
+        assert q[3] == pytest.approx(0.05, abs=1e-12)
+        assert q.max() <= 1.0
+
+    def test_empty(self):
+        assert holm_adjust([]).size == 0
+        assert bh_fdr([]).size == 0
+
+
+class TestCrossFitResidualization:
+    def test_val_not_in_fit(self):
+        """跨 fold：训练区拟合系数，验证区只 apply。拟合区外的 val 残差不被污染。"""
+        rng = np.random.default_rng(7)
+        n = 200
+        X = rng.normal(size=(n, 2))
+        f = 2.0 * X[:, 0] + rng.normal(0, 0.1, n)  # 特征大部分由 F0 解释
+        o = np.abs(rng.normal(0, 1, n))  # outcome 与特征独立
+        rho = cross_fit_residual_spearman(f, X, o)
+        # val 残差（特征去 F0 后）与 outcome 无显著关联
+        assert abs(rho) < 0.4
+
+    def test_unexplained_feature_keeps_signal(self):
+        """特征含独立于 F0 的信号，且该信号预测 outcome → val 残差仍显著。"""
+        rng = np.random.default_rng(8)
+        n = 300
+        X = rng.normal(size=(n, 2))
+        signal = rng.normal(0, 1, n)
+        f = 1.5 * X[:, 0] + signal  # 特征 = F0 部分 + 独立信号
+        o = np.abs(rng.normal(0, 1, n)) * (1 + 0.8 * signal)  # |o| 由 signal 驱动
+        rho = cross_fit_residual_spearman(f, X, o)
+        assert rho > 0.3
+
+
+class TestScreeningDecisionDays:
+    def test_train_val_excludes_own_test_fold_local(self):
+        """fold-local：每 fold 自己的 train∪val 不含该 fold 自己的 test（expanding 下 union 必然重叠）。"""
+        from china_etf.evaluation.walkforward import make_folds
+        idx = pd.date_range("2020-01-01", periods=1000, freq="B")
+        folds = make_folds(idx, n_folds=4, min_train_days=300, val_days=60)
+        for f in folds:
+            screen = set(pd.DatetimeIndex([d for d in idx if f.train_start <= d <= f.train_end]))
+            screen.update(pd.DatetimeIndex([d for d in idx if f.val_start <= d <= f.val_end]))
+            own_test = set(pd.DatetimeIndex([d for d in idx if f.test_start <= d <= f.test_end]))
+            assert screen.isdisjoint(own_test)
+        # expanding union 确实重叠（fold k+1 train 含 fold k test）——证明该测试的必要性
+        all_screen = set()
+        all_test = set()
+        for f in folds:
+            all_screen.update(pd.DatetimeIndex([d for d in idx if f.train_start <= d <= f.train_end]))
+            all_screen.update(pd.DatetimeIndex([d for d in idx if f.val_start <= d <= f.val_end]))
+            all_test.update(pd.DatetimeIndex([d for d in idx if f.test_start <= d <= f.test_end]))
+        assert not all_screen.isdisjoint(all_test)
