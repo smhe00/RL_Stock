@@ -176,39 +176,79 @@ def block_bootstrap_ci(x: np.ndarray, y: np.ndarray, stat_fn, *,
             "n": int(n)}
 
 
-def block_permutation_p(x: np.ndarray, y: np.ndarray, stat_fn, *,
-                        n_perm: int = 1000, block_len: int = 20, seed: int = 0) -> float:
-    """Block-shuffle permutation 的 null-centered 双侧 p（B2/B4）。
+def contiguous_segments(dates, calendar) -> list[np.ndarray]:
+    """把 admissible dates（⊆ calendar，sorted）按原始 calendar 邻接分组成段（C3）。
 
-    在 x 保持不变下，对 y 做移动块洗牌（保持时间连续 + 依赖结构近似），重算 stat_fn(x, y_shuffled)
-    得到 null 分布；p = 2 * min(P(null >= obs), P(null <= obs))，夹到 [1/n_perm, 1]。
+    返回每段的 **dates 内位置数组**（非 calendar 位置）。若 dates 中两个相邻日期在 calendar
+    中不连续（中间有被排除的 Test gap），则属于不同段。保持段内时间连续性，禁止跨 gap。
+    """
+    dates = pd.DatetimeIndex(dates)
+    cal = pd.DatetimeIndex(calendar)
+    pos = cal.get_indexer(dates)
+    segs: list[list[int]] = []
+    cur: list[int] = []
+    prev_cal_pos = None
+    for i, p in enumerate(pos):
+        if p < 0:
+            continue
+        if prev_cal_pos is not None and p != prev_cal_pos + 1:
+            segs.append(cur)
+            cur = []
+        cur.append(i)
+        prev_cal_pos = p
+    if cur:
+        segs.append(cur)
+    return [np.asarray(s, dtype=int) for s in segs]
+
+
+def _shuffle_segment_blocks(values: np.ndarray, block_len: int, rng: np.random.Generator) -> np.ndarray:
+    """段内**无替换** contiguous-block 洗牌：把段分成不重叠连续块（块长 block_len），洗牌块顺序。
+
+    保持每块内的时间连续性（块内依赖保留），块间顺序打乱（打破 x-y 对齐）。真 permutation，非 bootstrap。
+    """
+    n = len(values)
+    bl = max(1, min(int(block_len), n))
+    blocks = [values[i:i + bl] for i in range(0, n, bl)]
+    rng.shuffle(blocks)
+    return np.concatenate(blocks)[:n]
+
+
+def segment_block_permutation_p(x: np.ndarray, y: np.ndarray, segments: list[np.ndarray],
+                                stat_fn, *, n_perm: int = 1000, block_len: int = 60,
+                                seed: int = 0) -> float:
+    """Segment-aware 无替换块 permutation 的 null-centered 双侧 p（C2/C3）。
+
+    对每个 admissible 段独立做块洗牌（_shuffle_segment_blocks），从不跨段/跨 gap。
+    双侧 p（对称零中心统计量如 Spearman）：p = (1 + count(|T_null| >= |T_obs|)) / (B + 1)。
     """
     x = np.asarray(x, dtype=float)
     y = np.asarray(y, dtype=float)
     m = np.isfinite(x) & np.isfinite(y)
     xx, yy = x[m], y[m]
-    n = len(xx)
-    bl = max(1, min(int(block_len), n))
-    if n < 5:
+    # segments 是原始 indices 的位置；映射到 xx 索引（m[j] 处 = 掩码内前置 True 数）
+    xx_idx = np.cumsum(m) - 1
+    seg_positions = []
+    for seg in segments:
+        rel = [i for i in seg if m[i]]
+        if len(rel) >= 4:
+            seg_positions.append(xx_idx[np.asarray(rel, dtype=int)])
+    if not seg_positions:
         return float("nan")
+    n = len(xx)
     obs = stat_fn(xx, yy)
     if not np.isfinite(obs):
         return float("nan")
     rng = np.random.default_rng(seed)
-    # null 分布：打乱 y 的移动块
-    cnt_ge = 1  # +1 计入观测本身（保守）
-    cnt_le = 1
+    cnt_extreme = 1  # +1 计入观测本身（保守）
     for _ in range(n_perm):
-        idx = _moving_block_indices(n, bl, rng)
-        y_shuf = yy[idx]
-        s = stat_fn(xx, y_shuf)
-        if not np.isfinite(s):
-            continue
-        cnt_ge += int(s >= obs)
-        cnt_le += int(s <= obs)
-    total = n_perm + 1
-    p = 2.0 * min(cnt_ge, cnt_le) / total
-    return float(max(p, 1.0 / total))
+        y_perm = yy.copy()
+        for seg in seg_positions:
+            y_perm[seg] = _shuffle_segment_blocks(yy[seg], block_len, rng)
+        s = stat_fn(xx, y_perm)
+        if np.isfinite(s) and abs(s) >= abs(obs):
+            cnt_extreme += 1
+    p = cnt_extreme / (n_perm + 1)
+    return float(min(max(p, 1.0 / (n_perm + 1)), 1.0))
 
 
 def holm_adjust(pvals) -> np.ndarray:

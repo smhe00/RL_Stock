@@ -1,5 +1,10 @@
 # GATE 4 FEATURE ABLATION RUNS — STAT FINALIZATION（B1-B5 统计严谨性修正）
 
+> **注记（STAT_FINALIZATION_CORRECTIONS）**：本 packet 的 Test 隔离按执行日而非决策日（C1），
+> permutation 为 with-replacement bootstrap 非真 permutation（C2），resampling 跨 gap（C3），
+> fold CI 措辞"独立"不当（C4），inferential block_len 未敏感性（C5）。最终版本见
+> `GATE_4_FEATURE_ABLATION_RUNS_STAT_FINALIZATION_CORRECTIONS.md`（transition-quarantined + segment-aware）。
+>
 > 评审（`GATE_4_FEATURE_ABLATION_RUNS_CORRECTIONS_REVIEWER_RESPONSE.md`）**TARGETED_STATISTICAL_FINALIZATION_REQUIRED**
 > （B1-B5），`authorized_next: GATE_4_FEATURE_ABLATION_RUNS_STAT_FINALIZATION`。本 packet 关闭 B1-B5。
 > handoff_id = **G4_FEATURE_ABLATION_RUNS_STAT_FINALIZATION_001**。

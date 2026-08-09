@@ -13,11 +13,12 @@ ROOT_ARTIFACT_DIR = Path(__file__).resolve().parents[1] / "artifacts"
 from china_etf.evaluation.factor_importance import (
     bh_fdr,
     block_bootstrap_ci,
-    block_permutation_p,
+    contiguous_segments,
     cross_fit_residual_spearman,
     decision_dates,
     holm_adjust,
     ols_residual,
+    segment_block_permutation_p,
     spearman,
     tercile_discrimination,
     tercile_labels,
@@ -245,28 +246,88 @@ class TestScreeningDecisionDays:
         assert not all_screen.isdisjoint(all_test)
 
 
-class TestBlockPermutationP:
+class TestContiguousSegments:
+    def test_gap_splits_segments(self):
+        cal = pd.date_range("2024-01-01", periods=10, freq="D")
+        dates = pd.DatetimeIndex([cal[0], cal[1], cal[3], cal[4], cal[5], cal[7]])
+        segs = contiguous_segments(dates, cal)
+        assert len(segs) == 3  # [0,1] [3,4,5] [7]
+        assert [len(s) for s in segs] == [2, 3, 1]
+
+    def test_no_gap_single_segment(self):
+        cal = pd.date_range("2024-01-01", periods=8, freq="D")
+        dates = pd.DatetimeIndex(list(cal))
+        segs = contiguous_segments(dates, cal)
+        assert len(segs) == 1 and len(segs[0]) == 8
+
+
+class TestSegmentBlockPermutationP:
+    def _segments_all(self, n, calendar):
+        dates = pd.DatetimeIndex(calendar[:n])
+        return contiguous_segments(dates, calendar)
+
     def test_null_permutation_p_not_tiny(self):
-        """独立 x/y（无关联）→ permutation p 不应很小（null 下近似均匀）。"""
         rng = np.random.default_rng(10)
+        cal = pd.date_range("2020-01-01", periods=300, freq="D")
         x = rng.normal(0, 1, 300)
         y = rng.normal(0, 1, 300)
-        p = block_permutation_p(x, y, spearman, n_perm=300, block_len=20, seed=0)
+        segs = self._segments_all(300, cal)
+        p = segment_block_permutation_p(x, y, segs, spearman, n_perm=300, block_len=60, seed=0)
         assert p > 0.05
 
     def test_strong_signal_small_p(self):
-        """强单调信号 → permutation p 很小（<0.05）。"""
         rng = np.random.default_rng(11)
+        cal = pd.date_range("2020-01-01", periods=300, freq="D")
         x = np.linspace(0.0, 1.0, 300)
         y = 3 * x + rng.normal(0, 0.05, 300)
-        p = block_permutation_p(x, y, spearman, n_perm=300, block_len=20, seed=0)
+        segs = self._segments_all(300, cal)
+        p = segment_block_permutation_p(x, y, segs, spearman, n_perm=300, block_len=60, seed=0)
         assert p < 0.05
 
-    def test_permutation_p_in_unit_interval(self):
+    def test_p_in_unit_interval(self):
+        cal = pd.date_range("2020-01-01", periods=100, freq="D")
         x = np.arange(100.0)
         y = np.arange(100.0)
-        p = block_permutation_p(x, y, spearman, n_perm=100, block_len=20, seed=0)
+        segs = self._segments_all(100, cal)
+        p = segment_block_permutation_p(x, y, segs, spearman, n_perm=100, block_len=60, seed=0)
         assert 0.0 <= p <= 1.0
+
+    def test_no_cross_gap_permutation(self):
+        """C3: 有 gap 时 permutation 只在段内洗牌——两段各自保留块内顺序。"""
+        cal = pd.date_range("2020-01-01", periods=10, freq="D")
+        # dates: [d0,d1,  d4,d5]（d2/d3 被排除 → gap）
+        dates = pd.DatetimeIndex([cal[0], cal[1], cal[4], cal[5]])
+        x = np.array([1.0, 2.0, 3.0, 4.0])
+        y = np.array([1.0, 2.0, 3.0, 4.0])
+        segs = contiguous_segments(dates, cal)
+        assert [len(s) for s in segs] == [2, 2]
+        rng = np.random.default_rng(0)
+        from china_etf.evaluation.factor_importance import _shuffle_segment_blocks
+        y_perm = y.copy()
+        for seg in segs:
+            y_perm[seg] = _shuffle_segment_blocks(y[seg], 2, rng)
+        # 每段内是 {1,2} 和 {3,4} 的置换，绝不跨 gap 混合
+        assert set(y_perm[:2]) <= {1.0, 2.0}
+        assert set(y_perm[2:]) <= {3.0, 4.0}
+
+
+class TestC1TransitionInvariant:
+    def test_screen_t_plus_1_not_in_test_exec(self):
+        """C1: 排除决策日（执行日前一日）后，screen 中任何 t 的 t+1 不在 Test 执行 mask 中。"""
+        from china_etf.evaluation.walkforward import make_folds
+        idx = pd.date_range("2020-01-01", periods=1000, freq="B")
+        folds = make_folds(idx, n_folds=4, min_train_days=300, val_days=60)
+        test_exec = set()
+        for f in folds:
+            test_exec.update(pd.DatetimeIndex([d for d in idx if f.test_start <= d <= f.test_end]))
+        test_dec = decision_dates(sorted(test_exec), idx)
+        excluded = set(test_dec) - {pd.NaT}
+        screen = set(pd.DatetimeIndex([d for d in idx if d in idx[:-1]])) - excluded
+        t_plus1 = {idx[idx.get_indexer([d])[0] + 1] for d in screen}
+        assert t_plus1.isdisjoint(test_exec)
+        # val_end（决策日）被排除：每 fold 首 Test 决策日
+        for f in folds:
+            assert f.val_end not in screen
 
 
 class TestBlockBootstrapNoPBs:
