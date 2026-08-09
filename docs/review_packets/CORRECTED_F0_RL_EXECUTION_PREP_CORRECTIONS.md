@@ -49,7 +49,7 @@ config_sha256 = 46c56bc9a204…
 
 # 4. Git Commit
 
-`CORRECTED_F0_RL_EXECUTION_PREP_CORRECTIONS` 提交 SHA：**`PENDING_SHA`**
+`CORRECTED_F0_RL_EXECUTION_PREP_CORRECTIONS` 提交 SHA：**`b17fe19`**
 
 ```text
 src/china_etf/evaluation/rl_formal.py          ← H1-H7（共享构造、hash、fold/stitched mask、cost evidence、身份、seed、Pareto）
