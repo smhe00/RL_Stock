@@ -1,19 +1,19 @@
 protocol_version: 2
 actor: claude
-handoff_id: G4_LONG_HORIZON_NON_RL_RUN_DOC_FIX_001
+handoff_id: G4_LONG_HORIZON_PROXY_PREP_001
 state: READY_FOR_REVIEW
 
 gate: 4
-phase: GATE_4_LONG_HORIZON_NON_RL_RUN_DOC_FIX
+phase: GATE_4_LONG_HORIZON_PROXY_PREP
 code_commit: f039d36
-packet: docs/review_packets/GATE_4_LONG_HORIZON_NON_RL_RUN.md
+packet: docs/review_packets/GATE_4_LONG_HORIZON_PROXY_PREP.md
 
 progress:
-  current_task: L1 run doc correction (reviewer accepted L1_RESULTS, required documentation-only fix: correct weak-phase uniqueness overstatement to match artifact — MaxDiv is highest weak-phase Sharpe 0.86, not the only positive one; Momentum +0.31 also positive. No rerun / no artifact / no code changes)
+  current_task: L2 scenario proxy PREP freeze (Track C; 11-slot proxy mapping verified via QMT-first probes, window 2015-01-27..2026-08-07, 2801 decision days; research-return main table + 1x cost sensitivity; no L2 execution)
 
 last_consumed_review:
-  handoff_id: G4_LONG_HORIZON_NON_RL_RUN_001
-  decision: L1_RESULTS_ACCEPTED_DOC_CORRECTION_REQUIRED
-  response: docs/reviewer_responses/GATE_4_LONG_HORIZON_NON_RL_RUN_REVIEWER_RESPONSE.md
+  handoff_id: G4_LONG_HORIZON_NON_RL_RUN_DOC_FIX_001
+  decision: DOC_FIX_ACCEPTED_L1_CLOSED_L2_PROXY_PREP_AUTHORIZED
+  response: docs/reviewer_responses/GATE_4_LONG_HORIZON_NON_RL_RUN_DOC_FIX_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-09T20:15:00+08:00
+updated_at: 2026-08-09T22:10:00+08:00
