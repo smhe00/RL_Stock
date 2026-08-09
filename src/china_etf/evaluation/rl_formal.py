@@ -336,13 +336,15 @@ def aggregate_raw_results(results: dict, cfg: dict, mask_dates) -> dict:
     active_day_annualized_return / sharpe / max_drawdown / calmar；
     stop_violations 从 run 字段派生（save_load/nan/neg_cash/非 finite），字段缺失 → fail-closed。
 
-    返回 {algo: {seed: {active_day_annualized_return, sharpe, max_drawdown, calmar,
-                        stop_violations, n_seeds}}}
+    返回 algo-centric schema（S1，匹配 evaluate_go_nogo 契约）：
+    {algo: {seed_keys, active_day_annualized_return: {seed: val}, sharpe: {seed: val},
+            max_drawdown: {seed: val}, calmar_median, stop_violations, per_seed}}
     """
     n_mask = len(mask_dates)
     out: dict[str, dict] = {}
     for algo, ag in results.get("per_algorithm", {}).items():
-        out[algo] = {}
+        seed_keys = [int(s) for s in ag.keys()]
+        per_seed: dict[int, dict] = {}
         for seed_key, seed_res in ag.items():
             nr_all: list[float] = []
             stop_violations = 0
@@ -383,14 +385,24 @@ def aggregate_raw_results(results: dict, cfg: dict, mask_dates) -> dict:
             eq = np.exp(np.log1p(nr).cumsum())
             mdd = float((eq / np.maximum.accumulate(eq) - 1.0).min()) if len(eq) else float("nan")
             calmar = float(active_ann / abs(mdd)) if np.isfinite(active_ann) and abs(mdd) > 1e-12 else float("nan")
-            out[algo][int(seed_key)] = {
+            per_seed[int(seed_key)] = {
                 "active_day_annualized_return": active_ann,
                 "sharpe": sharpe,
                 "max_drawdown": mdd,
                 "calmar": calmar,
                 "stop_violations": stop_violations,
-                "n_seeds": len(ag),
             }
+        calmars = [ps["calmar"] for ps in per_seed.values() if np.isfinite(ps["calmar"])]
+        out[algo] = {
+            "seed_keys": seed_keys,
+            "active_day_annualized_return": {s: ps["active_day_annualized_return"]
+                                             for s, ps in per_seed.items()},
+            "sharpe": {s: ps["sharpe"] for s, ps in per_seed.items()},
+            "max_drawdown": {s: ps["max_drawdown"] for s, ps in per_seed.items()},
+            "calmar_median": float(np.median(calmars)) if calmars else float("nan"),
+            "stop_violations": int(sum(ps["stop_violations"] for ps in per_seed.values())),
+            "per_seed": {str(s): ps for s, ps in per_seed.items()},
+        }
     return out
 
 
@@ -430,14 +442,16 @@ def finalize_publish(results: dict, config_envelope: dict, mask_dates,
 
     # P1b：caller summary 仅诊断对比，mismatch fail-closed
     if caller_stitched is not None:
+        # caller 与 canonical 同为 algo-centric schema：{algo: {metric: {seed: val}}}
         for algo, ag in canonical.items():
-            for seed_key, m in ag.items():
-                cm = caller_stitched.get(algo, {}).get(seed_key, {})
+            caller_algo = caller_stitched.get(algo, {})
+            for seed_key in ag["seed_keys"]:
                 for field in ("active_day_annualized_return", "sharpe", "max_drawdown"):
-                    if field in cm:
-                        if not np.isclose(cm[field], m[field], atol=1e-6):
+                    cm_map = caller_algo.get(field, {})
+                    if seed_key in cm_map:
+                        if not np.isclose(cm_map[seed_key], ag[field][seed_key], atol=1e-6):
                             raise InvariantViolation(
-                                f"{algo}|{seed_key}: caller {field} {cm[field]} != canonical {m[field]}")
+                                f"{algo}|{seed_key}: caller {field} {cm_map[seed_key]} != canonical {ag[field][seed_key]}")
 
     # 仅 canonical 通过后跑 GO/NO-GO
     go_nogo = evaluate_go_nogo(canonical, cfg)

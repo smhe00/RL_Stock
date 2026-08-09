@@ -467,7 +467,7 @@ class TestHarnessFinalizationF1_F6:
         payload = finalize_publish(results, loaded, mask)  # 无 caller → 纯 canonical
         assert payload["published"] is True
         assert payload["config_sha256"] == top_sha
-        assert payload["canonical_stitched"]["PPO"][42]["active_day_annualized_return"] == pytest.approx(0.0, abs=1e-9)
+        assert payload["canonical_stitched"]["PPO"]["active_day_annualized_return"][42] == pytest.approx(0.0, abs=1e-9)
 
 
 class TestPublicationBindingP1_P3:
@@ -506,8 +506,9 @@ class TestPublicationBindingP1_P3:
         loaded = load_protocol_config()
         top_sha = loaded["config_sha256"]
         results, mask = self._pass_results(sha=top_sha, ret_val=0.0)  # 零 raw
-        contradictory = {a: {s: {"active_day_annualized_return": 0.30, "sharpe": 1.7,
-                                "max_drawdown": -0.06} for s in (42, 2026, 7)}
+        contradictory = {a: {"active_day_annualized_return": {s: 0.30 for s in (42, 2026, 7)},
+                             "sharpe": {s: 1.7 for s in (42, 2026, 7)},
+                             "max_drawdown": {s: -0.06 for s in (42, 2026, 7)}}
                          for a in ("PPO", "SAC", "TD3")}
         # caller 与 canonical（零收益）矛盾 → fail-closed
         from china_etf.evaluation.rl_formal import InvariantViolation
@@ -521,7 +522,7 @@ class TestPublicationBindingP1_P3:
         top_sha = loaded["config_sha256"]
         results, mask = self._pass_results(sha=top_sha, ret_val=0.0)
         # 零收益 → canonical active_ann=0；只提供该字段避免 NaN sharpe 对比
-        consistent = {a: {s: {"active_day_annualized_return": 0.0} for s in (42, 2026, 7)}
+        consistent = {a: {"active_day_annualized_return": {s: 0.0 for s in (42, 2026, 7)}}
                       for a in ("PPO", "SAC", "TD3")}
         payload = finalize_publish(results, loaded, mask, consistent)
         assert payload["published"] is True
@@ -535,7 +536,7 @@ class TestPublicationBindingP1_P3:
         results["per_algorithm"]["PPO"][42]["F1"]["save_load_deterministic_identical"] = False
         payload = finalize_publish(results, loaded, mask)
         # 该 algo 有 stop violation → 不能 GO
-        assert payload["canonical_stitched"]["PPO"][42]["stop_violations"] >= 1
+        assert payload["canonical_stitched"]["PPO"]["per_seed"]["42"]["stop_violations"] >= 1
         assert payload["go_nogo"]["per_algorithm"]["PPO"]["decision"] == "NO_GO"
 
     def test_p2_missing_stop_evidence_fails_closed(self):
@@ -572,3 +573,88 @@ class TestPublicationBindingP1_P3:
                     results["per_algorithm"][a][seed][fold]["test"]["series"]["execution_dates"] = list(seg)
         payload = finalize_publish(results, loaded, mask)
         assert payload["published"] is True
+
+
+class TestSchemaCloseoutS1_S3:
+    """S2/S3：端到端 positive-GO + stop-flip 集成测试（synthetic raw returns）。"""
+    FOLD_LENS = {"F1": 118, "F2": 118, "F3": 118, "F4": 121}
+    SEEDS = (42, 2026, 7)
+    ALGOS = ("PPO", "SAC", "TD3")
+
+    def _positive_raw_results(self, sha="a" * 64, daily_ret=0.0012):
+        """正收益 raw returns（finite variance、非零 drawdown）。daily_ret 使 stitched 超 EW hurdle。"""
+        per_algo = {}
+        import pandas as pd
+        mask_dates = pd.bdate_range("2023-11-24", periods=475, freq="B")
+        mask_str = [str(d.date()) for d in mask_dates]
+        offset = 0
+        rng = np.random.default_rng(0)
+        for a in self.ALGOS:
+            per_algo[a] = {}
+            for seed in self.SEEDS:
+                per_algo[a][seed] = {}
+                for fold in ("F1", "F2", "F3", "F4"):
+                    n = self.FOLD_LENS[fold]
+                    seg = mask_str[offset:offset + n]
+                    offset = (offset + n) % 475
+                    costs = [0.001] * n
+                    # 正收益 + 波动（Sharpe 高、CAGR 超 0.27、MaxDD 浅）
+                    nr = daily_ret + rng.normal(0, 0.003, n)
+                    per_algo[a][seed][fold] = {
+                        "config_sha256": sha,
+                        "save_load_deterministic_identical": True,
+                        "test": {"n_eval_steps": n, "total_cost": sum(costs),
+                                 "nan_obs_or_reward": 0, "negative_cash_count": 0,
+                                 "series": {"execution_dates": list(seg), "costs": list(costs),
+                                            "net_returns": nr.tolist(), "cash": [1e6] * n,
+                                            "actual_weights": [[0.1] * 11] * n,
+                                            "raw_weights": [[0.1] * 11] * n,
+                                            "post_risk_weights": [[0.1] * 11] * n}}}
+        return {"per_algorithm": per_algo}, mask_str
+
+    def test_positive_raw_produces_go_promising(self):
+        """S2: 正收益 raw → 完整 publication chain → GO + PROMISING。"""
+        from china_etf.evaluation.rl_formal import finalize_publish, load_protocol_config
+        loaded = load_protocol_config()
+        top_sha = loaded["config_sha256"]
+        results, mask = self._positive_raw_results(sha=top_sha)
+        payload = finalize_publish(results, loaded, mask)
+        assert payload["published"] is True
+        # 至少 1 算法 GO（正收益清空 EW hurdle）→ project PROMISING
+        go_algos = [a for a, v in payload["go_nogo"]["per_algorithm"].items()
+                    if v["decision"] == "GO"]
+        assert len(go_algos) >= 1, payload["go_nogo"]["per_algorithm"]
+        assert payload["go_nogo"]["project_level"] == "PROMISING"
+
+    def test_stop_flip_turns_go_to_no_go(self):
+        """S3: 同正收益 + save_load False → 该 algo NO_GO（raw-derived stop 翻转）。"""
+        from china_etf.evaluation.rl_formal import finalize_publish, load_protocol_config
+        loaded = load_protocol_config()
+        top_sha = loaded["config_sha256"]
+        results, mask = self._positive_raw_results(sha=top_sha)
+        # 基线：GO
+        base = finalize_publish(results, loaded, mask)
+        go_algo = next(a for a, v in base["go_nogo"]["per_algorithm"].items() if v["decision"] == "GO")
+        # 翻转：该 algo 的某 seed run save_load False（保留 returns）
+        results["per_algorithm"][go_algo][42]["F1"]["save_load_deterministic_identical"] = False
+        flipped = finalize_publish(results, loaded, mask)
+        assert flipped["go_nogo"]["per_algorithm"][go_algo]["decision"] == "NO_GO"
+        assert flipped["canonical_stitched"][go_algo]["per_seed"]["42"]["stop_violations"] >= 1
+
+    def test_numeric_consistency(self):
+        """S1: evaluator 收到的 canonical 指标 == 从 raw F1→F4 重算值。"""
+        from china_etf.evaluation.rl_formal import finalize_publish, aggregate_raw_results, load_protocol_config
+        loaded = load_protocol_config()
+        cfg = loaded["config"]
+        top_sha = loaded["config_sha256"]
+        results, mask = self._positive_raw_results(sha=top_sha)
+        canonical = aggregate_raw_results(results, cfg, mask)
+        # 重算 PPO/42：拼接 raw
+        nr = []
+        for fold in ("F1", "F2", "F3", "F4"):
+            nr.extend(float(x) for x in results["per_algorithm"]["PPO"][42][fold]["test"]["series"]["net_returns"])
+        nr = np.asarray(nr)
+        cum = float(np.exp(np.log1p(nr).sum()) - 1.0)
+        exp_ann = float((1.0 + cum) ** (252.0 / len(nr)) - 1.0)
+        assert canonical["PPO"]["active_day_annualized_return"][42] == pytest.approx(exp_ann, rel=1e-9)
+        assert canonical["PPO"]["seed_keys"] == [42, 2026, 7]
