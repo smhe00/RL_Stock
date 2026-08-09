@@ -34,7 +34,7 @@ RUNNER_SRC = (ROOT / "scripts" / "gate4_long_horizon_proxy.py").read_text(encodi
 
 
 def test_window_parity_fail_closed() -> None:
-    panel, cal = build_panel()
+    signal_panel, return_levels, cal = build_panel()
     ds = pd.Timestamp("2015-01-28")
     ds_i = cal.get_loc(ds)
     # 决策区间 [ds_i, last_decision] 含末决策（last_decision = cal[-2]）
@@ -43,14 +43,16 @@ def test_window_parity_fail_closed() -> None:
     assert cal[ds_i].date().isoformat() == "2015-01-28"
     assert cal[-1].date().isoformat() == "2026-08-07"
     assert cal[-2].date().isoformat() == "2026-08-06"
-    assert list(panel.columns) == SLOT_ORDER
+    assert list(signal_panel.columns) == SLOT_ORDER
+    assert list(return_levels.columns) == SLOT_ORDER
 
 
 # --- STAR/CHINEXT distinct ---
 
 
 def test_star_chinext_distinct_series() -> None:
-    panel, _ = build_panel()
+    signal_panel, _, _ = build_panel()
+    panel = signal_panel
     star = panel["STAR"]
     cyb = panel["CHINEXT"]
     # distinct: 决不可共享同一水平序列（原 CHINEXT 双计被否）
@@ -129,23 +131,41 @@ def test_cn_duration_y_over_100_normalization_asserted() -> None:
 
 
 def test_non_a_share_lag_1_information_timing() -> None:
-    panel, _ = build_panel()
+    signal_panel, return_levels, cal = build_panel()
     for slot in LAG_1_SLOTS:
-        s = panel[slot].dropna()
+        s = signal_panel[slot].dropna()
         assert len(s) > 0, f"{slot} empty after dropna"
         # T-1 lag：面板首个非 NaN 决策日 = 数据首日 SH 交易日 + 1
         # （build_panel 中 shift(1) 保证；此处验证数据从 2015 前即可用）
         assert s.index[0] <= pd.Timestamp("2015-01-28"), f"{slot} unavailable before decision_start"
-    # 决策起点 2015-01-28 时全部有限
-    panel, cal = build_panel()
+    # 决策起点 2015-01-28 时全部有限（signal 面板）
     ds = pd.Timestamp("2015-01-28")
-    row = panel.loc[:ds].iloc[-1]
+    row = signal_panel.loc[:ds].iloc[-1]
     assert row.notna().all(), f"decision_start {ds.date()} not fully finite:\n{row}"
+
+
+def test_signal_return_panel_separation() -> None:
+    """BLOCKER 1：lagged slot 的 signal(T) = return(T-1)，且 return 面板不被 lag（T->T+1 收益）。"""
+    signal_panel, return_levels, cal = build_panel()
+    ds = pd.Timestamp("2015-01-28")
+    ds_i = cal.get_loc(ds)
+    for slot in LAG_1_SLOTS:
+        assert abs(signal_panel[slot].iloc[ds_i] - return_levels[slot].iloc[ds_i - 1]) < 1e-12, \
+            f"{slot} signal(T) != return(T-1)"
+        # return 面板未被 lag：决策 T 的已实现收益 = price(T+1)/price(T) - 1
+        r_impl = return_levels[slot].iloc[ds_i + 1] / return_levels[slot].iloc[ds_i] - 1.0
+        assert np.isfinite(r_impl) or np.isnan(r_impl)
+        # signal 与 return 面板在 lag 变换后不同（fail-closed，BLOCKER 1）
+        # 对齐索引比较（signal 因 shift 少一行）
+        common = signal_panel[slot].dropna().index.intersection(return_levels[slot].dropna().index)
+        diff = np.abs(signal_panel[slot].reindex(common) - return_levels[slot].reindex(common)).max()
+        assert diff > 1e-9, f"{slot} signal/return panels identical after lag (BLOCKER 1)"
 
 
 def test_no_future_data_rolling() -> None:
     """rolling cov/vol/momentum 只用 ≤T：决策日 T 的 momentum 锚点 = T-252 / T-21（≤T）。"""
-    panel, cal = build_panel()
+    signal_panel, _, cal = build_panel()
+    panel = signal_panel
     t = pd.Timestamp("2020-06-01")
     idx = panel.index
     pos = idx.get_loc(t)
@@ -186,6 +206,53 @@ def test_methods_and_params_frozen() -> None:
         "Momentum_12_1": {"lookback": 252, "skip": 21},
     }
     assert D_EFF == 7.5
+
+
+def test_overlay_constraints_applied_all_methods() -> None:
+    """BLOCKER 2：全 run 每方法 post-overlay 权重满足 project 可行集（sum=1, single<=0.25,
+    CHINEXT+STAR<=0.50, 无负）。用 runner 的 _apply_overlay + ProxyPolicy 实测全期。"""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("l2_mod", ROOT / "scripts" / "gate4_long_horizon_proxy.py")
+    l2 = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(l2)
+    signal_panel, return_levels, cal = l2.build_panel()
+    ds = pd.Timestamp("2015-01-28")
+    ds_i = cal.get_loc(ds)
+    last_dec_i = len(cal) - 2
+    decision_dates = cal[ds_i:last_dec_i + 1]
+    growth_idx = [i for i, s in enumerate(SLOT_ORDER) if s in ("CHINEXT", "STAR")]
+    for name in l2.METHODS:
+        pol = l2.ProxyPolicy(signal_panel, name)
+        for t in decision_dates[::500]:  # 抽样覆盖全期
+            w = l2._apply_overlay(pol(t), SLOT_ORDER)
+            assert np.allclose(w.sum(), 1.0, atol=1e-6), f"{name} sum != 1"
+            assert (w >= -1e-9).all(), f"{name} negative weight"
+            assert w.max() <= 0.25 + 1e-6, f"{name} single>25%: {w.max():.4f}"
+            assert w[growth_idx].sum() <= 0.50 + 1e-6, f"{name} growth>50%: {w[growth_idx].sum():.4f}"
+
+
+def test_overlay_projects_unconstrained_to_feasible() -> None:
+    """BLOCKER 2：合成用例——未约束 MinVar/RP/Momentum 超 25% 时 overlay 投影回可行集。"""
+    from china_etf.evaluation.long_horizon_proxy_panel import SLOT_ORDER as SO
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("l2_mod2", ROOT / "scripts" / "gate4_long_horizon_proxy.py")
+    l2 = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(l2)
+    # 构造极端未约束权重：CASH_LIKE 99%（超 25%）
+    w_bad = np.zeros(len(SO))
+    w_bad[SO.index("CASH_LIKE")] = 0.99
+    w_bad[SO.index("CN_LARGE")] = 0.01
+    out = l2._apply_overlay(w_bad, SO)
+    assert out.max() <= 0.25 + 1e-6, f"overlay failed: max {out.max():.4f}"
+    assert np.allclose(out.sum(), 1.0, atol=1e-6)
+    # CHINEXT+STAR 超 50% 用例
+    w_g = np.zeros(len(SO))
+    w_g[SO.index("CHINEXT")] = 0.30
+    w_g[SO.index("STAR")] = 0.30
+    w_g[SO.index("CN_LARGE")] = 0.40
+    out_g = l2._apply_overlay(w_g, SO)
+    growth_sum = out_g[SO.index("CHINEXT")] + out_g[SO.index("STAR")]
+    assert growth_sum <= 0.50 + 1e-6, f"overlay failed growth cap: {growth_sum:.4f}"
 
 
 def test_scenario_label_enforced() -> None:

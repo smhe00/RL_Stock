@@ -100,12 +100,15 @@ def _cash_like_series(y: pd.DataFrame) -> pd.Series:
     return np.exp(r.cumsum())
 
 
-def build_panel() -> tuple[pd.DataFrame, pd.DatetimeIndex]:
-    """构建统一 price-return 研究面板（决策可用水平序列，SH 日历对齐）。
+def build_panel() -> tuple[pd.DataFrame, pd.DataFrame, pd.DatetimeIndex]:
+    """构建分离的研究面板（BLOCKER 1 修正：信号 vs 收益面板解耦）。
 
-    返回 (price_level, calendar)：
-      price_level: 每槽位累计价格（决策 T 可用值），用于 rolling cov/vol/momentum
-      calendar: SH 日历（QMT 交易日期）
+    返回 (signal_panel, return_levels, calendar)：
+      signal_panel: 决策可用水平（rolling cov/vol/momentum 用）。HK/US/GOLD/FX 按冻结信息规则
+                   lag 1 天（T-1 收盘晚于上海 15:00）→ signal_panel(T) 仅含 ≤T 决策可用信息。
+      return_levels: 经济 proxy 原始水平（无信号 lag）→ 已实现收益 price(T)->price(T+1)，
+                    与决策 T 的权重对应 T->T+1 区间（评审冻结 return-alignment）。
+      calendar: SH 数据日历（L1 日历，含 2026-08-07）。
     """
     # SH 交易日历（决策日历）：用 L1 数据日历（含 2026-08-07）。
     # 注意：QMT get_trading_dates 不含 08-07（滞后一天），而冻结契约末执行日 = 2026-08-07，
@@ -118,18 +121,24 @@ def build_panel() -> tuple[pd.DataFrame, pd.DatetimeIndex]:
     cash = _cash_like_series(y)
     dur = _cn_duration_series(y)
 
-    prices: dict[str, pd.Series] = {}
+    # 原始经济水平（return_panel 用；无信号 lag）
+    return_levels: dict[str, pd.Series] = {}
     for slot in SLOT_ORDER:
         if slot == "CN_DURATION":
-            s = dur
+            return_levels[slot] = dur
         elif slot == "CASH_LIKE":
-            s = cash
+            return_levels[slot] = cash
         else:
             s = _load_close(slot)
-            s = s.reindex(cal).ffill()
+            return_levels[slot] = s.reindex(cal).ffill()
+    return_levels = pd.DataFrame(return_levels)
+
+    # 信号水平（signal_panel 用；HK/US/GOLD/FX lag 1）
+    signal: dict[str, pd.Series] = {}
+    for slot in SLOT_ORDER:
+        s = return_levels[slot].copy()
         if slot in LAG_1_SLOTS:
             s = s.shift(1)  # T-1 决策可用（HK/US/GOLD 收盘晚于上海 15:00）
-        prices[slot] = s
-
-    panel = pd.DataFrame(prices)
-    return panel, cal
+        signal[slot] = s
+    signal_panel = pd.DataFrame(signal)
+    return signal_panel, return_levels, cal

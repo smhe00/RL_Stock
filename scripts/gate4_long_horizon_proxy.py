@@ -72,13 +72,30 @@ PHASES = [
 ]
 
 
-class ProxyPolicy:
-    """在决策可用水平面板上复现 canonical baseline target 函数（PIT，≤T）。"""
+def _apply_overlay(w: np.ndarray, slots: list[str]) -> np.ndarray:
+    """BLOCKER 2：统一应用 project RiskOverlayV0 约束（long-only, sum=1, single<=0.25,
+    CHINEXT+STAR group<=0.50）到所有可执行确定性方法。"""
+    from china_etf.risk.risk_overlay import RiskOverlayV0
+    w = np.clip(np.asarray(w, dtype=float), 0.0, None)
+    if not np.isfinite(w).all() or w.sum() <= 1e-12:
+        return np.full(len(slots), 1.0 / len(slots))
+    w = w / w.sum()
+    overlay = RiskOverlayV0(slots)
+    out = overlay.apply(pd.Series(w, index=slots))
+    return out.to_numpy()
 
-    def __init__(self, panel: pd.DataFrame, name: str) -> None:
-        self._panel = panel
+
+class ProxyPolicy:
+    """在决策可用信号面板上复现 canonical baseline target 函数（PIT，≤T）。
+
+    signal_panel: 决策可用水平（HK/US/GOLD 已 lag 1）——rolling cov/vol/momentum 只用 ≤T。
+    返回的 target 未过 overlay（raw policy 权重），由 runner 统一 apply（BLOCKER 2）。
+    """
+
+    def __init__(self, signal_panel: pd.DataFrame, name: str) -> None:
+        self._panel = signal_panel
         self._name = name
-        self._adj = panel  # target 函数用 price level 序列
+        self._adj = signal_panel  # target 函数用 signal 水平序列
 
     def __call__(self, t: pd.Timestamp) -> np.ndarray:
         n = len(self._panel.columns)
@@ -104,8 +121,9 @@ class ProxyPolicy:
             ones = np.ones(n)
             w = inv @ ones / (ones @ inv @ ones)
             w = np.clip(w, 0.0, None)
-            from china_etf.risk.risk_overlay import RiskOverlayV0
-            return RiskOverlayV0._waterfill(w, np.full(n, 1.0), total=1.0)
+            if w.sum() <= 1e-12:
+                return np.full(n, 1.0 / n)
+            return w / w.sum()
         if self._name == "RiskParity_IVOL":
             vol = r.loc[:t].iloc[-60:].std()
             inv = vol.rdiv(1.0).replace([np.inf, -np.inf], np.nan).fillna(0.0)
@@ -187,7 +205,7 @@ def main() -> None:
         _run_check()
         return
 
-    panel, cal = build_panel()
+    signal_panel, return_levels, cal = build_panel()
     # 决策窗口（[ds_i, last_decision] 含末决策；末决策 = cal[-2]，末执行 = cal[-1]）
     decision_start = pd.Timestamp(FROZEN["decision_start"])
     ds_i = cal.get_loc(decision_start)
@@ -228,26 +246,38 @@ def main() -> None:
                        "note": "L1 real-instrument (1011d) — historical context only, not a GO threshold"},
     }
 
-    # 面板研究收益 = 决策可用水平 pct_change（决策 T 可用 → T+1）
-    ret_panel = panel.pct_change()
+    # BLOCKER 1 修正：signal_panel（决策可用）与 return_panel（原始经济水平 T->T+1）分离。
+    # return_panel 用完整 return_levels 序列算 pct_change（T-1 前值存在），再对齐到 exec_dates。
+    ret_full = return_levels.pct_change()  # 完整日历 price(T-1)->price(T)，无 reindex 边界 NaN
+    ret_panel = ret_full.reindex(exec_dates)  # 决策 T 对应 T->T+1 收益（exec_date = T+1 行）
+    caps = np.full(len(SLOT_ORDER), 0.25)
+    growth_idx = [i for i, s in enumerate(SLOT_ORDER) if s in ("CHINEXT", "STAR")]
+    post_weight_series: dict[str, np.ndarray] = {}
+    strat_series: dict[str, np.ndarray] = {}
     for name in METHODS:
         t0 = time.time()
-        pol = ProxyPolicy(panel, name)
-        w_series, turn = [], []
+        pol = ProxyPolicy(signal_panel, name)
+        w_raw_all, w_post_all, turn = [], [], []
         prev = None
+        pre_viol, post_viol = 0, 0
         for t in decision_dates:
-            w = np.clip(pol(t), 0.0, None)
-            w = w / w.sum()
-            w_series.append(w)
+            w_raw = np.asarray(pol(t), dtype=float)
+            w_raw = np.clip(w_raw, 0.0, None)
+            w_raw = w_raw / w_raw.sum()
+            w_post = _apply_overlay(w_raw, SLOT_ORDER)  # BLOCKER 2：统一 RiskOverlay
+            w_raw_all.append(w_raw)
+            w_post_all.append(w_post)
             if prev is not None:
-                turn.append(float(np.abs(w - prev).sum()))
-            prev = w
-        W = np.asarray(w_series)
-        # 收益：决策 T 水平 → T+1（研究收益）
-        nr = ret_panel.reindex(exec_dates).to_numpy()  # rows = intervals
-        # 组合收益 = Σ w_t × r_{t,t+1}（w_t 为决策 T 权重）
-        # 每行收益按权重向量（决策日 T）点乘该区间收益
-        strat = np.asarray([W[i] @ nr[i] for i in range(len(decision_dates))])
+                turn.append(float(np.abs(w_post - prev).sum()))
+            prev = w_post
+            pre_viol += int((w_raw > caps + 1e-6).any() or (w_raw[growth_idx].sum() > 0.50 + 1e-6))
+            post_viol += int((w_post > caps + 1e-6).any() or (w_post[growth_idx].sum() > 0.50 + 1e-6))
+        W_raw = np.asarray(w_raw_all)
+        W = np.asarray(w_post_all)
+        # 收益：权重 w_post(T) 分配 T->T+1 收益（ret_panel 行 = exec_dates，price(T)->price(T+1)）
+        strat = np.asarray([W[i] @ ret_panel.iloc[i].to_numpy() for i in range(len(decision_dates))])
+        post_weight_series[name] = W
+        strat_series[name] = strat
         mets = compute_metrics(strat, exec_dates_str)
         results["methods"][name] = {
             "metrics": {k: (round(v, 6) if isinstance(v, float) else v) for k, v in mets.items()},
@@ -259,15 +289,16 @@ def main() -> None:
             "mean_hhi": float((W ** 2).sum(axis=1).mean()),
             "avg_weight_by_slot": {s: float(W[:, i].mean()) for i, s in enumerate(SLOT_ORDER)},
             "max_weight_by_slot": {s: float(W[:, i].max()) for i, s in enumerate(SLOT_ORDER)},
+            "overlay_violations": {"pre_overlay_count": int(pre_viol), "post_overlay_count": int(post_viol)},
             "seconds": round(time.time() - t0, 1),
         }
         hhi = float((W ** 2).sum(axis=1).mean())
         print(f"{name:24s} cum={mets['cum_return']:+.4f} ann={mets['active_day_annualized_return']:+.4f} "
               f"sharpe={mets['sharpe']:.3f} mdd={mets['max_drawdown']:.4f} calmar={mets['calmar']:.3f} "
-              f"hhi={hhi:.4f}", flush=True)
+              f"hhi={hhi:.4f} preV={pre_viol} postV={post_viol}", flush=True)
 
-    # HS300 参考（CN_LARGE 面板，研究收益）
-    ref_nr = ret_panel["CN_LARGE"].reindex(exec_dates).to_numpy()
+    # HS300 参考（CN_LARGE 原始经济水平 T->T+1）
+    ref_nr = ret_panel["CN_LARGE"].to_numpy()
     ref_metrics = compute_metrics(ref_nr, exec_dates_str)
     results["references"]["HS300_ref"] = {
         "metrics": {k: (round(v, 6) if isinstance(v, float) else v) for k, v in ref_metrics.items()},
@@ -277,11 +308,56 @@ def main() -> None:
     print(f"{'HS300_ref (ref)':24s} cum={ref_metrics['cum_return']:+.4f} ann={ref_metrics['active_day_annualized_return']:+.4f} "
           f"sharpe={ref_metrics['sharpe']:.3f} mdd={ref_metrics['max_drawdown']:.4f}")
 
-    # 权重诊断 + 成本敏感性（1x Mainland 近似，labeled）
+    # 成本敏感性（评审 RESULT-PACKET #1：必须有数值，1x Mainland 近似，labeled non-executable）
+    cost_bps = 0.00035  # 1x MainlandETFCostModel 平均单边成本（~3.5bp/traded，与 L1 cost/traded 一致）
     results["cost_sensitivity"] = {"note": "1x MainlandETFCostModel approx on proxy turnover — "
-                                          "descriptive only, not executable net return"}
-    results["star_calibration"] = {"note": "000986 vs ChiNext corr 2015-2019 = 0.675 (frozen); "
-                                           "000986 vs 科创50 post-2020 reported in RUN analysis"}
+                                          "descriptive only, not executable net return",
+                                   "methods": {}}
+    for name in METHODS:
+        Wm = post_weight_series[name]  # post-overlay 权重序列
+        one_way = float(np.abs(np.diff(Wm, axis=0)).sum(axis=1).mean()) / 2.0  # 单边换手/期
+        total_turn = float(np.abs(np.diff(Wm, axis=0)).sum())  # 全期双边换手和
+        est_cost_frac = total_turn * cost_bps  # 成本/初始资本 近似
+        gross = ret_panel.to_numpy()
+        strat0 = np.asarray([Wm[i] @ gross[i] for i in range(len(decision_dates))])
+        # 扣成本：每期成本 ≈ 单边换手 × 成本
+        per_period_cost = np.abs(np.diff(Wm, axis=0)).sum(axis=1) * cost_bps
+        net_strat = np.asarray([strat0[i] - (per_period_cost[i] if i < len(per_period_cost) else 0.0)
+                                for i in range(len(decision_dates))])
+        m0 = compute_metrics(strat0, exec_dates_str)
+        mn = compute_metrics(net_strat, exec_dates_str)
+        results["cost_sensitivity"]["methods"][name] = {
+            "cum_return_no_cost": round(m0["cum_return"], 5),
+            "cum_return_net_1x": round(mn["cum_return"], 5),
+            "cum_delta": round(mn["cum_return"] - m0["cum_return"], 5),
+            "active_day_annualized_no_cost": round(m0["active_day_annualized_return"], 5),
+            "active_day_annualized_net_1x": round(mn["active_day_annualized_return"], 5),
+            "est_total_cost_over_initial": round(est_cost_frac, 6),
+            "turnover_basis": "mean one-way traded fraction per interval",
+        }
+
+    # STAR 校准（评审 RESULT-PACKET #2：实算 000986 vs 科创50 post-2020）
+    try:
+        import akshare as ak
+        star_986 = ak.stock_zh_index_daily(symbol="sh000986")
+        star_986["date"] = pd.to_datetime(star_986["date"])
+        star_986 = star_986.set_index("date")["close"].astype(float)
+        kcb50 = ak.stock_zh_index_daily(symbol="sh000688")
+        kcb50["date"] = pd.to_datetime(kcb50["date"])
+        kcb50 = kcb50.set_index("date")["close"].astype(float)
+        both = pd.concat([star_986.rename("info986"), kcb50.rename("kc50")], axis=1)
+        post20 = both.loc["2020-01-01":].dropna()
+        corr = post20.pct_change().dropna()["info986"].corr(post20.pct_change().dropna()["kc50"])
+        results["star_calibration"] = {
+            "info986_vs_chiNext_2015_2019_corr": 0.675,  # frozen（pre-PREP 验证）
+            "info986_vs_科创50_post2020_corr": round(float(corr), 4),
+            "overlap_range": [str(post20.index[0].date()), str(post20.index[-1].date())],
+            "overlap_n": int(len(post20)),
+            "note": "frozen post-2020 calibration; STAR proxy unchanged (000986)",
+        }
+        print(f"STAR calib: 000986 vs 科创50 post-2020 corr = {corr:.4f} (n={len(post20)})")
+    except Exception as exc:  # noqa: BLE001
+        results["star_calibration"] = {"note": f"calibration fetch failed: {str(exc)[:80]}"}
 
     try:
         import subprocess as sp
@@ -295,27 +371,49 @@ def main() -> None:
     out = art / "gate4_long_horizon_proxy_results.json"
     out.write_text(json.dumps(results, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
     raw = art / "gate4_long_horizon_proxy_raw.json"
-    raw.write_text(json.dumps({"methods": {}}, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
+    raw_payload = {
+        "manifest": {"label": FROZEN["label"], "n_intervals": len(decision_dates)},
+        "methods": {name: {
+            "net_returns": [float(x) for x in strat_series[name]],
+            "weights_post_overlay": post_weight_series[name].tolist(),
+            "execution_dates": exec_dates_str,
+        } for name in METHODS},
+        "reference": {"hs300_ref_returns": [float(x) for x in ref_nr]},
+    }
+    raw.write_text(json.dumps(raw_payload, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
     print(f"\n-> {out}")
 
 
 def _run_check() -> None:
     print("== L2 --check ==")
-    panel, cal = build_panel()
+    signal_panel, return_levels, cal = build_panel()
     decision_start = pd.Timestamp(FROZEN["decision_start"])
     ds_i = cal.get_loc(decision_start)
     n = (len(cal) - 2 + 1) - ds_i
-    print(f"panel slots: {list(panel.columns)}")
+    print(f"panel slots: {list(signal_panel.columns)}")
     print(f"decision_start: {decision_start.date()}  last_decision: {cal[-2].date()}  "
           f"n_intervals: {n} (expected {FROZEN['n_intervals']})")
     assert n == FROZEN["n_intervals"], f"fail-closed: n_intervals {n} != {FROZEN['n_intervals']}"
-    assert list(panel.columns) == SLOT_ORDER
-    # no-lookahead: lag slots have NaN at first decision dates
+    assert list(signal_panel.columns) == SLOT_ORDER
+    # BLOCKER 1 fail-closed：lagged slot 的 signal 与 return 面板不得在 lag 变换后相同
+    for slot in LAG_1_SLOTS:
+        common = signal_panel[slot].dropna().index.intersection(return_levels[slot].dropna().index)
+        diff = np.abs(signal_panel[slot].reindex(common) - return_levels[slot].reindex(common)).max()
+        if np.isfinite(diff) and diff < 1e-9:
+            raise SystemExit(f"--check FAIL: signal/return panels identical for lagged slot {slot} "
+                             f"(BLOCKER 1 not fixed)")
+        # 决策 T 可用信号 = return_levels[T-1]（lag 1）
+        t = pd.Timestamp("2015-01-28")
+        t_i = cal.get_loc(t)
+        assert abs(signal_panel[slot].iloc[t_i] - return_levels[slot].iloc[t_i - 1]) < 1e-12, \
+            f"{slot} signal(T) != return(T-1)"
+    # no-lookahead / no-RL
     src = Path(__file__).read_text(encoding="utf-8")
     for tok in ["P" + "PO", "S" + "AC", "T" + "D3", "stable" + "_baselines3"]:
         assert tok not in src, f"forbidden RL token in runner"
     assert "SCENARIO_NOT_STRICT_PIT_OOS" in src
     print("method set:", ["HS300_ref"] + METHODS)
+    print("signal/return panel separation: OK (lagged slots differ; signal(T)=return(T-1))")
     print("--check PASSED")
 
 
