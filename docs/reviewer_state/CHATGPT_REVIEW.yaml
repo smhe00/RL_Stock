@@ -1,40 +1,37 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: RL_FORMAL_PROTOCOL_PREP_001
+handoff_id: RL_FORMAL_PROTOCOL_PREP_CORRECTIONS_001
 state: REVISIONS_REQUIRED
 
 reviewed_packet:
-  path: docs/review_packets/RL_FORMAL_PROTOCOL_PREP.md
-  commit: 90558aaef0b0a900572ed98f6079b420a05d06ef
+  path: docs/review_packets/RL_FORMAL_PROTOCOL_PREP_CORRECTIONS.md
+  commit: fdaa1bbdae3ca4dabf711b446e779bc07acb94fb
 
-code_commit: 707bbe34d157e66275edfac0e9f35c24ce687a02
+code_commit: 943f92c21a49d1c3e5284cef9dd0ffb7fe0bdb49
 
-decision: TARGETED_PROTOCOL_CORRECTIONS_REQUIRED
+decision: PROTOCOL_APPROVED_EXECUTION_HARNESS_NOT_YET_AUTHORIZED
 
 response:
-  path: docs/reviewer_responses/RL_FORMAL_PROTOCOL_PREP_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/RL_FORMAL_PROTOCOL_PREP_CORRECTIONS_REVIEWER_RESPONSE.md
 
 passed:
-  - PREP_ONLY_SCOPE
-  - CORRECTED_EVALUATION_SEMANTICS_DIRECTION
-  - TRAIN_BUDGET_SKELETON
-  - THREE_SEED_IDENTITIES_AS_PILOT_SET
-  - TRACKED_ARTIFACT_INTENT
-  - NO_FORMAL_SIGNIFICANCE_CLAIM_FROM_3_SEEDS
+  - P1_F0_RATIONALE_BASELINE_CONTRACT
+  - P2_3SEED_RESEARCH_BENCHMARK_AND_CONDITIONAL_ROBUSTNESS_STAGE
+  - P3_RESEARCH_BENCHMARK_TEST_AND_FUTURE_FORWARD_HOLDOUT
+  - P4_TWO_TIER_BENCHMARK_INTERPRETATION
+  - P5_PER_ALGORITHM_AND_PROJECT_LEVEL_GO_NO_GO_SEMANTICS
+  - P6_FINAL_TRAINING_ENDPOINT_ONLY
+  - P7_MACHINE_READABLE_CONFIG_AS_SPECIFICATION
+  - NO_RL_TRAINING
 
 blocked:
-  - P1_F0_RATIONALE_MUST_NOT_CONSUME_DESCRIPTIVE_F1_DIAGNOSTIC
-  - P2_3SEED_VS_CONDITIONAL_10SEED_CANONICAL_CONFLICT
-  - P3_475_TEST_IS_RESEARCH_BENCHMARK_NOT_PRISTINE_FINAL_HOLDOUT
-  - P4_EQUALWEIGHT_ONLY_HURDLE_IGNORES_NON_RL_RISK_FRONTIER
-  - P5_ALGORITHM_DIMENSION_GO_NO_GO_AMBIGUOUS
-  - P6_VALIDATION_CHECKPOINT_SELECTION_UNDERSPECIFIED
-  - P7_EFFECTIVE_SB3_HYPERPARAMETERS_NOT_FULLY_FROZEN
-  - P8_EVALUATOR_INVARIANTS_NOT_HARD_STOP_CONDITIONS
-  - P9_ACTIVE_DAY_ANNUALIZATION_NAMING_AMBIGUITY
+  - E1_CANONICAL_CONFIG_NOT_BOUND_TO_ACTUAL_EXECUTION_RUNNER
+  - E2_HARD_STOP_INVARIANTS_NOT_RUNTIME_ENFORCED
+  - E3_ACTIVE_DAY_ANNUALIZED_RETURN_NAMING_STILL_INCONSISTENT_IN_GO_RULE
+  - E4_NO_CANONICAL_CONFIG_DRIVEN_GO_NO_GO_EVALUATOR
 
 authorized_next:
-  - RL_FORMAL_PROTOCOL_PREP_CORRECTIONS
+  - CORRECTED_F0_RL_EXECUTION_PREP
 
 forbidden_next:
   - RL_RETRAINING
@@ -51,15 +48,12 @@ forbidden_next:
   - SOUTHBOUND_EXECUTION
 
 notes:
-  - F0 remains the correct formal baseline, but because it was already frozen before the descriptive F1 diagnostic; the closeout must not be consumed as proof that F1 has no value.
-  - FEATURE_ABLATION_SPEC still freezes a conditional F0 10-seed formal stage; current protocol cannot silently remove it. Treat the next 3-seed run as corrected research-benchmark GO/NO-GO and leave later robustness formal work conditional/unapproved.
-  - The historical 475-date mask has already been observed repeatedly, so it is a research benchmark, not a pristine final holdout. Reserve a future forward holdout for final confirmation.
-  - EqualWeight is the return hurdle, while MaximumDiversification is the risk-adjusted frontier; both must be represented in interpretation before claiming RL incremental value.
-  - GO/NO-GO must be defined per algorithm and project-level without Test-based winner selection.
-  - Prefer final training endpoint only; otherwise freeze checkpoint cadence, validation metric, tie-break, and scope before execution.
-  - Freeze all effective PPO/SAC/TD3 constructor hyperparameters plus software/device policy in machine-readable config consumed by runner/tests.
-  - Add execution-date parity, 475-step parity, cost reconciliation, and complete fold/raw-series checks as fail-closed stop conditions.
-  - Use active_day_annualized_return consistently for stitched series with validation gaps; do not call it calendar CAGR.
-  - No RL training is authorized by this review.
+  - The research protocol itself is substantially corrected and accepted, but execution is not yet authorized.
+  - configs/rl_formal_protocol.yaml is declared canonical, yet the real RL path still uses WalkForwardRunner.run_fold_rl arguments / SB3 defaults and the legacy gate4_3seed_pilot environment overrides.
+  - The next gate must bind config values explicitly into the runtime constructors, forbid/fail on formal-run overrides, and record a config hash/snapshot in artifacts.
+  - The five evaluator invariants must become executable fail-closed runtime checks before artifact publication.
+  - Replace remaining stitched CAGR terminology with active_day_annualized_return in the GO rule, evaluator, tests, and output schema.
+  - Implement a deterministic config-driven per-algorithm/project GO-NO-GO evaluator plus MaxDiv Pareto reporting; do not rank/select an algorithm from Test results.
+  - CORRECTED_F0_RL_EXECUTION_PREP is dry/preparation only and must not train PPO/SAC/TD3 or consume new Test results.
 
-updated_at: 2026-08-09T10:05:00+08:00
+updated_at: 2026-08-09T10:29:00+08:00
