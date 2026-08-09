@@ -66,7 +66,7 @@ GATE_4_10_SEED_FORMAL：不授权
 
 # 6. Git Commit
 
-`GATE_4_RL_NO_GO_CLOSEOUT` 提交 SHA：**`PENDING_SHA`**
+`GATE_4_RL_NO_GO_CLOSEOUT` 提交 SHA：**`c18234a`**
 
 ```text
 docs/DECISIONS.md                    ← D-022 NO_GO 决策记录
