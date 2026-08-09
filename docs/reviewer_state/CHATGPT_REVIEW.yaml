@@ -1,35 +1,33 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: CORRECTED_F0_RL_EXECUTION_HARNESS_FINALIZATION_001
+handoff_id: CORRECTED_F0_RL_EXECUTION_PUBLICATION_BINDING_001
 state: REVISIONS_REQUIRED
 
 reviewed_packet:
-  path: docs/review_packets/CORRECTED_F0_RL_EXECUTION_HARNESS_FINALIZATION.md
-  commit: 361dbe535db2b5d647c143cc93bc06800f974956
+  path: docs/review_packets/CORRECTED_F0_RL_EXECUTION_PUBLICATION_BINDING.md
+  commit: b8c07e50fb41e9129dccfef9c0d54f6c6f71fb85
 
-code_commit: 765ccacb8350e35efc25721f74f465e3be4a6f7d
+code_commit: 6e183be8851da6a3ab745290c532892603f8b242
 
-decision: TARGETED_PUBLICATION_METRIC_BINDING_REQUIRED
+decision: TARGETED_CANONICAL_SCHEMA_BRIDGE_REQUIRED
 
 response:
-  path: docs/reviewer_responses/CORRECTED_F0_RL_EXECUTION_HARNESS_FINALIZATION_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/CORRECTED_F0_RL_EXECUTION_PUBLICATION_BINDING_REVIEWER_RESPONSE.md
 
 passed:
-  - F1_ALGO_NAME_CLASS_MISMATCH_REJECTED
-  - F2_MISSING_N_EVAL_STEPS_FAIL_CLOSED
-  - F3_RAW_SERIES_LENGTH_AND_WEIGHT_SHAPE
-  - F4_METRIC_SEED_KEYS_AND_PROJECT_ALGO_COMPLETENESS_IN_EVALUATOR
-  - F5_PARETO_ALL_FINITE_REQUIREMENT
-  - F6_RUN_LEVEL_CONFIG_SHA_AND_INVARIANT_BEFORE_EVALUATION_CORE
+  - P1_RAW_RESULTS_TO_SEED_METRIC_RECOMPUTATION
+  - P2_RUN_DERIVED_STOP_EVIDENCE_AT_SEED_AGGREGATION
+  - P3_REAL_CANONICAL_TEST_MASK_SYNTHETIC
+  - CALLER_SUMMARY_NON_AUTHORITATIVE_DIRECTION
   - NO_RL_TRAINING
 
 blocked:
-  - P1_GO_NO_GO_METRICS_NOT_DERIVED_FROM_VALIDATED_RAW_RUN_RESULTS
-  - P2_STOP_CONDITIONS_NOT_DERIVED_FROM_ACTUAL_RUN_RECORDS
-  - P3_SYNTHETIC_PUBLICATION_PROOF_NOT_USING_REAL_CANONICAL_TEST_MASK
+  - S1_CANONICAL_AGGREGATION_SCHEMA_INCOMPATIBLE_WITH_GO_NO_GO_EVALUATOR
+  - S2_NO_POSITIVE_RAW_TO_GO_END_TO_END_INTEGRATION_TEST
+  - S3_STOP_FLIP_TEST_FALSE_GREEN_FROM_PREEXISTING_SCHEMA_INCOMPLETENESS
 
 authorized_next:
-  - CORRECTED_F0_RL_EXECUTION_PUBLICATION_BINDING
+  - CORRECTED_F0_RL_EXECUTION_PUBLICATION_SCHEMA_CLOSEOUT
 
 forbidden_next:
   - RL_RETRAINING
@@ -46,12 +44,11 @@ forbidden_next:
   - SOUTHBOUND_EXECUTION
 
 notes:
-  - F1-F6 are substantially closed; the remaining issue is publication integrity rather than research design.
-  - finalize_publish currently validates raw results but evaluates an independently supplied per_algo_stitched object. A passing test uses zero raw net_returns while supplying positive stitched return/Sharpe and still publishes, proving the disconnect.
-  - Canonical stitched active_day_annualized_return, Sharpe, MaxDD, Calmar and seed-level decision inputs must be recomputed directly from ordered F1-F4 raw net_returns inside the publication path.
-  - Stop violations must be derived from actual run evidence (save/load determinism, NaN/Inf, negative cash, finite series/metrics); missing evidence must fail closed.
-  - Caller-supplied stitched summaries may be diagnostic only; if retained, mismatch to canonical recomputation must fail closed and they must never be authoritative for GO/NO-GO.
-  - The final synthetic publication proof should use the repository's real folds and exact_test_mask rather than an arbitrary continuous business-day calendar.
-  - CORRECTED_F0_RL_EXECUTION_PUBLICATION_BINDING is no-training closeout only. If it passes without a new material defect, intended next gate is CORRECTED_F0_RL_3SEED.
+  - Raw F1-F4 aggregation now recomputes canonical seed-level return/risk metrics and derives stop evidence from actual runs, but the output schema is seed-centric while evaluate_go_nogo still expects algorithm-centric metric maps.
+  - Because of that mismatch, evaluate_go_nogo sees empty return/Sharpe/MaxDD maps, treats algorithms as incomplete/NO_GO, ignores seed-level stop_violations, and cannot use canonical Calmar for Pareto reporting.
+  - Existing 243-test success is false-green for this bridge: zero-return synthetic data expects NO_GO anyway, and the stop-violation test does not prove the stop caused NO_GO because the schema mismatch already causes NO_GO.
+  - Use one canonical schema end-to-end, then add a positive raw-results integration case that produces an algorithm GO/project PROMISING and a stop-flip case that turns the same otherwise-GO algorithm into NO_GO.
+  - Preserve the real exact 475-date mask proof and do not change frozen algorithms, seeds, thresholds, features, train budget, or Test-selection rules.
+  - No corrected F0 3-seed training is authorized yet. If the schema closeout passes without a new material defect, the intended next gate is CORRECTED_F0_RL_3SEED.
 
-updated_at: 2026-08-09T11:41:00+08:00
+updated_at: 2026-08-09T11:53:00+08:00
