@@ -1,39 +1,45 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_LONG_HORIZON_PROXY_PREP_FIX_002
-state: REVIEW_COMPLETE
+handoff_id: G4_LONG_HORIZON_PROXY_RUN_001
+state: REVISIONS_REQUIRED
 
 reviewed_packet:
-  path: docs/review_packets/GATE_4_LONG_HORIZON_PROXY_PREP.md
-  commit: 520a44e4229f4e7ea7110f2e5bf5a66735bd2409
+  path: docs/review_packets/GATE_4_LONG_HORIZON_PROXY_RUN.md
+  commit: 538e6881472e8ae2ef7d061db7328e52ab249481
 
-code_commit: f039d369d94295433132e17cf981b2eb6243c17a
+code_commit: 00d7f64c1a0a632a6a0c0232a194ad8a42877228
 
-decision: PREP_FIX_2_ACCEPTED_L2_PROXY_RUN_AUTHORIZED
+decision: L2_RUN_RESULTS_QUARANTINED_IMPLEMENTATION_FIX_RERUN_REQUIRED
 
 response:
-  path: docs/reviewer_responses/GATE_4_LONG_HORIZON_PROXY_PREP_FIX_2_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/GATE_4_LONG_HORIZON_PROXY_RUN_REVIEWER_RESPONSE.md
 
 passed:
   - TRACK_C_SCENARIO_LABELING_CORRECT
-  - TARGET_HISTORY_SPANS_2015_TO_2026
-  - SIX_METHOD_SET_AND_CANONICAL_PARAMS_PRESERVED
-  - STAR_PROXY_NO_LONGER_DUPLICATES_CHINEXT
-  - CASH_LIKE_PRIMARY_PROXY_IS_CARRY_ONLY_NEAR_ZERO_DURATION
-  - UNIFORM_PRICE_RETURN_MAIN_PANEL_FROZEN
-  - CROSS_MARKET_CAUSAL_TIMING_FROZEN
-  - HKD_CNY_LAG1_FROZEN
-  - CN_DURATION_UNIT_SAFE_RETURN_FORMULA_FROZEN
-  - CN_DURATION_10BP_SYNTHETIC_TEST_REQUIRED
-  - WINDOW_REDERIVED_TO_2800_INTERVALS
-  - PRE_FROZEN_REGIME_REPORTING_DEFINED
+  - WINDOW_2800_PARITY_REPORTED
+  - SIX_METHOD_SET_AND_CANONICAL_PARAMS_REPORTED
+  - PROXY_MAPPING_AND_PROVENANCE_REPORTED
+  - CN_DURATION_UNIT_SAFE_FORMULA_IMPLEMENTED
+  - CASH_LIKE_CARRY_ONLY_IMPLEMENTED
+  - STAR_PROXY_DISTINCT_FROM_CHINEXT
   - PPO_SAC_TD3_EXCLUDED
-  - L2_PREP_COMPLETE
+  - FULL_TEST_SUITE_REPORTED_265_PASS
+
+revision_required:
+  - SIGNAL_PANEL_AND_REALIZED_RETURN_PANEL_CONFLATED_FOR_LAGGED_SLOTS
+  - LAGGED_HK_US_GOLD_RETURNS_MISALIGNED_WITH_FROZEN_T_TO_TPLUS1_INTERVAL
+  - COMMON_RISK_OVERLAY_NOT_APPLIED_TO_ALL_DETERMINISTIC_METHODS
+  - MINVAR_RP_MOMENTUM_VIOLATE_PROJECT_SINGLE_SLOT_25PCT_CAP
+  - COST_SENSITIVITY_HAS_NO_NUMERIC_RESULTS
+  - STAR_POST2020_CALIBRATION_NOT_COMPUTED
+  - RAW_ARTIFACT_EMPTY_PLACEHOLDER
 
 authorized_next:
-  - GATE_4_LONG_HORIZON_PROXY_RUN
+  - GATE_4_LONG_HORIZON_PROXY_RUN_FIX_RERUN
 
 forbidden_next:
+  - ACCEPT_L2_RESULTS
+  - STRATEGY_SELECTION_FROM_L2
   - PPO
   - SAC
   - TD3
@@ -43,13 +49,14 @@ forbidden_next:
   - QMT_LIVE
 
 notes:
-  - L2 proxy scenario run is authorized under the frozen SCENARIO_NOT_STRICT_PIT_OOS contract.
-  - Derived window must fail-closed at 2015-01-28 through 2026-08-07 with 2800 decision/return intervals; any mismatch is a blocker.
-  - Implement the frozen 11-slot proxy mapping, return basis, lag rules, CN_DURATION formula, and provenance exactly as reviewed.
-  - tests/test_long_horizon_proxy.py and scripts/gate4_long_horizon_proxy.py --check must pass before the full run.
-  - No proxy substitution, parameter tuning, regime-boundary change, data repair after observing strategy results, or method-set change is authorized.
-  - Primary output is the no-cost research-return scenario table; project 1x cost sensitivity must remain separately labeled and non-executable.
-  - Return GATE_4_LONG_HORIZON_PROXY_RUN for review with annual/regime metrics, slot weights/concentration, and dependency diagnostics.
-  - L1 remains frozen and closed; PPO/SAC/TD3 remain excluded.
+  - Current L2 numbers including MaxDiv Sharpe 1.183 / MaxDD -11.4% are quarantined diagnostic output and are not accepted as the final L2 result.
+  - Separate signal_panel from realized return_panel: lag non-A-share signal inputs, but assign decision-T weights to the frozen raw T->T+1 return interval.
+  - Apply RiskOverlayV0 project constraints to every executable deterministic method before realized returns: long-only, sum=1, per-slot <=25%, CHINEXT+STAR <=50%.
+  - The 100%/97.2%/84.1% max weights for MinVar/RP/Momentum demonstrate that the current runner bypassed the common project feasible set.
+  - No proxy, data source, parameter, date, regime, method-set, or result-informed strategy change is authorized during the correction.
+  - Add regression tests for signal/return timing separation and overlay feasibility; full tests and --check must pass before the single corrected rerun.
+  - Rerun packet must include numeric 1x cost sensitivity, actual STAR-vs-科创50 post-2020 calibration, and either a populated raw reproducibility artifact or removal of the empty raw-artifact claim.
+  - Preserve original 00d7f64 / 538e688 outputs as quarantined historical output; do not use them for strategy conclusions.
+  - L1 remains frozen and closed; L2 remains open pending corrected rerun review.
 
-updated_at: 2026-08-09T23:10:00+08:00
+updated_at: 2026-08-09T23:15:00+08:00
