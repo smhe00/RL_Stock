@@ -9,6 +9,27 @@
 > 2. **CASH_LIKE 真正现金化**：主 proxy = **SHIBOR O/N carry-only**（近零久期，2015-05-08 起）；2015-01-28..2015-05-07 用 **2Y 国债收益率 carry-only bridge**（近零久期，无价格 P&L）。2Y 久期价格版仅作 labeled sensitivity。
 > 3. **统一 price-return 面板**：全部权益槽位（含 US_BROAD/GOLD 用 513500/518880 **price** 序列）统一 **price-return** research 收益；income-aware（TR）sensitivity 单列，不改变主面板 basis。
 > 4. **因果时序 lag**：HK（HSI/HSCEI）+ US（513500 price）+ GOLD（518880 price）输入 **lag 1 天**（收盘晚于上海 15:00 决策时刻）；A股指数 + 利率用 T 收盘。决策 T 收盘 → 收益 T→T+1 close-to-close（无 T+1 open 执行主张）。窗口重推导：**decision_start 2015-01-28，n_decision=2800**（因 US_BROAD lag 后移 1 天，不保留 2801）。
+>
+> ## Revision Record（PREP_FIX_002，评审 PREP_FIX_REVIEWER_RESPONSE）
+>
+> 评审实质接受 PREP_FIX_001（decision `PREP_FIX_SUBSTANTIALLY_ACCEPTED_BOND_FORMULA_FIX_REQUIRED`），
+> 仅剩 2 项冻结澄清，本记录落地：
+>
+> 5. **CN_DURATION 单位安全公式**（评审 §"Required final PREP correction"）：10Y 收益率 proxy 的
+>    构造在 **return space 显式冻结**，避免 % 单位（Δy=0.10 vs decimal 0.0010）100x 放大：
+>    ```text
+>    y_t_decimal = y_t_percent / 100
+>    Δy_t        = y_t_decimal − y_{t-1}_decimal
+>    carry_t     = y_{t-1}_decimal × Δcalendar_days / 365
+>    log_return_t = −D_eff × Δy_t + carry_t          # D_eff = 7.5（冻结）
+>    proxy_price_t = proxy_price_{t-1} × exp(log_return_t)
+>    ```
+>    Tests：原始收益率单位断言（`/100` 归一化显式）；+10bp → Δy=+0.0010 而非 +0.10；
+>    纯久期分量 ≈ −0.75%（10bp×7.5）在 carry 前；carry 为按日历天缩放的 return 贡献（非价格级加常量）；
+>    缺日 **先 ffill 再 Δy**（避免多日间隔被当作多次独立冲击）。
+> 6. **FX 时序澄清**（评审 "Minor timing clarification"）：HKD/CNY 折算价（hkd_cny_boc，中行折算价
+>    收盘晚于上海 15:00 决策时刻）与 HK 序列一致 **lag 1 天**：决策 T 使用 T-1 的 FX。测试强制该 lag。
+>    该澄清不改变已推导窗口（US_BROAD lag 仍为 limiting，2800 不变）。
 
 ---
 
@@ -69,8 +90,16 @@ label = LONG_HORIZON_PROXY_SCENARIO_DIAGNOSTIC
 (c) HK_TECH：恒生科技官方回溯 2014-12 但可及源（新浪 2020-08；东财接口网络不可达）无 2015 历史
       → HSI（2013-08 起）作港股 equity beta scenario proxy。basis risk medium。
 (d) CN_DIVIDEND：中证红利 000922 QMT 无代码、新浪中断于 2019-01 → 上证红利 000015。basis low-medium。
-(e) CN_DURATION：10Y 收益率 → 久期价格 proxy，公式冻结并测试：
-      P_t = P_{t-1} × exp(-D_eff × Δy_t) + carry，D_eff = 7.5（冻结）。
+(e) CN_DURATION：10Y 收益率 → 久期价格 proxy，**单位安全 return-space 公式冻结**（PREP_FIX_002）：
+      ```text
+      y_t_decimal = y_t_percent / 100                      # 显式 /100 归一化（% → decimal）
+      Δy_t        = y_t_decimal − y_{t-1}_decimal          # 缺日先 ffill 再差分（见 §4）
+      carry_t     = y_{t-1}_decimal × Δcalendar_days / 365 # 按日历天缩放的 carry 收益
+      log_return_t = −D_eff × Δy_t + carry_t               # D_eff = 7.5（冻结）
+      proxy_price_t = proxy_price_{t-1} × exp(log_return_t)
+      ```
+      校验：+10bp 收益率变动 → Δy=+0.0010（非 +0.10）；纯久期分量 ≈ −0.75% 在 carry 前；
+      carry 为 return 贡献（非价格级加常量）；无未来收益率进入 T 决策或 T→T+1 分配收益。
 (f) US_BROAD/GOLD：直接真实 ETF **price**（非 TR），统一 price-return 面板（评审修正 #3）。
 ```
 
@@ -121,9 +150,13 @@ label                       = LONG_HORIZON_PROXY_SCENARIO_DIAGNOSTIC
   权重于 T 收盘决策 → 收益 = T→T+1 close-to-close（research-return；无 T+1 open 执行主张）。
 对齐：各序列按 SH 日历 reindex + ffill（休市日补前值）；起点前保持 NaN。
 收益：权益 price-return（pct_change）；CASH_LIKE/CN_DURATION 用冻结 carry/久期公式。
-FX：HKD→CNY 用现有 hkd_cny_boc（2013-01-04 起，日频 ffill）；USD→CNY 已含于 513500（人民币 QDII）。
-no-lookahead：决策 T 仅用 ≤T 可用输入（A股 T / 非A股 T-1）；rolling cov/vol/momentum 只用这些；
-  不跨段重置。
+FX：HKD→CNY 用现有 hkd_cny_boc（2013-01-04 起，日频 ffill）——**中行折算价收盘晚于上海 15:00
+  决策时刻，与 HK 序列一致 lag 1 天**（决策 T 使用 T-1 FX；PREP_FIX_002 澄清，测试强制）。
+  USD→CNY 已含于 513500（人民币 QDII）。
+no-lookahead：决策 T 仅用 ≤T 可用输入（A股 T / 非A股 T-1 / 利率 T / FX T-1）；rolling cov/vol/
+  momentum 只用这些；不跨段重置。收益率缺日：权益/指数先 ffill 价再 pct_change；收益率序列
+  （10Y/2Y/SHIBOR）**先 ffill 再 Δy**（避免多日间隔被当作多次独立冲击）；CASH_LIKE/CN_DURATION
+  carry 按 Δcalendar_days/365 缩放。
 ```
 
 # 5. 成本处理（评审 guard #6）
@@ -180,6 +213,9 @@ proxy/index 数据非可执行 ETF → L2 主表 = research-return 无成本对�
 tests/test_long_horizon_proxy.py（新）：
   - 因果 lookback + 时序对齐：A股 T / 非A股 T-1 断言（HK/US/GOLD 输入 lag 1）；
     rolling cov/vol/momentum 只用 ≤ 决策可用输入
+  - CN_DURATION 单位安全：原始收益率单位断言（`/100` 归一化显式）；+10bp → Δy=+0.0010
+    而非 +0.10；纯久期分量 ≈ −0.75% 在 carry 前；carry 按日历天缩放；缺日先 ffill 再 Δy
+  - FX 时序：hkd_cny 折算价与 HK 一致 lag 1（决策 T 用 T-1 FX）
   - 日期对齐（统一 SH 日历；缺日 ffill 有记录；无 future 数据）
   - proxy provenance 完整性（每槽位 source/start/end/is_backfilled 断言）
   - SCENARIO_NOT_STRICT_PIT_OOS 标注强制（runner 源码含该 label）
@@ -217,9 +253,13 @@ L2 执行未授权（本 packet 为 PREP_FIX）；L1 结果/artifact frozen，�
 
 ```yaml
 gate: 4
-handoff_id: G4_LONG_HORIZON_PROXY_PREP_FIX_001
+handoff_id: G4_LONG_HORIZON_PROXY_PREP_FIX_002
 packet: GATE_4_LONG_HORIZON_PROXY_PREP
 status: READY_FOR_REVIEW
+
+fixes_fix2_applied:
+  CN_DURATION: unit-safe return-space formula frozen (y_decimal=y_percent/100, carry by calendar days/365, log_return=-7.5*dY+carry; tests: 10bp->0.0010->-0.75% before carry, ffill-before-diff)
+  FX: hkd_cny lag 1 consistent with HK (BOC fixing price closes after SH 15:00); window unchanged 2800
 
 fixes_applied:
   #1 STAR distinct proxy: 中证全指信息技术 000986 (2011-08-02, corr 0.675 vs ChiNext 2015-2019), NOT ChiNext; no 2020 switch (no splice)
