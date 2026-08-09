@@ -1,51 +1,42 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_POST_L2_DETERMINISTIC_ARCH_PREP_001
-state: REVISIONS_REQUIRED
+handoff_id: G4_POST_L2_DETERMINISTIC_ARCH_PREP_CORRECTION_001
+state: REVIEW_COMPLETE
 
 reviewed_packet:
   path: docs/review_packets/POST_L2_DETERMINISTIC_ARCHITECTURE_PREP.md
-  commit: 0710c54adbd1ad23dc923d1dfb0d2d5a1c0d4f8d
+  commit: 9d3b63be28ca2c238c50ff38584b6b39c88c6875
 
 code_commit: 7781800d4ce996a216aa1e08f1346504c2628b66
 
-decision: ARCH_PREP_SUBSTANTIALLY_CORRECT_SEMANTIC_FIX_REQUIRED
+decision: ARCH_PREP_CORRECTION_ACCEPTED_FROZEN_RUN_AUTHORIZED
 
 response:
-  path: docs/reviewer_responses/POST_L2_DETERMINISTIC_ARCHITECTURE_PREP_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/POST_L2_DETERMINISTIC_ARCHITECTURE_PREP_CORRECTION_REVIEWER_RESPONSE.md
 
 passed:
-  - DEDICATED_POST_L2_ARCHITECTURE_PREP_PACKET_PRESENT
-  - PARENT_STRATEGIES_IMMUTABLE
-  - MAXDIV_120_0P5_CONFIRMED
-  - MOMENTUM_252_21_CONFIRMED
-  - CANDIDATE_SET_C0_C4_FROZEN
-  - PURE_PARENT_CONTROLS_RETAINED
+  - PREP_CORRECTION_DOC_ONLY_CONFIRMED
+  - NO_COMBINED_RUN_PERFORMED
+  - HK_RETURN_LEVEL_SAME_DATE_CNY_FIXED
+  - HK_SIGNAL_TMINUS1_CONVERTED_LEVEL_FIXED
+  - HK_REALIZED_RETURN_CNY_T_TO_TPLUS1_FIXED
+  - R4_COST_SIGN_FIXED_TO_NET_MINUS_GROSS_GTE_MINUS_3PCT
+  - R1_EXACT_C0_BINDING_FIXED
+  - R2_EXACT_C0_BINDING_FIXED
+  - C0_C1_RECONSTRUCT_AND_PARITY_RULE_FIXED
+  - CANDIDATE_SET_C0_C4_UNCHANGED
+  - PARENT_PARAMS_UNCHANGED
   - NO_DENSE_ALPHA_SEARCH
-  - NO_DYNAMIC_RULE_IN_THIS_TRACK
-  - STATIC_BLEND_ORDER_FROZEN
-  - FINAL_RISK_OVERLAY_SPECIFIED
-  - TURNOVER_COST_ON_FINAL_EXECUTABLE_PATH
-  - FULL_EVALUATION_TABLE_FROZEN
-  - PREFROZEN_STRESS_REGIMES_REUSED
-  - R3_R5_R6_SEMANTICS_ACCEPTABLE
+  - NO_DYNAMIC_ALPHA
   - PPO_SAC_TD3_REMAIN_EXCLUDED
   - QMT_LIVE_REMAINS_FORBIDDEN
 
-revision_required:
-  - HK_RETURN_LEVEL_MUST_USE_SAME_DATE_HKD_CNY_NOT_TMINUS1_FX
-  - HK_SIGNAL_MUST_USE_TMINUS1_CONVERTED_CNY_LEVEL
-  - HK_REALIZED_RETURN_MUST_REMAIN_CONVERTED_CNY_T_TO_TPLUS1
-  - R4_COST_INEQUALITY_REVERSED_MUST_BE_CUM_DELTA_GTE_MINUS_3PCT
-  - R1_R2_MUST_BIND_TO_EXACT_ACCEPTED_C0_VALUES_NOT_ROUNDED_DISPLAY_VALUES
-  - C0_C1_CONTROL_PATH_HANDLING_MUST_BE_EXPLICIT_AND_PARITY_CHECKED
-
 authorized_next:
-  - POST_L2_DETERMINISTIC_ARCHITECTURE_PREP_CORRECTION
+  - POST_L2_DETERMINISTIC_ARCHITECTURE_RUN
 
 forbidden_next:
-  - POST_L2_DETERMINISTIC_ARCHITECTURE_RUN
   - RESULT_INFORMED_BLEND_WEIGHT_SEARCH
+  - DYNAMIC_ALPHA
   - PPO
   - SAC
   - TD3
@@ -55,13 +46,12 @@ forbidden_next:
   - QMT_LIVE
 
 notes:
-  - PREP is substantively correct and close to RUN authorization; candidate set C0-C4 must not change during correction.
-  - Correct HK semantics to return_level_hk_cny(t)=raw_hk_index_hkd(t)*hkd_cny(t); signal(T)=return_level(T-1); realized return for decision T=CNY level(T+1)/CNY level(T)-1.
-  - Correct R4 to cost_cum_delta=net-gross and pass iff cost_cum_delta >= -3.0 percentage points, or use an equivalent positive cost-drag <=3.0pct convention consistently.
-  - Accepted exact C0 MaxDiv metrics from gen3 artifact: calendar_cagr=0.059496; max_drawdown=-0.103874.
-  - Freeze R1 as candidate_calendar_cagr - C0_calendar_cagr >= 0.005 and R2 as candidate_max_drawdown >= C0_max_drawdown - 0.05; rounded 6.0%/-10.4% are display-only.
-  - C0/C1 must reuse exact accepted gen3 parent paths or be deterministically reconstructed with parity assertions before blends are evaluated.
-  - No combined strategy result may be run before corrected PREP review.
-  - L2 remains closed and accepted; this revision applies only to architecture PREP.
+  - One frozen architecture RUN is authorized for exactly C0-C4: MaxDiv 100%, Momentum 100%, and alpha 0.75/0.50/0.25 static blends.
+  - Frozen blend semantics: w_final(T)=RiskOverlayV0(alpha*w_maxdiv(T)+(1-alpha)*w_mom(T)); turnover/cost computed on final executable path.
+  - HK contract: return_level_hk_cny(t)=raw_hk_index_hkd(t)*hkd_cny(t); signal(T)=return_level(T-1); realized return for decision T=CNY level(T+1)/CNY level(T)-1.
+  - Exact accepted C0 anchors: calendar_cagr=0.059496; max_drawdown=-0.103874. R1 uses +0.005 relative CAGR; R2 allows at most 0.05 additional drawdown; R3 Sharpe>=0.80 and Calmar>=0.40; R4 net-minus-gross cost_cum_delta>=-0.03.
+  - C0/C1 must reconstruct with unchanged accepted implementations and assert parity to gen3 before evaluating C2-C4; parity failure is a STOP condition.
+  - Preserve accepted 2800-interval Track-C panel, 11 slots, parent parameters, timing, FX, fallback, stress regimes, no-lookahead semantics and evaluation table.
+  - Next RUN must return as a new unique READY_FOR_REVIEW handoff. No later gate is authorized here.
 
-updated_at: 2026-08-10T00:27:00+08:00
+updated_at: 2026-08-10T01:34:00+08:00
