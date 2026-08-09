@@ -1,37 +1,37 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: RL_FORMAL_PROTOCOL_PREP_CORRECTIONS_001
+handoff_id: CORRECTED_F0_RL_EXECUTION_PREP_001
 state: REVISIONS_REQUIRED
 
 reviewed_packet:
-  path: docs/review_packets/RL_FORMAL_PROTOCOL_PREP_CORRECTIONS.md
-  commit: fdaa1bbdae3ca4dabf711b446e779bc07acb94fb
+  path: docs/review_packets/CORRECTED_F0_RL_EXECUTION_PREP.md
+  commit: d76ccedd4e84a05421581e8b8f5ef5c78678051f
 
-code_commit: 943f92c21a49d1c3e5284cef9dd0ffb7fe0bdb49
+code_commit: 338693c2d065a168599ae651152d60d06cb8da26
 
-decision: PROTOCOL_APPROVED_EXECUTION_HARNESS_NOT_YET_AUTHORIZED
+decision: TARGETED_EXECUTION_HARNESS_CORRECTIONS_REQUIRED
 
 response:
-  path: docs/reviewer_responses/RL_FORMAL_PROTOCOL_PREP_CORRECTIONS_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/CORRECTED_F0_RL_EXECUTION_PREP_REVIEWER_RESPONSE.md
 
 passed:
-  - P1_F0_RATIONALE_BASELINE_CONTRACT
-  - P2_3SEED_RESEARCH_BENCHMARK_AND_CONDITIONAL_ROBUSTNESS_STAGE
-  - P3_RESEARCH_BENCHMARK_TEST_AND_FUTURE_FORWARD_HOLDOUT
-  - P4_TWO_TIER_BENCHMARK_INTERPRETATION
-  - P5_PER_ALGORITHM_AND_PROJECT_LEVEL_GO_NO_GO_SEMANTICS
-  - P6_FINAL_TRAINING_ENDPOINT_ONLY
-  - P7_MACHINE_READABLE_CONFIG_AS_SPECIFICATION
   - NO_RL_TRAINING
+  - CANONICAL_MACHINE_READABLE_CONFIG_EXISTS
+  - FORBIDDEN_PILOT_OVERRIDE_HELPER_DIRECTION
+  - E3_ACTIVE_DAY_ANNUALIZED_RETURN_NAMING_DIRECTION
+  - E4_PER_ALGORITHM_GO_NO_GO_SKELETON
 
 blocked:
-  - E1_CANONICAL_CONFIG_NOT_BOUND_TO_ACTUAL_EXECUTION_RUNNER
-  - E2_HARD_STOP_INVARIANTS_NOT_RUNTIME_ENFORCED
-  - E3_ACTIVE_DAY_ANNUALIZED_RETURN_NAMING_STILL_INCONSISTENT_IN_GO_RULE
-  - E4_NO_CANONICAL_CONFIG_DRIVEN_GO_NO_GO_EVALUATOR
+  - H1_DRY_RUN_SPY_BYPASSES_REAL_RUN_FOLD_RL_CONFIG_PATH
+  - H2_REAL_RUN_CONFIG_SHA256_FIELD_CONTAINS_PATH_NOT_DIGEST
+  - H3_PER_FOLD_MASK_INVARIANT_WRONGLY_REQUIRES_FULL_475_MASK_AND_475_STEPS
+  - H4_COST_RECONCILIATION_SILENTLY_SKIPPED_BECAUSE_REAL_SERIES_HAS_NO_FEES_FIELD
+  - H5_RAW_SERIES_COMPLETENESS_AND_EXACT_CONFIG_RUN_IDENTITIES_NOT_ENFORCED
+  - H6_GO_NO_GO_DOES_NOT_REQUIRE_EXACT_CONFIG_SEED_SET
+  - H7_MAXDIV_PARETO_DOMINANCE_SEMANTICS_INCORRECT
 
 authorized_next:
-  - CORRECTED_F0_RL_EXECUTION_PREP
+  - CORRECTED_F0_RL_EXECUTION_PREP_CORRECTIONS
 
 forbidden_next:
   - RL_RETRAINING
@@ -48,12 +48,14 @@ forbidden_next:
   - SOUTHBOUND_EXECUTION
 
 notes:
-  - The research protocol itself is substantially corrected and accepted, but execution is not yet authorized.
-  - configs/rl_formal_protocol.yaml is declared canonical, yet the real RL path still uses WalkForwardRunner.run_fold_rl arguments / SB3 defaults and the legacy gate4_3seed_pilot environment overrides.
-  - The next gate must bind config values explicitly into the runtime constructors, forbid/fail on formal-run overrides, and record a config hash/snapshot in artifacts.
-  - The five evaluator invariants must become executable fail-closed runtime checks before artifact publication.
-  - Replace remaining stitched CAGR terminology with active_day_annualized_return in the GO rule, evaluator, tests, and output schema.
-  - Implement a deterministic config-driven per-algorithm/project GO-NO-GO evaluator plus MaxDiv Pareto reporting; do not rank/select an algorithm from Test results.
-  - CORRECTED_F0_RL_EXECUTION_PREP is dry/preparation only and must not train PPO/SAC/TD3 or consume new Test results.
+  - The frozen research protocol remains accepted; this review is limited to execution-harness correctness.
+  - Dry-run and tests must exercise the same runtime constructor/config path used by run_fold_rl_config rather than duplicating constructor calls.
+  - run_fold_rl_config currently stores cfg[_config_path] under config_sha256; it must record the actual 64-hex digest and artifact-level/run-level hashes must agree.
+  - Real Test fold lengths are F1/F2/F3/F4 = 118/118/118/121. Validate fold-specific ordered masks first, then exact ordered stitched 475-date parity per algo/seed; never require 475 dates per fold.
+  - Rollout series contains costs but no fees field, so current cost reconciliation branch is silently skipped. Missing reconciliation evidence must fail closed.
+  - raw_series_complete must validate required raw arrays and exact algorithms x configured seeds x F1-F4 identities, not only count dictionary entries.
+  - GO/NO-GO must require the exact configured seed set and finite metrics; incomplete seeds cannot GO.
+  - Current MaxDiv logic is not true Pareto dominance because it declares dominated when any one dimension is worse. Implement true dominance or rename the report to underperformance-by-dimension.
+  - No corrected F0 3-seed training is authorized yet.
 
-updated_at: 2026-08-09T10:29:00+08:00
+updated_at: 2026-08-09T11:06:00+08:00
