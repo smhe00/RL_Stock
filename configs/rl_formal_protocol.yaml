@@ -1,0 +1,88 @@
+# RL FORMAL PROTOCOL — 机器可读冻结配置（P7 canonical source）
+# 评审（RL_FORMAL_PROTOCOL_PREP_REVIEWER_RESPONSE.md）P7：有效 SB3 超参/软件/device 机器可读冻结。
+# 本文件是 execution runner 与 tests 的 canonical 输入；prose 见 docs/features/RL_FORMAL_PROTOCOL.md。
+
+meta:
+  gate: RL_FORMAL_PROTOCOL_PREP_CORRECTIONS
+  observation: F0
+  observation_dim: 104          # 93 exog + 11 weights
+  n_folds: 4
+  test_mask_label: RESEARCH_BENCHMARK_TEST   # P3：历史 475 日，已反复观测，非 pristine holdout
+  test_mask_count: 475
+  forward_holdout: FUTURE_FINAL_FORWARD_HOLDOUT   # P3：最终确认需未来未见期
+
+seeds: [42, 2026, 7]            # 3-seed pilot 集；10-seed 保留 conditional/未授权（P2）
+train_passes: 20
+net_arch: [256, 256]
+checkpoint_policy: final_training_endpoint_only   # P6：无 checkpoint search
+device:
+  PPO: cpu
+  SAC: cuda
+  TD3: cuda
+
+versions:
+  sb3: "2.8.0"
+  torch: "2.7.1+cu118"
+  gymnasium: "1.2.3"
+  pandas: "3.0.5"
+  numpy: "2.5.1"
+
+# P7：有效构造超参 = SB3 默认（run_fold_rl 只用 policy_kwargs/seed/device 覆盖，其余取默认）。
+# 冻结此处以消除隐性默认依赖。
+algorithms:
+  PPO:
+    learning_rate: 0.0003
+    n_steps: 2048
+    batch_size: 64
+    n_epochs: 10
+    gamma: 0.99
+    gae_lambda: 0.95
+    clip_range: 0.2
+    ent_coef: 0.0
+    vf_coef: 0.5
+    max_grad_norm: 0.5
+  SAC:
+    learning_rate: 0.0003
+    buffer_size: 1000000
+    learning_starts: 100
+    batch_size: 256
+    tau: 0.005
+    gamma: 0.99
+    train_freq: 1
+    gradient_steps: 1
+    ent_coef: auto
+    target_update_interval: 1
+  TD3:
+    learning_rate: 0.001
+    buffer_size: 1000000
+    learning_starts: 100
+    batch_size: 256
+    tau: 0.005
+    gamma: 0.99
+    train_freq: 1
+    gradient_steps: 1
+    policy_delay: 2
+    target_policy_noise: 0.2
+    target_noise_clip: 0.5
+
+# P4：两层 benchmark 解释。
+benchmark:
+  primary_return_hurdle:      # PROMISING_GO 依据（回报维度）
+    name: EqualWeight
+    active_day_annualized_return: 0.2687
+    sharpe: 1.64
+    max_drawdown: -0.0881
+  risk_adjusted_frontier:     # 风险调整前沿参照（Pareto 报告）
+    name: MaximumDiversification
+    active_day_annualized_return: 0.1832
+    sharpe: 2.77
+    max_drawdown: -0.0340
+    calmar: 5.38
+
+# P8：评估器不变量硬 stop（CORRECTED_F0_RL_3SEED 执行时 fail-closed）。
+hard_stop_invariants:
+  - execution_dates_equal_475_mask
+  - n_eval_steps_equal_475
+  - cost_reconciliation_pass
+  - all_folds_present_no_duplicates
+  - raw_series_complete

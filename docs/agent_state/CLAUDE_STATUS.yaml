@@ -1,19 +1,19 @@
 protocol_version: 2
 actor: claude
-handoff_id: RL_FORMAL_PROTOCOL_PREP_001
+handoff_id: RL_FORMAL_PROTOCOL_PREP_CORRECTIONS_001
 state: READY_FOR_REVIEW
 
 gate: 4
-phase: RL_FORMAL_PROTOCOL_PREP
-code_commit: 707bbe3
-packet: docs/review_packets/RL_FORMAL_PROTOCOL_PREP.md
+phase: RL_FORMAL_PROTOCOL_PREP_CORRECTIONS
+code_commit: PENDING_SHA
+packet: docs/review_packets/RL_FORMAL_PROTOCOL_PREP_CORRECTIONS.md
 
 progress:
-  current_task: freeze corrected F0 RL formal experiment contract (protocol prep only; no RL training)
+  current_task: protocol P1-P9 corrections (machine-readable config, two-tier benchmark, per-algo GO/NO-GO, hard-stop invariants; no RL training)
 
 last_consumed_review:
-  handoff_id: G4_FEATURE_ABLATION_DIAGNOSTIC_CLOSEOUT_001
-  decision: APPROVED
-  response: docs/reviewer_responses/GATE_4_FEATURE_ABLATION_DIAGNOSTIC_CLOSEOUT_REVIEWER_RESPONSE.md
+  handoff_id: RL_FORMAL_PROTOCOL_PREP_001
+  decision: TARGETED_PROTOCOL_CORRECTIONS_REQUIRED
+  response: docs/reviewer_responses/RL_FORMAL_PROTOCOL_PREP_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-09T09:45:00+08:00
+updated_at: 2026-08-09T10:15:00+08:00

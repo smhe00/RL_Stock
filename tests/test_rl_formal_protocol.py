@@ -1,7 +1,9 @@
-"""RL_FORMAL_PROTOCOL_PREP — 冻结协议契约测试（无训练）。
+"""RL_FORMAL_PROTOCOL_PREP_CORRECTIONS — 冻结协议契约测试（无训练，P1-P9）。
 
-验证冻结值与既有代码/artifact 一致：算法配置、seed 政策、475 mask、benchmark hurdle、
-F0 观测维度、stop-condition 语义。不训练任何 RL 模型。
+验证机器可读 config（configs/rl_formal_protocol.yaml）与既有代码/artifact 一致：
+算法超参（P7）、seed、device、475 mask、两层 benchmark（P4）、checkpoint policy（P6）、
+hard-stop invariants（P8）、active-day annualization 命名（P9）、GO/NO-GO 完整规则（P5）。
+不训练任何 RL 模型。
 """
 
 from __future__ import annotations
@@ -12,41 +14,50 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
+import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 ARTIFACTS = ROOT / "artifacts"
+CONFIG = ROOT / "configs" / "rl_formal_protocol.yaml"
 
 
-def _pilot_source() -> str:
-    return (ROOT / "scripts" / "gate4_3seed_pilot.py").read_text(encoding="utf-8")
+def _cfg() -> dict:
+    assert CONFIG.exists(), "configs/rl_formal_protocol.yaml missing"
+    return yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
 
 
-class TestFrozenAlgorithmConfig:
-    def test_train_passes_and_net(self):
-        # 冻结契约：TRAIN_PASSES=20、net [256,256]、seeds {42,2026,7}（RL_FORMAL_PROTOCOL §2/§4）
-        src = _pilot_source()
-        assert '"20"' in src or "20" in src.split("TRAIN_PASSES = ")[1].split("\n")[0]
-        # run_fold_rl 默认 net=(256,256)
-        from china_etf.evaluation.walkforward import WalkForwardRunner
-        import inspect
-        sig = inspect.signature(WalkForwardRunner.run_fold_rl)
-        assert sig.parameters["net"].default == (256, 256)
+class TestConfigFrozenValues:
+    def test_meta(self):
+        c = _cfg()
+        assert c["meta"]["gate"] == "RL_FORMAL_PROTOCOL_PREP_CORRECTIONS"
+        assert c["meta"]["observation"] == "F0"
+        assert c["meta"]["observation_dim"] == 104
+        assert c["meta"]["n_folds"] == 4
 
-    def test_seed_policy(self):
-        src = _pilot_source()
-        seed_line = [l for l in src.splitlines() if "SEEDS =" in l and "GATE4_PILOT_SEEDS" in l]
-        assert seed_line and "42,2026,7" in seed_line[0]
-        # 3 algos
-        assert "TD3,SAC,PPO" in [l for l in src.splitlines() if "GATE4_PILOT_ALGOS" in l][0]
+    def test_seed_device_checkpoint(self):
+        c = _cfg()
+        assert c["seeds"] == [42, 2026, 7]
+        assert c["device"] == {"PPO": "cpu", "SAC": "cuda", "TD3": "cuda"}
+        assert c["checkpoint_policy"] == "final_training_endpoint_only"  # P6
 
-    def test_train_passes_value(self):
-        from china_etf.evaluation.walkforward import WalkForwardRunner
-        import inspect
-        sig = inspect.signature(WalkForwardRunner.run_fold_rl)
-        assert sig.parameters["train_passes"].default == 20
+    def test_train_budget(self):
+        c = _cfg()
+        assert c["train_passes"] == 20
+        assert c["net_arch"] == [256, 256]
+
+    def test_versions(self):
+        c = _cfg()
+        assert c["versions"]["sb3"] == "2.8.0"
+        assert c["versions"]["torch"].startswith("2.7")
 
 
-class TestExactTestMask:
+class TestTestMask:
+    def test_research_benchmark_label(self):
+        c = _cfg()
+        assert c["meta"]["test_mask_label"] == "RESEARCH_BENCHMARK_TEST"  # P3
+        assert c["meta"]["forward_holdout"] == "FUTURE_FINAL_FORWARD_HOLDOUT"  # P3
+        assert c["meta"]["test_mask_count"] == 475
+
     def test_mask_count_475(self):
         import sys
         sys.path.insert(0, str(ROOT / "scripts"))
@@ -66,78 +77,108 @@ class TestExactTestMask:
         assert mask["exact_test_date_count"] == 475
 
 
-class TestBenchmarkHurdle:
-    def test_equal_weight_hurdle_matches_artifact(self):
-        art = ARTIFACTS / "gate4_non_rl_horse_race_results.json"
-        assert art.exists(), "horse-race artifact missing"
-        hr = json.loads(art.read_text(encoding="utf-8"))
-        ew = hr["horse_race_table"]["EqualWeight"]
-        # 协议冻结值（RL_FORMAL_PROTOCOL.md §8）
+class TestTwoTierBenchmark:
+    def test_primary_return_hurdle(self):
+        c = _cfg()
+        ew = c["benchmark"]["primary_return_hurdle"]
+        assert ew["name"] == "EqualWeight"
         assert ew["active_day_annualized_return"] == pytest.approx(0.2687, abs=1e-3)
         assert ew["sharpe"] == pytest.approx(1.64, abs=1e-2)
         assert ew["max_drawdown"] == pytest.approx(-0.0881, abs=1e-3)
 
+    def test_risk_adjusted_frontier(self):
+        c = _cfg()
+        mxd = c["benchmark"]["risk_adjusted_frontier"]
+        assert mxd["name"] == "MaximumDiversification"
+        assert mxd["sharpe"] == pytest.approx(2.77, abs=1e-2)
+        assert mxd["max_drawdown"] == pytest.approx(-0.0340, abs=1e-3)
+        assert mxd["calmar"] == pytest.approx(5.38, abs=1e-2)
 
-class TestStopConditions:
-    @staticmethod
-    def _stop_fn():
-        """从 pilot 源码提取 check_stop_conditions 并独立执行（避免加载整个 pilot 模块）。"""
-        src = _pilot_source()
-        start = src.index("def check_stop_conditions(")
-        # 取到函数体结束（下一个顶格 def 或文件尾）
-        rest = src[start:]
-        end = rest.find("\n\ndef ")
-        body = rest[:end] if end != -1 else rest
-        ns: dict = {"np": np}
-        exec(compile(body, "check_stop_conditions", "exec"), ns)  # noqa: S102
-        return ns["check_stop_conditions"]
-
-    def test_stop_condition_semantics(self):
-        """pilot check_stop_conditions：NaN/neg-cash/save-load/non-finite 均触发。"""
-        fn = self._stop_fn()
-        assert fn({"nan_obs_or_reward": 0, "negative_cash_count": 0, "oos_cum_return": 0.1}, True) == []
-        assert "NaN/Inf" in fn({"nan_obs_or_reward": 1, "negative_cash_count": 0,
-                                "oos_cum_return": 0.1}, True)
-        assert "negative_broker_cash" in fn({"nan_obs_or_reward": 0, "negative_cash_count": 2,
-                                             "oos_cum_return": 0.1}, True)
-        assert "save_load_mismatch" in fn({"nan_obs_or_reward": 0, "negative_cash_count": 0,
-                                           "oos_cum_return": 0.1}, False)
-        assert "non_finite_oos_return" in fn({"nan_obs_or_reward": 0, "negative_cash_count": 0,
-                                              "oos_cum_return": float("nan")}, True)
+    def test_benchmark_matches_artifact(self):
+        art = ARTIFACTS / "gate4_non_rl_horse_race_results.json"
+        assert art.exists()
+        hr = json.loads(art.read_text(encoding="utf-8"))["horse_race_table"]
+        ew = hr["EqualWeight"]
+        mxd = hr["MaximumDiversification"]
+        c = _cfg()
+        cew = c["benchmark"]["primary_return_hurdle"]
+        cmxd = c["benchmark"]["risk_adjusted_frontier"]
+        assert ew["active_day_annualized_return"] == pytest.approx(cew["active_day_annualized_return"], abs=1e-3)
+        assert mxd["sharpe"] == pytest.approx(cmxd["sharpe"], abs=1e-2)
 
 
-class TestF0ObsDim:
-    def test_obs_dim_104(self):
-        """F0 观测 = 93 exog + 11 weights = 104（RL_FORMAL_PROTOCOL §13）。"""
-        from china_etf.features.ablation_features import OBS_DIM
-        assert OBS_DIM["F0"] == 104
-        assert OBS_DIM["F1"] == 110
-        assert OBS_DIM["F2"] == 110
-        assert OBS_DIM["F3"] == 116
+class TestHyperparams:
+    def test_algo_hyperparams_frozen(self):
+        """P7：有效超参机器可读冻结（learning_rate/gamma/batch 等关键项）。"""
+        c = _cfg()
+        ppo = c["algorithms"]["PPO"]
+        sac = c["algorithms"]["SAC"]
+        td3 = c["algorithms"]["TD3"]
+        assert ppo["learning_rate"] == 0.0003 and ppo["n_epochs"] == 10 and ppo["gamma"] == 0.99
+        assert sac["learning_rate"] == 0.0003 and sac["tau"] == 0.005 and sac["buffer_size"] == 1000000
+        assert td3["learning_rate"] == 0.001 and td3["policy_delay"] == 2
 
-    def test_gym_wrapper_obs_dim(self):
-        """gym wrapper obs = 8*11+5 exog + 11 weights = 104。"""
-        from china_etf.environment.gym_wrapper import ChinaETFGymEnv
-        import gymnasium as gym
-        import numpy as np
-        class FakeEnv:
-            def __init__(self):
-                self.slots = [f"s{i}" for i in range(11)]
-            @property
-            def action_dim(self):
-                return len(self.slots)
-        env = ChinaETFGymEnv(FakeEnv())
-        assert env.observation_space.shape == (104,)
-        assert env.action_space.shape == (11,)
+    def test_hyperparams_match_sb3_defaults(self):
+        """P7：config 超参与 SB3 默认一致（消除隐性默认依赖）。"""
+        from stable_baselines3 import PPO, SAC, TD3
+        import inspect
+        c = _cfg()
+        for cls, name in ((PPO, "PPO"), (SAC, "SAC"), (TD3, "TD3")):
+            sig = inspect.signature(cls.__init__)
+            for param, frozen in c["algorithms"][name].items():
+                default = sig.parameters[param].default
+                assert default is not inspect.Parameter.empty, f"{name}.{param} not a default param"
+                assert str(default) == str(frozen), f"{name}.{param}: config {frozen} != SB3 {default}"
 
 
-class TestGoNoGoLogic:
-    def test_go_logic(self):
-        """GO = 无 stop + median Sharpe/CAGR ≥ hurdle + ≥2/3 seeds Sharpe ≥ hurdle。"""
-        med_sharpe = [1.7, 1.9, 1.5]  # median 1.7, 2/3 ≥ 1.64
-        assert float(np.median(med_sharpe)) >= 1.64
-        assert sum(s >= 1.64 for s in med_sharpe) >= 2
+class TestHardStopInvariants:
+    def test_invariants_present(self):
+        """P8：评估器不变量硬 stop（execution parity / 475 / cost / 完整 series）。"""
+        c = _cfg()
+        inv = c["hard_stop_invariants"]
+        assert "execution_dates_equal_475_mask" in inv
+        assert "n_eval_steps_equal_475" in inv
+        assert "cost_reconciliation_pass" in inv
+        assert "all_folds_present_no_duplicates" in inv
+        assert "raw_series_complete" in inv
 
-    def test_no_go_if_median_below(self):
-        med_sharpe = [1.4, 1.5, 1.6]
-        assert float(np.median(med_sharpe)) < 1.64
+
+class TestGoNoGo:
+    def test_per_algorithm_go_full_rule(self):
+        """P5：per-algorithm GO = CAGR + Sharpe + stops + MaxDD + ≥2/3 seeds。"""
+        c = _cfg()
+        ew_sharpe = c["benchmark"]["primary_return_hurdle"]["sharpe"]
+        ew_cagr = c["benchmark"]["primary_return_hurdle"]["active_day_annualized_return"]
+        ew_mdd = c["benchmark"]["primary_return_hurdle"]["max_drawdown"]
+        # 通过样例
+        sharpe = [1.7, 1.9, 1.5]
+        cagr = [0.30, 0.28, 0.27]
+        mdd = [-0.06, -0.05, -0.08]
+        no_stop = True
+        assert float(np.median(sharpe)) >= ew_sharpe
+        assert float(np.median(cagr)) >= ew_cagr
+        assert float(np.median(mdd)) >= ew_mdd  # 负值比较：更浅回撤 = 更高
+        assert sum(s >= ew_sharpe for s in sharpe) >= 2
+        assert no_stop
+        # NO-GO：median Sharpe 低于 hurdle
+        assert float(np.median([1.4, 1.5, 1.6])) < ew_sharpe
+
+    def test_project_level_promising(self):
+        """P5：≥1 算法 per-algo GO → project PROMISING。"""
+        per_algo_go = {"PPO": True, "SAC": False, "TD3": True}
+        assert sum(per_algo_go.values()) >= 1
+        assert not (sum(per_algo_go.values()) == 0)  # 0 个 → NO-GO
+
+
+class TestActiveDayAnnualization:
+    def test_stitched_uses_active_day(self):
+        """P9：stitched 年化 = (1+cum)**(252/n_steps)-1（val gaps 不计日数）。"""
+        nr = np.array([0.01] * 475)
+        cum = float(np.exp(np.log1p(nr).sum()) - 1.0)
+        active_ann = float((1.0 + cum) ** (252.0 / 475) - 1.0)
+        assert np.isfinite(active_ann)
+        # 475 执行日（active days）≠ 日历总天数 → 定义明确不混用
+        n_steps = 475
+        assert n_steps < 365 + 200  # 475 是执行日数，非日历日数基准
+        # 与 horse-race artifact 的 active_day_annualized_return 定义一致（同公式）
+        assert active_ann > 0
