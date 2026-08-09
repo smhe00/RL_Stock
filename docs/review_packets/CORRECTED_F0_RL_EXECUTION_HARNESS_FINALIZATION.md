@@ -46,7 +46,7 @@ runner --dry-run: PPO/SAC/TD3 match（共享 _construct_model，无 learn）
 
 # 4. Git Commit
 
-`CORRECTED_F0_RL_EXECUTION_HARNESS_FINALIZATION` 提交 SHA：**`PENDING_SHA`**
+`CORRECTED_F0_RL_EXECUTION_HARNESS_FINALIZATION` 提交 SHA：**`765ccac`**
 
 ```text
 src/china_etf/evaluation/rl_formal.py          ← F1-F6（algo 匹配、n_eval、raw 完整性、metric seed、Pareto finite、finalize_publish）
