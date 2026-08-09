@@ -1,19 +1,19 @@
 protocol_version: 2
 actor: claude
-handoff_id: RL_FORMAL_PROTOCOL_PREP_CORRECTIONS_001
+handoff_id: CORRECTED_F0_RL_EXECUTION_PREP_001
 state: READY_FOR_REVIEW
 
 gate: 4
-phase: RL_FORMAL_PROTOCOL_PREP_CORRECTIONS
-code_commit: 943f92c
-packet: docs/review_packets/RL_FORMAL_PROTOCOL_PREP_CORRECTIONS.md
+phase: CORRECTED_F0_RL_EXECUTION_PREP
+code_commit: PENDING_SHA
+packet: docs/review_packets/CORRECTED_F0_RL_EXECUTION_PREP.md
 
 progress:
-  current_task: protocol P1-P9 corrections (machine-readable config, two-tier benchmark, per-algo GO/NO-GO, hard-stop invariants; no RL training)
+  current_task: execution harness binding (E1 config->runtime, E2 invariant validator, E4 GO/NO-GO evaluator; dry-run spy, no training)
 
 last_consumed_review:
-  handoff_id: RL_FORMAL_PROTOCOL_PREP_001
-  decision: TARGETED_PROTOCOL_CORRECTIONS_REQUIRED
-  response: docs/reviewer_responses/RL_FORMAL_PROTOCOL_PREP_REVIEWER_RESPONSE.md
+  handoff_id: RL_FORMAL_PROTOCOL_PREP_CORRECTIONS_001
+  decision: PROTOCOL_APPROVED_EXECUTION_HARNESS_NOT_YET_AUTHORIZED
+  response: docs/reviewer_responses/RL_FORMAL_PROTOCOL_PREP_CORRECTIONS_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-09T10:15:00+08:00
+updated_at: 2026-08-09T10:35:00+08:00

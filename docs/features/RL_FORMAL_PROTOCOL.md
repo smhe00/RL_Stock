@@ -102,8 +102,10 @@ nan_obs_or_reward, negative_cash_count
 
 ```text
 【per-algorithm】（对 PPO、SAC、TD3 各自）：
-  GO = 无 stop/invariant 违规 AND median(seed Sharpe) ≥ 1.64 AND median(seed CAGR) ≥ 0.2687
-       AND ≥2/3 seeds 的 Sharpe ≥ 1.64 AND median(seed MaxDD) ≥ -0.0881（点估计，3-seed 不声明统计显著）
+  GO = 无 stop/invariant 违规 AND median(seed Sharpe) ≥ 1.64
+       AND median(seed active_day_annualized_return) ≥ 0.2687
+       AND ≥2/3 seeds 的 Sharpe ≥ 1.64 AND median(seed MaxDD) ≥ -0.0881
+       （点估计，3-seed 不声明统计显著；E3：一律用 active_day_annualized_return，无 stitched cagr 字段）
   NO-GO = 任何 stop/invariant 违规，或未达任一条件
 【project-level】：
   至少 1 个算法 per-algorithm GO → project = PROMISING（值得进一步验证）
@@ -111,6 +113,18 @@ nan_obs_or_reward, negative_cash_count
   禁止 Test-based 算法 winner selection（不得用 Test 选单算法推进；若仅 1 算法通过，
   后续推进的 selection 必须 validation-only 且先于 Test 消费冻结）
   冻结通过后行为：通过算法进入 conditional formal robustness stage（10-seed，未来独立授权，P2）
+```
+
+## 10b. Execution harness 绑定（CORRECTED_F0_RL_EXECUTION_PREP，E1/E2/E4）
+
+```text
+E1 config→runtime 绑定：execution runner 直接读 configs/rl_formal_protocol.yaml；
+   PPO/SAC/TD3 构造显式传冻结超参（不依赖 SB3 默认）；formal run 禁止 env overrides（fail-closed）；
+   config_sha256 记录于 artifact。
+E2 hard-stop invariants 运行时强制：execution_dates==475 mask、n_eval_steps==475、cost reconciliation、
+   全部 fold 无重复、raw series 完整——publication 前 fail-closed（validate_runtime_invariants）。
+E4 GO/NO-GO evaluator：确定性 config-driven per_algorithm（median active_day_annualized_return/Sharpe/
+   MaxDD + ≥2/3 seeds + stops）+ project_level（PROMISING/NO_GO）+ Pareto vs MaxDiv；无 Test-based ranking。
 ```
 
 ## 11. Artifacts

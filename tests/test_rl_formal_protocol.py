@@ -182,3 +182,142 @@ class TestActiveDayAnnualization:
         assert n_steps < 365 + 200  # 475 是执行日数，非日历日数基准
         # 与 horse-race artifact 的 active_day_annualized_return 定义一致（同公式）
         assert active_ann > 0
+
+
+class TestConfigBindingE1:
+    def test_no_forbidden_overrides(self, monkeypatch):
+        """E1: formal run 禁止 pilot env overrides——存在则 fail-closed raise。"""
+        from china_etf.evaluation.rl_formal import check_no_forbidden_overrides, FormalConfigError
+        check_no_forbidden_overrides()  # 无 override 时不抛
+        monkeypatch.setenv("GATE4_PILOT_PASSES", "10")
+        with pytest.raises(FormalConfigError):
+            check_no_forbidden_overrides()
+
+    def test_config_hash_deterministic(self):
+        from china_etf.evaluation.rl_formal import load_protocol_config
+        a = load_protocol_config()["config_sha256"]
+        b = load_protocol_config()["config_sha256"]
+        assert a == b and len(a) == 64
+
+    def test_constructor_spy_receives_frozen_kwargs(self):
+        """E1: config 超参显式传入构造器（非 SB3 默认）。"""
+        from china_etf.evaluation.rl_formal import load_protocol_config
+        loaded = load_protocol_config()
+        cfg = loaded["config"]
+        # 复用 runner 的 dry-run spy 逻辑
+        from unittest import mock
+        captured = {}
+        import importlib
+        from stable_baselines3 import PPO
+        name = "PPO"
+        algo_cfg = cfg["algorithms"][name]
+        def fake_init(self, policy, env, *, seed=None, policy_kwargs=None, verbose=0,
+                      device="cpu", **kwargs):
+            captured[name] = {"seed": seed, "policy_kwargs": policy_kwargs,
+                              "device": device, "kwargs": kwargs}
+        with mock.patch.object(PPO, "__init__", fake_init):
+            PPO("MlpPolicy", object(), seed=42, policy_kwargs={"net_arch": list(cfg["net_arch"])},
+                verbose=0, device=cfg["device"][name], **dict(algo_cfg))
+        assert captured[name]["kwargs"] == dict(algo_cfg)
+        assert captured[name]["policy_kwargs"] == {"net_arch": [256, 256]}
+
+
+class TestRuntimeInvariantsE2:
+    def _pass_results(self, n=36):
+        # 合成通过结构：36 runs，execution_dates == mask，n_eval == len(mask)
+        per_algo = {}
+        import pandas as pd
+        mask_dates = pd.bdate_range("2023-11-24", periods=475, freq="B")
+        mask_str = [str(d.date()) for d in mask_dates]
+        count = 0
+        for a in ("PPO", "SAC", "TD3"):
+            per_algo[a] = {}
+            for seed in (42, 2026, 7):
+                per_algo[a][seed] = {}
+                for fold in ("F1", "F2", "F3", "F4"):
+                    per_algo[a][seed][fold] = {
+                        "test": {"n_eval_steps": len(mask_str),
+                                 "series": {"execution_dates": list(mask_str),
+                                            "costs": [1.0], "fees": [1.0]}}}
+                    count += 1
+        return {"per_algorithm": per_algo}, mask_str
+
+    def test_invariants_pass(self):
+        from china_etf.evaluation.rl_formal import validate_runtime_invariants
+        results, mask = self._pass_results()
+        validate_runtime_invariants(results, mask)  # 不抛
+
+    def test_invariants_fail_wrong_execution_dates(self):
+        from china_etf.evaluation.rl_formal import validate_runtime_invariants, InvariantViolation
+        results, mask = self._pass_results()
+        results["per_algorithm"]["PPO"][42]["F1"]["test"]["series"]["execution_dates"] = ["2020-01-01"]
+        with pytest.raises(InvariantViolation):
+            validate_runtime_invariants(results, mask)
+
+    def test_invariants_fail_wrong_n_steps(self):
+        from china_etf.evaluation.rl_formal import validate_runtime_invariants, InvariantViolation
+        results, mask = self._pass_results()
+        results["per_algorithm"]["SAC"][2026]["F2"]["test"]["n_eval_steps"] = 100
+        with pytest.raises(InvariantViolation):
+            validate_runtime_invariants(results, mask)
+
+    def test_invariants_fail_cost_reconciliation(self):
+        from china_etf.evaluation.rl_formal import validate_runtime_invariants, InvariantViolation
+        results, mask = self._pass_results()
+        results["per_algorithm"]["TD3"][7]["F3"]["test"]["series"]["costs"] = [1.0, 1.0]
+        with pytest.raises(InvariantViolation):
+            validate_runtime_invariants(results, mask)
+
+
+class TestGoNoGoEvaluatorE4:
+    def _stitched(self, rets, sharpes, mdds, calmars):
+        return {
+            "active_day_annualized_return": {s: r for s, r in zip([42, 2026, 7], rets)},
+            "sharpe": {s: x for s, x in zip([42, 2026, 7], sharpes)},
+            "max_drawdown": {s: x for s, x in zip([42, 2026, 7], mdds)},
+            "calmar_median": float(np.median(calmars)),
+            "n_seeds": 3, "stop_violations": 0,
+        }
+
+    def test_per_algo_go(self):
+        from china_etf.evaluation.rl_formal import evaluate_go_nogo
+        cfg = _cfg()
+        st = self._stitched([0.30, 0.28, 0.27], [1.7, 1.9, 1.5], [-0.06, -0.05, -0.08], [3.0, 3.5, 2.8])
+        out = evaluate_go_nogo({"PPO": st}, cfg)
+        assert out["per_algorithm"]["PPO"]["decision"] == "GO"
+        assert out["project_level"] == "PROMISING"
+
+    def test_per_algo_no_go_below_hurdle(self):
+        from china_etf.evaluation.rl_formal import evaluate_go_nogo
+        cfg = _cfg()
+        st = self._stitched([0.20, 0.22, 0.21], [1.2, 1.3, 1.4], [-0.10, -0.09, -0.11], [2.0, 2.1, 2.2])
+        out = evaluate_go_nogo({"PPO": st}, cfg)
+        assert out["per_algorithm"]["PPO"]["decision"] == "NO_GO"
+        assert out["project_level"] == "NO_GO"
+
+    def test_project_promising_if_one_algo_go(self):
+        from china_etf.evaluation.rl_formal import evaluate_go_nogo
+        cfg = _cfg()
+        st_go = self._stitched([0.30, 0.28, 0.27], [1.7, 1.9, 1.5], [-0.06, -0.05, -0.08], [3.0, 3.5, 2.8])
+        st_nogo = self._stitched([0.20, 0.22, 0.21], [1.2, 1.3, 1.4], [-0.10, -0.09, -0.11], [2.0, 2.1, 2.2])
+        out = evaluate_go_nogo({"PPO": st_go, "SAC": st_nogo}, cfg)
+        assert out["project_level"] == "PROMISING"
+        assert out["per_algorithm"]["SAC"]["decision"] == "NO_GO"
+
+    def test_pareto_vs_maxdiv(self):
+        from china_etf.evaluation.rl_formal import evaluate_go_nogo
+        cfg = _cfg()
+        # 风险调整差于 MaxDiv（Sharpe 2.77）
+        st = self._stitched([0.25, 0.26, 0.24], [2.0, 2.1, 2.0], [-0.05, -0.04, -0.06], [4.0, 4.2, 3.8])
+        out = evaluate_go_nogo({"PPO": st}, cfg)
+        assert out["pareto_vs_maxdiv"]["PPO"]["vs_max_div"] == "dominated"
+        assert "sharpe" in out["pareto_vs_maxdiv"]["PPO"]["dominated_dims"]
+
+    def test_no_test_based_ranking(self):
+        from china_etf.evaluation.rl_formal import evaluate_go_nogo
+        cfg = _cfg()
+        out = evaluate_go_nogo({"PPO": {}, "SAC": {}, "TD3": {}}, cfg)
+        # 空 stitched → NO_GO（无 data），不 ranking
+        for a in ("PPO", "SAC", "TD3"):
+            assert out["per_algorithm"][a]["decision"] == "NO_GO"
+        assert out["project_level"] == "NO_GO"

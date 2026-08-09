@@ -49,8 +49,14 @@ def check_hyperparams_match_sb3(cfg: dict) -> dict:
     return results
 
 
+def config_sha256() -> str:
+    import hashlib
+    return hashlib.sha256((ROOT / "configs" / "rl_formal_protocol.yaml").read_bytes()).hexdigest()
+
+
 def main() -> None:
     cfg = load_config()
+    sha = config_sha256()
     adj = load_research_adj()
     ca = load_corporate_actions()
     runner = WalkForwardRunner(
@@ -103,6 +109,7 @@ def main() -> None:
 
     results = {
         "config_source": "configs/rl_formal_protocol.yaml",
+        "config_sha256": sha,
         "exact_test_mask": {"label": cfg["meta"]["test_mask_label"], "count": n_test,
                             "first": str(mask["first_test_date"]), "last": str(mask["last_test_date"]),
                             "forward_holdout": cfg["meta"]["forward_holdout"]},
