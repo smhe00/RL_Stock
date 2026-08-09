@@ -1,42 +1,46 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_FEATURE_ABLATION_RUNS_CORRECTIONS_001
+handoff_id: G4_FEATURE_ABLATION_RUNS_STAT_FINALIZATION_001
 state: REVISIONS_REQUIRED
 
 reviewed_packet:
-  path: docs/review_packets/GATE_4_FEATURE_ABLATION_RUNS_CORRECTIONS.md
-  commit: 0dfc536b8728605f42b81007e72f0d17256e3822
+  path: docs/review_packets/GATE_4_FEATURE_ABLATION_RUNS_STAT_FINALIZATION.md
+  commit: d93891e8a68c107cf045b32931e59d0de79d3c10
 
-code_commit: 520d13ad1252d7ef73b57ec6175b349bd06b6510
+code_commit: 6dd8b344564ca0cca1559c3ecf45840ee16d47f6
 
-decision: TARGETED_STATISTICAL_FINALIZATION_REQUIRED
+decision: TARGETED_TRANSITION_AND_RESAMPLING_CORRECTIONS_REQUIRED
 
 response:
-  path: docs/reviewer_responses/GATE_4_FEATURE_ABLATION_RUNS_CORRECTIONS_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/GATE_4_FEATURE_ABLATION_RUNS_STAT_FINALIZATION_REVIEWER_RESPONSE.md
 
 passed:
-  - A2_NON_RL_DIAGNOSTIC_SCOPE
-  - A5_COMPOSITE_IMPORTANCE_SCORE_REMOVED
+  - B4_BOOTSTRAP_NULL_P_REMOVED
+  - B5_REDUCED_F0_PROXY_LABEL_AND_NARROWED_CLAIM
   - NO_RL_RETRAINING
   - NO_10_SEED
   - NO_OPTUNA_OR_SWEEP
+  - FROZEN_F1_CANDIDATE_SET_UNCHANGED
 
 partial_pass:
-  - TRAIN_FIT_VALIDATION_APPLY_MECHANICS
-  - TIME_SERIES_RESAMPLING_INFRASTRUCTURE
+  - B1_GLOBAL_TEST_EXCLUSION_DIRECTION
+  - B2_DEPENDENCE_NULL_TEST_DIRECTION
+  - B3_FOLD_SPECIFIC_BOOTSTRAP_CI
 
 blocked:
-  - B1_GLOBAL_475_TEST_QUARANTINE_SEMANTICS
-  - B2_INVALID_MEDIAN_P_THEN_HOLM_BH
-  - B3_INVALID_AGGREGATE_BOOTSTRAP_CI_LABEL
-  - B4_INVALID_BOOTSTRAP_NULL_P_VALUE
-  - B5_REDUCED_F0_PROXY_OVERCLAIM
+  - C1_TEST_EXECUTION_TO_DECISION_DATE_SHIFT
+  - C2_BLOCK_PERMUTATION_IS_ACTUALLY_WITH_REPLACEMENT_BLOCK_RESAMPLE
+  - C3_RESAMPLING_CROSSES_QUARANTINED_GAPS_AFTER_ARRAY_COMPACTION
+  - C4_FOLD_CI_FALSE_INDEPENDENCE_WORDING
+  - C5_INFERENTIAL_BLOCK_LENGTH_NOT_SENSITIVITY_CHECKED_OR_CONSERVATIVELY_FROZEN
 
 authorized_next:
-  - GATE_4_FEATURE_ABLATION_RUNS_STAT_FINALIZATION
+  - GATE_4_FEATURE_ABLATION_RUNS_STAT_FINALIZATION_CORRECTIONS
 
 forbidden_next:
+  - RL_FORMAL_PROTOCOL_PREP
   - RL_RETRAINING
+  - CORRECTED_F0_RL_3SEED
   - GATE_4_10_SEED_FORMAL
   - OPTUNA
   - HYPERPARAMETER_SWEEP
@@ -48,13 +52,13 @@ forbidden_next:
   - SOUTHBOUND_EXECUTION
 
 notes:
-  - Later expanding folds reuse earlier frozen Test dates in train, so current packet cannot claim the union 475-day Test panel is globally quarantined.
-  - Median of per-fold Mann-Whitney p-values is not a calibrated p-value; Holm/BH on that median does not provide valid family-wise/FDR control.
-  - Median lower/upper endpoints of per-fold bootstrap intervals are not an aggregate 95% confidence interval.
-  - block_bootstrap_ci p_bs compares the empirical bootstrap distribution to the observed statistic rather than a null-centered distribution and should be removed or replaced.
-  - BLOCK_LEN=20 is incorrectly described as the longest rolling window; F1 contains 60-day windows. Add block-length sensitivity or a justified automatic rule.
-  - Residualization uses only a 10-variable reduced F0 market proxy, not the full 104-dimensional F0 observation contract; conclusions must be narrowed accordingly.
-  - Current evidence can support only a descriptive statement that F1 lacks a strong stable monotonic association in development data; it cannot prove no F1 predictive value or refute the previously observed Test association independently.
-  - Frozen F1 candidate set remains unchanged; no feature may be added/removed because of current Test results.
+  - Frozen Test metrics are indexed by execution date; the first Test transition is decided at val_end and executed at test_start. Current same-date exclusion leaves each fold val_end in the screening panel, leaking up to four first-Test forward returns.
+  - The exact 475 Test execution-date mask must be mapped to preceding research-calendar decision dates, and the invariant must prove no diagnostic t->t+1 outcome has t+1 in the Test execution mask.
+  - block_permutation_p currently uses _moving_block_indices with replacement, so it is a moving-block resample rather than a true block permutation; the null mechanism must be accurately specified and implemented.
+  - After Test removal the compact arrays contain artificial adjacency across quarantined gaps; dependence resampling must be segment-aware and never cross those gaps.
+  - Fold development panels are expanding/nested, so their descriptive CIs are not independent.
+  - Confirmatory p-values currently use block_len=20 only despite 60-session F1 features; freeze a justified conservative scale or predeclare a robust sensitivity rule before rerunning.
+  - Current numerical findings remain descriptive negative evidence only; Holm/BH values are not final confirmatory inference yet.
+  - No feature may be added/removed because of current Test results.
 
-updated_at: 2026-08-09T09:03:00+08:00
+updated_at: 2026-08-09T09:12:00+08:00
