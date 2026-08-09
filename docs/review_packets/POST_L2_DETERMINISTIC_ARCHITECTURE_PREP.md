@@ -1,8 +1,23 @@
-# POST_L2 DETERMINISTIC ARCHITECTURE PREP — MaxDiv Core × Momentum Engine 共存架构（冻结契约）
+# POST_L2 DETERMINISTIC ARCHITECTURE PREP — MaxDiv Core × Momentum Engine 共存架构（冻结契约，修正版）
 
-> 评审（`POST_L2_DETERMINISTIC_ARCHITECTURE_PREP_ACK_REVIEWER_RESPONSE.md`）
-> **POST_L2_ARCH_PREP_ACK_ONLY_ACTUAL_PREP_PACKET_REQUIRED** → 本 packet 为**实际架构 PREP**。
-> **PREP only，不运行任何 combined-strategy 结果。** handoff_id = **G4_POST_L2_DETERMINISTIC_ARCH_PREP_001**。
+> 评审（`POST_L2_DETERMINISTIC_ARCHITECTURE_PREP_REVIEWER_RESPONSE.md`）
+> **ARCH_PREP_SUBSTANTIALLY_CORRECT_SEMANTIC_FIX_REQUIRED** → 本 packet 为**架构 PREP 修正**。
+> **PREP only，不运行任何 combined-strategy 结果。** handoff_id = **G4_POST_L2_DETERMINISTIC_ARCH_PREP_CORRECTION_001**。
+
+> ## Revision Record（ARCH_PREP_CORRECTION，评审 3 项语义修正 + 控制处理）
+>
+> 1. **HK FX 时序措辞修正**：明确 `return_level_hk_cny(t) = raw_hk_index_hkd(t) × hkd_cny(t)`
+>    （**未 lag 的当日 CNY 经济水平**）；`signal_hk_cny(T) = return_level_hk_cny(T-1)`（含 T-1 HK + T-1 FX）；
+>    `realized_return(决策 T) = return_level_hk_cny(T+1)/return_level_hk_cny(T) - 1`（CNY T→T+1）。
+>    **不在 raw return-level 构造中插入 T-1 FX lag**（即信号/收益分离，与 FX 修正 L2 gen3 完全一致）。
+> 2. **R4 成本不等式符号修正**：`cost_cum_delta = net_cum_return - gross_cum_return`（零或负），
+>    R4 通过 iff `cost_cum_delta >= -3.0pct`（原写 `<= -3.0pct` 反向）。等价正拖累形式：
+>    `cost_drag = gross - net`，R4 iff `cost_drag <= 3.0pct`。全 packet/runner/artifact/pass-fail 用同一约定。
+> 3. **R1/R2 绑定精确 C0 值**（非舍入显示值）：gen3 C0 = `calendar_cagr 0.059496`、`max_drawdown -0.103874`。
+>    R1: `candidate_cagr - 0.059496 >= 0.005`（阈值 = **0.064496**）；
+>    R2: `candidate_mdd >= -0.103874 - 0.05`（阈值 = **-0.153874**）。显示可舍入，pass/fail 用精确值。
+> 4. **C0/C1 控制处理**：采用"重建 + parity 断言"——用未变更的已接受实现确定性重建 C0/C1，
+>    评估 C2-C4 前断言其 metrics 与 gen3 artifact 精确 parity（时序/fallback/FX/overlay 语义不变）。
 
 ---
 
@@ -57,10 +72,23 @@ w_final(T)     = RiskOverlayV0(w_blend_raw(T))     # 在混合后统一 overlay
 完全复用已接受 L2 时序路径（不更改）：
   decision cadence: 每交易日（2800 决策日）
   information cutoff: T 上海收盘；A股/利率 T，HK/US/GOLD/FX T-1（signal）
-  CNY return-level treatment: HK_TECH/HK_DIVIDEND = HKD × hkd_cny（T-1 FX）
+  CNY return-level treatment（修正，与 gen3 完全一致）:
+    return_level_hk_cny(t) = raw_hk_index_hkd(t) × hkd_cny(t)   # 未 lag 的当日 CNY 经济水平
+    signal_hk_cny(T)       = return_level_hk_cny(T-1)            # 决策 T 信号含 T-1 HK + T-1 FX
+    realized_return(决策 T) = return_level_hk_cny(T+1)/return_level_hk_cny(T) - 1   # CNY T→T+1
+    # 不在 raw return-level 构造中插入 T-1 FX lag（信号/收益分离保留）
   已实现收益: 决策 T 权重 → 原始 CNY 经济水平 T->T+1（return 面板无信号 lag）
   no lookahead: rolling cov/vol/momentum 只用 ≤T 决策可用输入
   missing-data/fallback: 与 L2 相同（ffill；方法 fallback → 1/N）
+```
+
+## 4b. C0/C1 控制处理（评审澄清）
+
+```text
+采用"确定性重建 + parity 断言"：用未变更的已接受实现（MaxDiv 120/0.5 project-constrained；
+Momentum 252/21 positive-score）在架构 RUN 中重建 C0/C1，评估 C2-C4 前断言其 metrics 与
+gen3 artifact 精确 parity（calendar_cagr 0.059496 / max_drawdown -0.103874 等）。若 parity
+不通过 → stop condition（不得静默创建不同时序/fallback/FX/overlay 的新父基线）。
 ```
 
 # 5. 评估表（评审 §5）
@@ -79,12 +107,17 @@ w_final(T)     = RiskOverlayV0(w_blend_raw(T))     # 在混合后统一 overlay
 # 6. Ex-ante 成功标准（评审 §6，冻结于见结果前）
 
 ```text
-对每个候选，相对纯 MaxDiv（C0）定义评估准则：
+对每个候选，相对纯 MaxDiv（C0）定义评估准则。C0 绑定精确 gen3 值（非舍入显示值）：
+  C0_calendar_cagr = 0.059496
+  C0_max_drawdown  = -0.103874
 
-  R1（收益改进）：Calendar CAGR 相对 C0 提升 ≥ +0.5pct（即候选 CAGR ≥ MaxDiv 6.0% + 0.5%）
-  R2（回撤保护）：MaxDD 相对 C0 恶化 ≤ +5.0pct（即候选 MaxDD ≥ MaxDiv -10.4% - 5.0% = -15.4%）
-  R3（风险调整）：Sharpe ≥ 0.80 且 Calmar ≥ 0.40
-  R4（成本容忍）：1x 成本后 cum Δ 相对无成本 ≤ -3.0pct
+  R1（收益改进）：candidate_calendar_cagr - C0_calendar_cagr >= 0.005
+     即候选 calendar_cagr >= 0.064496（6.4496%）
+  R2（回撤保护）：candidate_max_drawdown >= C0_max_drawdown - 0.05
+     即候选 max_drawdown >= -0.153874（-15.3874%）
+  R3（风险调整）：Sharpe >= 0.80 且 Calmar >= 0.40
+  R4（成本容忍）：cost_cum_delta = net_cum_return - gross_cum_return（零或负）
+     R4 通过 iff cost_cum_delta >= -0.03（-3.0pct）；等价 cost_drag = gross - net <= 0.03
   R5（Pareto）：若候选被任一父（C0 或 C1）Pareto 支配（在 cum/Sharpe/MaxDD 上全部不劣且至少一项更优）
     → 标记为 dominated，不作为推荐
   R6（terminal wealth vs Sharpe 权衡）：允许 terminal-wealth 改进换取更低 Sharpe 的情形——
@@ -129,17 +162,23 @@ L2 gen3 / L1 frozen 结果作为父策略输入，不重跑。
 
 ```yaml
 gate: 4
-handoff_id: G4_POST_L2_DETERMINISTIC_ARCH_PREP_001
+handoff_id: G4_POST_L2_DETERMINISTIC_ARCH_PREP_CORRECTION_001
 packet: POST_L2_DETERMINISTIC_ARCHITECTURE_PREP
 status: READY_FOR_REVIEW
+
+corrections_applied:
+  hk_fx_timing: return_level_hk_cny(t)=raw_hk_hkd(t)*fx(t) unlagged; signal=return(T-1); realized=CNY T->T+1; no FX lag in return-level construction
+  r4_sign: cost_cum_delta = net - gross; R4 passes iff >= -0.03 (was reversed)
+  r1_r2_exact: C0 cagr 0.059496 (R1 threshold 0.064496), C0 mdd -0.103874 (R2 threshold -0.153874)
+  c0_c1_control: reconstruct with unchanged accepted impl + parity assert to gen3 artifact before C2-C4
 
 frozen:
   parents_immutable: {maxdiv: {lookback: 120, shrinkage: 0.5}, momentum: {lookback: 252, skip: 21}, same panel/overlay/timing/FX}
   candidates: [C0 MaxDiv 100%, C1 Momentum 100%, C2 alpha 0.75, C3 alpha 0.50, C4 alpha 0.25]
   blend_semantics: w_final = RiskOverlayV0(alpha*w_maxdiv + (1-alpha)*w_mom); cost on final executable path
-  timing: reuse accepted L2 (T decision, T-1 non-A signal, CNY HK, T->T+1 realized)
+  timing: reuse accepted L2 (T decision, T-1 non-A signal, CNY HK signal/return separation, T->T+1 realized)
   evaluation: full table + pre-frozen stress regimes
-  success_criteria: {R1 CAGR gain >= +0.5pct vs MaxDiv, R2 MaxDD degradation <= +5.0pct, R3 Sharpe >= 0.80 & Calmar >= 0.40, R4 1x cost cum delta <= -3.0pct, R5 Pareto non-dominated, R6 terminal-wealth allowed only if R2/R3 hold}
+  success_criteria: {R1 candidate_cagr - 0.059496 >= 0.005, R2 candidate_mdd >= -0.153874, R3 Sharpe >= 0.80 & Calmar >= 0.40, R4 cost_cum_delta >= -0.03, R5 Pareto non-dominated, R6 terminal-wealth allowed only if R2/R3 hold}
   no_dense_search: small pre-declared set only; no result-informed tuning
 
 not_done:

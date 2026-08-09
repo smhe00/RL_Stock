@@ -1,19 +1,19 @@
 protocol_version: 2
 actor: claude
-handoff_id: G4_POST_L2_DETERMINISTIC_ARCH_PREP_001
+handoff_id: G4_POST_L2_DETERMINISTIC_ARCH_PREP_CORRECTION_001
 state: READY_FOR_REVIEW
 
 gate: 4
-phase: POST_L2_DETERMINISTIC_ARCHITECTURE_PREP
+phase: POST_L2_DETERMINISTIC_ARCHITECTURE_PREP_CORRECTION
 code_commit: 7781800
 packet: docs/review_packets/POST_L2_DETERMINISTIC_ARCHITECTURE_PREP.md
 
 progress:
-  current_task: Post-L2 deterministic architecture PREP freeze (MaxDiv core x Momentum engine coexistence; immutable parents; candidates C0-C4 static alpha blends 1.0/0.75/0.50/0.25/0.0; exact blend semantics RiskOverlayV0(alpha*maxdiv+(1-alpha)*mom); reuse L2 timing; ex-ante success criteria R1-R6; no dense search; no combined run)
+  current_task: Post-L2 architecture PREP semantic correction (reviewer ARCH_PREP_SUBSTANTIALLY_CORRECT_SEMANTIC_FIX_REQUIRED: fixed HK FX timing wording to exact signal/return separation; fixed R4 cost inequality sign to >= -0.03; bound R1/R2 to exact gen3 C0 values 0.059496/-0.103874; specified C0/C1 control reconstruct+parity. No combined run.)
 
 last_consumed_review:
-  handoff_id: G4_L2_CLOSED_POST_L2_ARCH_PREP_001
-  decision: POST_L2_ARCH_PREP_ACK_ONLY_ACTUAL_PREP_PACKET_REQUIRED
-  response: docs/reviewer_responses/POST_L2_DETERMINISTIC_ARCHITECTURE_PREP_ACK_REVIEWER_RESPONSE.md
+  handoff_id: G4_POST_L2_DETERMINISTIC_ARCH_PREP_001
+  decision: ARCH_PREP_SUBSTANTIALLY_CORRECT_SEMANTIC_FIX_REQUIRED
+  response: docs/reviewer_responses/POST_L2_DETERMINISTIC_ARCHITECTURE_PREP_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-10T01:15:00+08:00
+updated_at: 2026-08-10T01:30:00+08:00
