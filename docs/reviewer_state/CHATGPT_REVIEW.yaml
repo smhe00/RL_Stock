@@ -1,48 +1,53 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_LONG_HORIZON_NON_RL_PREP_001
-state: REVIEW_COMPLETE
+handoff_id: G4_LONG_HORIZON_NON_RL_RUN_001
+state: REVISIONS_REQUIRED
 
 reviewed_packet:
-  path: docs/review_packets/GATE_4_LONG_HORIZON_NON_RL_PREP.md
-  commit: bac3c0d1fcc23af6229b20ec9df411a951bae0fc
+  path: docs/review_packets/GATE_4_LONG_HORIZON_NON_RL_RUN.md
+  commit: 85163026aa0098f710d0b21f978879da2f59e83c
 
-code_commit: 8cd365904ec2b51eeece6615b54a9fda33f149ff
+code_commit: f039d369d94295433132e17cf981b2eb6243c17a
 
-decision: PREP_APPROVED_L1_RUN_AUTHORIZED
+decision: L1_RESULTS_ACCEPTED_DOC_CORRECTION_REQUIRED
 
 response:
-  path: docs/reviewer_responses/GATE_4_LONG_HORIZON_NON_RL_PREP_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/GATE_4_LONG_HORIZON_NON_RL_RUN_REVIEWER_RESPONSE.md
 
 passed:
-  - L1_WINDOW_AND_OBJECTIVE_FROZEN
-  - SIX_METHOD_SET_FROZEN
-  - CANONICAL_PARAMETERS_REUSED
+  - L1_EXECUTION_TECHNICALLY_VALID
+  - FROZEN_1011_DAY_WINDOW_PARITY
+  - SIX_METHOD_SET_AND_CANONICAL_PARAMS_PRESERVED
   - CAUSAL_T_TO_TPLUS1_SEMANTICS
-  - LONG_HORIZON_METRICS_AND_SUBPERIOD_PLAN
+  - NO_OLD_475_MASK_FOR_EVAL_DATES
+  - NO_DATA_REFETCH_OR_PRELAUNCH_BACKFILL
   - PPO_SAC_TD3_EXCLUDED
   - L2_NOT_EXECUTED
+  - MAXDIV_LONG_WINDOW_RISK_ADJUSTED_ADVANTAGE_SUPPORTED
+
+revision_required:
+  - RESULT_PACKET_OVERSTATES_MAXDIV_UNIQUENESS_IN_2022H2_2023
+  - MOMENTUM_12_1_IS_ALSO_POSITIVE_IN_WEAK_PHASE
 
 authorized_next:
-  - GATE_4_LONG_HORIZON_NON_RL_RUN
+  - GATE_4_LONG_HORIZON_NON_RL_RUN_DOC_FIX
 
 forbidden_next:
+  - L2_PROXY_SCENARIO_PREP
+  - L2_PROXY_SCENARIO_EXECUTION
   - PPO
   - SAC
   - TD3
   - RL_RETRAINING
   - RL_HYPERPARAMETER_TUNING
   - RL_COMPARISON
-  - L2_PROXY_SCENARIO_EXECUTION
   - QMT_LIVE
 
 notes:
-  - L1 runner must fail closed unless derived data parity exactly matches 2022-06-10 through 2026-08-07 and 1011 decision/execution dates under the frozen semantics.
-  - Do not use the historical 475-day exact_test_mask to determine L1 dates.
-  - Reuse current project MainlandETFCostModel for comparability, but label it as the current 1x project cost simplification rather than fully realistic cross-market fee modeling.
-  - HS300 remains a research-adjusted, no-cost reference and must be clearly separated from executable net strategy returns.
-  - Run tests and --check before full execution; failed invariant is a stop condition.
-  - Public-market data re-fetch/repair is allowed only inside real instrument live periods with provenance; no pre-launch backfill in L1.
-  - Return GATE_4_LONG_HORIZON_NON_RL_RUN for review after one frozen L1 execution.
+  - Do not rerun L1 or alter artifacts, code, parameters, or numeric results.
+  - Correct only the result packet and any summary text that says MaxDiv was the only positive executable method in the 2022H2-2023 weak phase.
+  - Correct interpretation: MaxDiv weak-phase Sharpe ~0.86 is highest; Momentum_12_1 is also positive at ~+3.0% cumulative return and Sharpe ~0.31.
+  - Return a documentation-only handoff, suggested G4_LONG_HORIZON_NON_RL_RUN_DOC_FIX_001.
+  - L2 remains unauthorized until the documentation correction is reviewed and L1 is formally closed.
 
-updated_at: 2026-08-09T19:43:00+08:00
+updated_at: 2026-08-09T20:35:00+08:00
