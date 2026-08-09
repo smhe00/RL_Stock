@@ -1,0 +1,390 @@
+{
+  "manifest": {
+    "gate": "4_FEATURE_ABLATION_DIAGNOSTIC_CLOSEOUT",
+    "method": "TRANSITION_QUARANTINED_DESCRIPTIVE_ONLY (no RL, no policy; market equal-weight fwd return)",
+    "inferential_claims_retired": true,
+    "descriptive_only": true,
+    "test_execution_mask_count": 475,
+    "excluded_decision_days": 475,
+    "screening_days": 539,
+    "transition_invariant": {
+      "no_screen_t_plus_1_in_test_exec": true,
+      "val_end_excluded": true
+    },
+    "segments_sizes": [
+      359,
+      60,
+      60,
+      60
+    ],
+    "f0_residualization": "reduced_F0_market_proxy (10 predictors; NOT full 104-dim F0)",
+    "rl_model_ablation_executed": false,
+    "conclusion": "Descriptive negative evidence only: on transition-quarantined development data, none of the six frozen F1 features shows a large, stable monotonic association with next-day market absolute return; the previously observed Test vol-ratio association does not reproduce with the same sign. Does not authorize deleting F1 features or changing RL observation/network; frozen F1 candidate set unchanged.",
+    "started_at": "2026-08-09 09:49:06"
+  },
+  "per_feature": {
+    "corr_pc1_share_60": {
+      "spearman_fwd_ret": 0.07781555790052867,
+      "spearman_fwd_abs": -0.0967990350358911,
+      "tercile_fwd_abs_mean": {
+        "low": 0.006041057778414141,
+        "mid": 0.004862784925019906,
+        "high": 0.005216602708936434
+      },
+      "tercile_gap_low_minus_high": 0.0008244550694777074,
+      "mann_whitney_p_exploratory_only": 0.019904690125094233,
+      "per_segment_spearman_abs": [
+        {
+          "seg": 0,
+          "n": 359,
+          "rho_abs": -0.10822453224610053
+        },
+        {
+          "seg": 1,
+          "n": 60,
+          "rho_abs": -0.44790219505418183
+        },
+        {
+          "seg": 2,
+          "n": 60,
+          "rho_abs": -0.12603500972492362
+        },
+        {
+          "seg": 3,
+          "n": 60,
+          "rho_abs": -0.1914420672409003
+        }
+      ],
+      "n": 539
+    },
+    "equity_bond_corr_change_20_60": {
+      "spearman_fwd_ret": -0.024181424287637775,
+      "spearman_fwd_abs": 0.014494692774034248,
+      "tercile_fwd_abs_mean": {
+        "low": 0.005336684599353168,
+        "mid": 0.005056065202994249,
+        "high": 0.005728769389345143
+      },
+      "tercile_gap_low_minus_high": -0.0003920847899919746,
+      "mann_whitney_p_exploratory_only": 0.6613303376280532,
+      "per_segment_spearman_abs": [
+        {
+          "seg": 0,
+          "n": 359,
+          "rho_abs": -0.0010034598486381061
+        },
+        {
+          "seg": 1,
+          "n": 60,
+          "rho_abs": 0.08368991386496251
+        },
+        {
+          "seg": 2,
+          "n": 60,
+          "rho_abs": 0.152820227841067
+        },
+        {
+          "seg": 3,
+          "n": 60,
+          "rho_abs": -0.044290080577938325
+        }
+      ],
+      "n": 539
+    },
+    "equity_gold_corr_change_20_60": {
+      "spearman_fwd_ret": -0.016557809335292075,
+      "spearman_fwd_abs": -0.04009697153616431,
+      "tercile_fwd_abs_mean": {
+        "low": 0.005590066944370539,
+        "mid": 0.005123701123468149,
+        "high": 0.005408126878967617
+      },
+      "tercile_gap_low_minus_high": 0.00018194006540292202,
+      "mann_whitney_p_exploratory_only": 0.6976865169352466,
+      "per_segment_spearman_abs": [
+        {
+          "seg": 0,
+          "n": 359,
+          "rho_abs": -0.011837143316578744
+        },
+        {
+          "seg": 1,
+          "n": 60,
+          "rho_abs": -0.21967213114754103
+        },
+        {
+          "seg": 2,
+          "n": 60,
+          "rho_abs": -0.06601833842734094
+        },
+        {
+          "seg": 3,
+          "n": 60,
+          "rho_abs": 0.0422895248680189
+        }
+      ],
+      "n": 539
+    },
+    "cn_us_corr_60": {
+      "spearman_fwd_ret": 0.08456042099164775,
+      "spearman_fwd_abs": 2.3756263798749192e-06,
+      "tercile_fwd_abs_mean": {
+        "low": 0.005473175093999331,
+        "mid": 0.00521190390515585,
+        "high": 0.005437305963104942
+      },
+      "tercile_gap_low_minus_high": 3.586913089438908e-05,
+      "mann_whitney_p_exploratory_only": 0.9181146703109613,
+      "per_segment_spearman_abs": [
+        {
+          "seg": 0,
+          "n": 359,
+          "rho_abs": 2.593589683737674e-06
+        },
+        {
+          "seg": 1,
+          "n": 60,
+          "rho_abs": -0.3050847457627119
+        },
+        {
+          "seg": 2,
+          "n": 60,
+          "rho_abs": -0.11575437621561546
+        },
+        {
+          "seg": 3,
+          "n": 60,
+          "rho_abs": -0.10425118088357879
+        }
+      ],
+      "n": 539
+    },
+    "equity_vol_ratio_20_60": {
+      "spearman_fwd_ret": -0.007532498185711142,
+      "spearman_fwd_abs": -0.061897175226968096,
+      "tercile_fwd_abs_mean": {
+        "low": 0.0055897007187843805,
+        "mid": 0.0053143391932929315,
+        "high": 0.005218914135116907
+      },
+      "tercile_gap_low_minus_high": 0.0003707865836674734,
+      "mann_whitney_p_exploratory_only": 0.1230412879708251,
+      "per_segment_spearman_abs": [
+        {
+          "seg": 0,
+          "n": 359,
+          "rho_abs": -0.06432984236161902
+        },
+        {
+          "seg": 1,
+          "n": 60,
+          "rho_abs": 0.022283967768824676
+        },
+        {
+          "seg": 2,
+          "n": 60,
+          "rho_abs": -0.11158655181995
+        },
+        {
+          "seg": 3,
+          "n": 60,
+          "rho_abs": 0.10903028619060852
+        }
+      ],
+      "n": 539
+    },
+    "equity_downside_semivol_60": {
+      "spearman_fwd_ret": 0.0749588694047315,
+      "spearman_fwd_abs": 0.05579729462984009,
+      "tercile_fwd_abs_mean": {
+        "low": 0.0050538465664731295,
+        "mid": 0.005350791085061554,
+        "high": 0.0057185189061693615
+      },
+      "tercile_gap_low_minus_high": -0.0006646723396962319,
+      "mann_whitney_p_exploratory_only": 0.1932365845301518,
+      "per_segment_spearman_abs": [
+        {
+          "seg": 0,
+          "n": 359,
+          "rho_abs": 0.06017637052221747
+        },
+        {
+          "seg": 1,
+          "n": 60,
+          "rho_abs": 0.05313768126444122
+        },
+        {
+          "seg": 2,
+          "n": 60,
+          "rho_abs": -0.05203975874678984
+        },
+        {
+          "seg": 3,
+          "n": 60,
+          "rho_abs": 0.051471012764986605
+        }
+      ],
+      "n": 539
+    }
+  },
+  "cross_fit_residualization": {
+    "corr_pc1_share_60": {
+      "per_fold": {
+        "F1": {
+          "rho_resid_abs": 0.0012273524254821744,
+          "n_train": 300,
+          "n_val": 59
+        },
+        "F2": {
+          "rho_resid_abs": -0.1440677966101695,
+          "n_train": 360,
+          "n_val": 59
+        },
+        "F3": {
+          "rho_resid_abs": -0.11630625365283462,
+          "n_train": 420,
+          "n_val": 59
+        },
+        "F4": {
+          "rho_resid_abs": -0.10128579777907658,
+          "n_train": 480,
+          "n_val": 59
+        }
+      },
+      "min_rho_resid_abs": -0.1440677966101695,
+      "median_rho_resid_abs": -0.10879602571595559
+    },
+    "equity_bond_corr_change_20_60": {
+      "per_fold": {
+        "F1": {
+          "rho_resid_abs": 0.10742255990648746,
+          "n_train": 300,
+          "n_val": 59
+        },
+        "F2": {
+          "rho_resid_abs": 0.16119228521332557,
+          "n_train": 360,
+          "n_val": 59
+        },
+        "F3": {
+          "rho_resid_abs": 0.07200467562828755,
+          "n_train": 420,
+          "n_val": 59
+        },
+        "F4": {
+          "rho_resid_abs": -0.08357685563997663,
+          "n_train": 480,
+          "n_val": 59
+        }
+      },
+      "min_rho_resid_abs": -0.08357685563997663,
+      "median_rho_resid_abs": 0.08971361776738751
+    },
+    "equity_gold_corr_change_20_60": {
+      "per_fold": {
+        "F1": {
+          "rho_resid_abs": -0.08527177089421394,
+          "n_train": 300,
+          "n_val": 59
+        },
+        "F2": {
+          "rho_resid_abs": -0.2508474576271187,
+          "n_train": 360,
+          "n_val": 59
+        },
+        "F3": {
+          "rho_resid_abs": -0.053302162478083004,
+          "n_train": 420,
+          "n_val": 59
+        },
+        "F4": {
+          "rho_resid_abs": -0.07551139684395092,
+          "n_train": 480,
+          "n_val": 59
+        }
+      },
+      "min_rho_resid_abs": -0.2508474576271187,
+      "median_rho_resid_abs": -0.08039158386908243
+    },
+    "cn_us_corr_60": {
+      "per_fold": {
+        "F1": {
+          "rho_resid_abs": -0.07369959088252484,
+          "n_train": 300,
+          "n_val": 59
+        },
+        "F2": {
+          "rho_resid_abs": -0.31326709526592644,
+          "n_train": 360,
+          "n_val": 59
+        },
+        "F3": {
+          "rho_resid_abs": -0.15791934541203975,
+          "n_train": 420,
+          "n_val": 59
+        },
+        "F4": {
+          "rho_resid_abs": -0.027527761542957337,
+          "n_train": 480,
+          "n_val": 59
+        }
+      },
+      "min_rho_resid_abs": -0.31326709526592644,
+      "median_rho_resid_abs": -0.1158094681472823
+    },
+    "equity_vol_ratio_20_60": {
+      "per_fold": {
+        "F1": {
+          "rho_resid_abs": -0.29579193454120406,
+          "n_train": 300,
+          "n_val": 59
+        },
+        "F2": {
+          "rho_resid_abs": -0.020046756282875514,
+          "n_train": 360,
+          "n_val": 59
+        },
+        "F3": {
+          "rho_resid_abs": -0.017299824663939218,
+          "n_train": 420,
+          "n_val": 59
+        },
+        "F4": {
+          "rho_resid_abs": -0.01022793687901812,
+          "n_train": 480,
+          "n_val": 59
+        }
+      },
+      "min_rho_resid_abs": -0.29579193454120406,
+      "median_rho_resid_abs": -0.018673290473407364
+    },
+    "equity_downside_semivol_60": {
+      "per_fold": {
+        "F1": {
+          "rho_resid_abs": -0.20333138515488022,
+          "n_train": 300,
+          "n_val": 59
+        },
+        "F2": {
+          "rho_resid_abs": -0.2585622443015781,
+          "n_train": 360,
+          "n_val": 59
+        },
+        "F3": {
+          "rho_resid_abs": -0.1250146113383986,
+          "n_train": 420,
+          "n_val": 59
+        },
+        "F4": {
+          "rho_resid_abs": 0.08743424897720632,
+          "n_train": 480,
+          "n_val": 59
+        }
+      },
+      "min_rho_resid_abs": -0.2585622443015781,
+      "median_rho_resid_abs": -0.16417299824663942
+    }
+  },
+  "runtime_seconds": 3.4
+}

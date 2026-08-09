@@ -311,6 +311,24 @@ class TestSegmentBlockPermutationP:
         assert set(y_perm[2:]) <= {3.0, 4.0}
 
 
+class TestSegmentShuffleDegeneracy:
+    def test_single_block_segment_is_identity(self):
+        """D1: 段长度 <= block_len → 单块，shuffle 恒等（块内顺序保留）。"""
+        from china_etf.evaluation.factor_importance import _shuffle_segment_blocks
+        rng = np.random.default_rng(0)
+        vals = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+        out = _shuffle_segment_blocks(vals, block_len=60, rng=rng)
+        assert np.array_equal(out, vals)  # 单块 → 恒等
+
+    def test_multi_block_shuffle_permutes_blocks(self):
+        """多块段 → shuffle 置换块顺序（值集合不变，顺序可能变）。"""
+        from china_etf.evaluation.factor_importance import _shuffle_segment_blocks
+        rng = np.random.default_rng(1)
+        vals = np.arange(20.0)
+        out = _shuffle_segment_blocks(vals, block_len=4, rng=rng)
+        assert set(out) == set(vals)  # 块洗牌是置换，值集合不变
+
+
 class TestC1TransitionInvariant:
     def test_screen_t_plus_1_not_in_test_exec(self):
         """C1: 排除决策日（执行日前一日）后，screen 中任何 t 的 t+1 不在 Test 执行 mask 中。"""
