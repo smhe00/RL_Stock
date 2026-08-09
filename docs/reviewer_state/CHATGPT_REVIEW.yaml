@@ -1,27 +1,30 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: GATE_4_RL_NO_GO_CLOSEOUT_001
+handoff_id: G4_LONG_HORIZON_NON_RL_PREP_001
 state: REVIEW_COMPLETE
 
 reviewed_packet:
-  path: docs/review_packets/GATE_4_RL_NO_GO_CLOSEOUT.md
-  commit: f4e0d399cbb52c30d35ca95e88c6246599bf408b
+  path: docs/review_packets/GATE_4_LONG_HORIZON_NON_RL_PREP.md
+  commit: bac3c0d1fcc23af6229b20ec9df411a951bae0fc
 
-code_commit: c18234a1153f9f03c38537fe717c26a025e94200
+code_commit: 8cd365904ec2b51eeece6615b54a9fda33f149ff
 
-decision: CLOSEOUT_ACCEPTED_LONG_HORIZON_NON_RL_PREP_AUTHORIZED
+decision: PREP_APPROVED_L1_RUN_AUTHORIZED
 
 response:
-  path: docs/reviewer_responses/LONG_HORIZON_NON_RL_ROBUSTNESS_DIRECTIVE.md
+  path: docs/reviewer_responses/GATE_4_LONG_HORIZON_NON_RL_PREP_REVIEWER_RESPONSE.md
 
 passed:
-  - DOCUMENTATION_ONLY_CLOSEOUT
-  - PREVIOUS_FORMAL_NO_GO_ACCURATELY_ARCHIVED
-  - CURRENT_F0_RL_BRANCH_CLOSED
-  - DETERMINISTIC_LONG_HORIZON_RESEARCH_DIRECTION_APPROVED
+  - L1_WINDOW_AND_OBJECTIVE_FROZEN
+  - SIX_METHOD_SET_FROZEN
+  - CANONICAL_PARAMETERS_REUSED
+  - CAUSAL_T_TO_TPLUS1_SEMANTICS
+  - LONG_HORIZON_METRICS_AND_SUBPERIOD_PLAN
+  - PPO_SAC_TD3_EXCLUDED
+  - L2_NOT_EXECUTED
 
 authorized_next:
-  - GATE_4_LONG_HORIZON_NON_RL_PREP
+  - GATE_4_LONG_HORIZON_NON_RL_RUN
 
 forbidden_next:
   - PPO
@@ -30,13 +33,16 @@ forbidden_next:
   - RL_RETRAINING
   - RL_HYPERPARAMETER_TUNING
   - RL_COMPARISON
+  - L2_PROXY_SCENARIO_EXECUTION
   - QMT_LIVE
 
 notes:
-  - PPO/SAC/TD3 remain closed and are explicitly excluded from the new study.
-  - Next scope is PREP for the real-instrument ~4.2-year long-horizon deterministic robustness study.
-  - Public-market data re-fetch/repair is permitted inside real instrument live periods with provenance; no pre-launch backfill may be represented as real-instrument history.
-  - L2 approximately 2015-2026 proxy scenario research is not yet authorized for execution; it requires a separate reviewed proposal after L1.
-  - Claude must return GATE_4_LONG_HORIZON_NON_RL_PREP for review before executing the L1 horse race.
+  - L1 runner must fail closed unless derived data parity exactly matches 2022-06-10 through 2026-08-07 and 1011 decision/execution dates under the frozen semantics.
+  - Do not use the historical 475-day exact_test_mask to determine L1 dates.
+  - Reuse current project MainlandETFCostModel for comparability, but label it as the current 1x project cost simplification rather than fully realistic cross-market fee modeling.
+  - HS300 remains a research-adjusted, no-cost reference and must be clearly separated from executable net strategy returns.
+  - Run tests and --check before full execution; failed invariant is a stop condition.
+  - Public-market data re-fetch/repair is allowed only inside real instrument live periods with provenance; no pre-launch backfill in L1.
+  - Return GATE_4_LONG_HORIZON_NON_RL_RUN for review after one frozen L1 execution.
 
-updated_at: 2026-08-09T19:30:00+08:00
+updated_at: 2026-08-09T19:43:00+08:00
