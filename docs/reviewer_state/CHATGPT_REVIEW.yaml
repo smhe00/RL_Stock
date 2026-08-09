@@ -1,33 +1,40 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_FEATURE_ABLATION_DIAGNOSTIC_CLOSEOUT_001
-state: REVIEW_COMPLETE
+handoff_id: RL_FORMAL_PROTOCOL_PREP_001
+state: REVISIONS_REQUIRED
 
 reviewed_packet:
-  path: docs/review_packets/GATE_4_FEATURE_ABLATION_DIAGNOSTIC_CLOSEOUT.md
-  commit: c78a2151bf2f85ffa94e577d2eb7261f56e22304
+  path: docs/review_packets/RL_FORMAL_PROTOCOL_PREP.md
+  commit: 90558aaef0b0a900572ed98f6079b420a05d06ef
 
-code_commit: cad0d4bd1c3b1b070f7b9a7aa65b7de64f130a03
+code_commit: 707bbe34d157e66275edfac0e9f35c24ce687a02
 
-decision: APPROVED
+decision: TARGETED_PROTOCOL_CORRECTIONS_REQUIRED
 
 response:
-  path: docs/reviewer_responses/GATE_4_FEATURE_ABLATION_DIAGNOSTIC_CLOSEOUT_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/RL_FORMAL_PROTOCOL_PREP_REVIEWER_RESPONSE.md
 
 passed:
-  - D1_CONFIRMATORY_INFERENCE_RETIRED
-  - D2_BOOTSTRAP_CI_EVIDENCE_REMOVED
-  - D3_DESCRIPTIVE_CONCLUSION_NARROWED
-  - TEST_TRANSITION_QUARANTINE
-  - PER_SEGMENT_DESCRIPTIVE_REPORTING
-  - REDUCED_F0_PROXY_LABEL_AND_NARROWED_INTERPRETATION
-  - FROZEN_F1_CANDIDATE_SET_UNCHANGED
-  - NO_RL_RETRAINING
-  - NO_10_SEED
-  - NO_OPTUNA_OR_SWEEP
+  - PREP_ONLY_SCOPE
+  - CORRECTED_EVALUATION_SEMANTICS_DIRECTION
+  - TRAIN_BUDGET_SKELETON
+  - THREE_SEED_IDENTITIES_AS_PILOT_SET
+  - TRACKED_ARTIFACT_INTENT
+  - NO_FORMAL_SIGNIFICANCE_CLAIM_FROM_3_SEEDS
+
+blocked:
+  - P1_F0_RATIONALE_MUST_NOT_CONSUME_DESCRIPTIVE_F1_DIAGNOSTIC
+  - P2_3SEED_VS_CONDITIONAL_10SEED_CANONICAL_CONFLICT
+  - P3_475_TEST_IS_RESEARCH_BENCHMARK_NOT_PRISTINE_FINAL_HOLDOUT
+  - P4_EQUALWEIGHT_ONLY_HURDLE_IGNORES_NON_RL_RISK_FRONTIER
+  - P5_ALGORITHM_DIMENSION_GO_NO_GO_AMBIGUOUS
+  - P6_VALIDATION_CHECKPOINT_SELECTION_UNDERSPECIFIED
+  - P7_EFFECTIVE_SB3_HYPERPARAMETERS_NOT_FULLY_FROZEN
+  - P8_EVALUATOR_INVARIANTS_NOT_HARD_STOP_CONDITIONS
+  - P9_ACTIVE_DAY_ANNUALIZATION_NAMING_AMBIGUITY
 
 authorized_next:
-  - RL_FORMAL_PROTOCOL_PREP
+  - RL_FORMAL_PROTOCOL_PREP_CORRECTIONS
 
 forbidden_next:
   - RL_RETRAINING
@@ -35,6 +42,7 @@ forbidden_next:
   - GATE_4_10_SEED_FORMAL
   - OPTUNA
   - HYPERPARAMETER_SWEEP
+  - TEST_INFORMED_ALGO_SELECTION
   - TEST_INFORMED_FEATURE_SELECTION
   - FEATURE_SET_CHANGE_FROM_CURRENT_TEST_RESULTS
   - FEATURE_DATA_READY_EXPANSION
@@ -43,11 +51,15 @@ forbidden_next:
   - SOUTHBOUND_EXECUTION
 
 notes:
-  - Feature-diagnostic closeout is descriptive only; confirmatory p/Holm/BH and bootstrap-CI claims are retired.
-  - The canonical 475 Test execution dates are mapped to preceding decision dates and excluded; the transition invariant is retained.
-  - Supported conclusion is limited to descriptive negative evidence: no large stable monotonic F1 association is seen on transition-quarantined development data, and the prior Test vol-ratio association does not reproduce with the same sign.
-  - This does not prove absence of F1 predictive value and does not authorize deleting F1 features or changing RL observation/network.
-  - mann_whitney_p_exploratory_only remains non-confirmatory and must not be consumed for model/feature decisions.
-  - RL_FORMAL_PROTOCOL_PREP is protocol-freeze/preparation only; it must not launch RL training or corrected F0 3-seed runs.
+  - F0 remains the correct formal baseline, but because it was already frozen before the descriptive F1 diagnostic; the closeout must not be consumed as proof that F1 has no value.
+  - FEATURE_ABLATION_SPEC still freezes a conditional F0 10-seed formal stage; current protocol cannot silently remove it. Treat the next 3-seed run as corrected research-benchmark GO/NO-GO and leave later robustness formal work conditional/unapproved.
+  - The historical 475-date mask has already been observed repeatedly, so it is a research benchmark, not a pristine final holdout. Reserve a future forward holdout for final confirmation.
+  - EqualWeight is the return hurdle, while MaximumDiversification is the risk-adjusted frontier; both must be represented in interpretation before claiming RL incremental value.
+  - GO/NO-GO must be defined per algorithm and project-level without Test-based winner selection.
+  - Prefer final training endpoint only; otherwise freeze checkpoint cadence, validation metric, tie-break, and scope before execution.
+  - Freeze all effective PPO/SAC/TD3 constructor hyperparameters plus software/device policy in machine-readable config consumed by runner/tests.
+  - Add execution-date parity, 475-step parity, cost reconciliation, and complete fold/raw-series checks as fail-closed stop conditions.
+  - Use active_day_annualized_return consistently for stitched series with validation gaps; do not call it calendar CAGR.
+  - No RL training is authorized by this review.
 
-updated_at: 2026-08-09T09:53:00+08:00
+updated_at: 2026-08-09T10:05:00+08:00
