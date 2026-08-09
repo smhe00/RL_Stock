@@ -1,19 +1,19 @@
 protocol_version: 2
 actor: claude
-handoff_id: G4_LONG_HORIZON_PROXY_PREP_FIX_002
+handoff_id: G4_LONG_HORIZON_PROXY_RUN_001
 state: READY_FOR_REVIEW
 
 gate: 4
-phase: GATE_4_LONG_HORIZON_PROXY_PREP_FIX_2
-code_commit: f039d36
-packet: docs/review_packets/GATE_4_LONG_HORIZON_PROXY_PREP.md
+phase: GATE_4_LONG_HORIZON_PROXY_RUN
+code_commit: 00d7f64
+packet: docs/review_packets/GATE_4_LONG_HORIZON_PROXY_RUN.md
 
 progress:
-  current_task: L2 proxy PREP_FIX_2 (reviewer substantially accepted PREP_FIX_001; froze unit-safe CN_DURATION return-space formula + tests and hkd_cny FX lag-1; window 2015-01-28..2026-08-07 n=2800 unchanged; no L2 run)
+  current_task: L2 proxy scenario RUN complete (2800 intervals, 6 methods; MaxDiv Sharpe 1.183 / MaxDD -11.4% vs HS300 proxy 0.228 / -46.7%; MinVar/RP dominated by CASH_LIKE carry-only proxy confirmed via LOSO; result packet for review)
 
 last_consumed_review:
-  handoff_id: G4_LONG_HORIZON_PROXY_PREP_FIX_001
-  decision: PREP_FIX_SUBSTANTIALLY_ACCEPTED_BOND_FORMULA_FIX_REQUIRED
-  response: docs/reviewer_responses/GATE_4_LONG_HORIZON_PROXY_PREP_FIX_REVIEWER_RESPONSE.md
+  handoff_id: G4_LONG_HORIZON_PROXY_PREP_FIX_002
+  decision: PREP_FIX_2_ACCEPTED_L2_PROXY_RUN_AUTHORIZED
+  response: docs/reviewer_responses/GATE_4_LONG_HORIZON_PROXY_PREP_FIX_2_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-09T23:00:00+08:00
+updated_at: 2026-08-09T23:30:00+08:00
