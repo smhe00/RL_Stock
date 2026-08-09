@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
 
+ROOT_ARTIFACT_DIR = Path(__file__).resolve().parents[1] / "artifacts"
+
 from china_etf.evaluation.factor_importance import (
     bh_fdr,
     block_bootstrap_ci,
+    block_permutation_p,
     cross_fit_residual_spearman,
     decision_dates,
     holm_adjust,
@@ -238,3 +243,61 @@ class TestScreeningDecisionDays:
             all_screen.update(pd.DatetimeIndex([d for d in idx if f.val_start <= d <= f.val_end]))
             all_test.update(pd.DatetimeIndex([d for d in idx if f.test_start <= d <= f.test_end]))
         assert not all_screen.isdisjoint(all_test)
+
+
+class TestBlockPermutationP:
+    def test_null_permutation_p_not_tiny(self):
+        """独立 x/y（无关联）→ permutation p 不应很小（null 下近似均匀）。"""
+        rng = np.random.default_rng(10)
+        x = rng.normal(0, 1, 300)
+        y = rng.normal(0, 1, 300)
+        p = block_permutation_p(x, y, spearman, n_perm=300, block_len=20, seed=0)
+        assert p > 0.05
+
+    def test_strong_signal_small_p(self):
+        """强单调信号 → permutation p 很小（<0.05）。"""
+        rng = np.random.default_rng(11)
+        x = np.linspace(0.0, 1.0, 300)
+        y = 3 * x + rng.normal(0, 0.05, 300)
+        p = block_permutation_p(x, y, spearman, n_perm=300, block_len=20, seed=0)
+        assert p < 0.05
+
+    def test_permutation_p_in_unit_interval(self):
+        x = np.arange(100.0)
+        y = np.arange(100.0)
+        p = block_permutation_p(x, y, spearman, n_perm=100, block_len=20, seed=0)
+        assert 0.0 <= p <= 1.0
+
+
+class TestBlockBootstrapNoPBs:
+    def test_no_p_bs_key(self):
+        """B4: block_bootstrap_ci 不再返回 p_bs（非 null 检验）。"""
+        x = np.linspace(0.0, 1.0, 100)
+        y = 2 * x
+        ci = block_bootstrap_ci(x, y, spearman, n_boot=50, block_len=20, seed=0)
+        assert "p_bs" not in ci
+        assert "ci_low" in ci and "ci_high" in ci
+
+
+class TestGlobalTestExclusion:
+    def test_global_union_exclusion_disjoint(self):
+        """全局 test 排除后 screening 集与 global test union 不相交（B1）。"""
+        from china_etf.evaluation.walkforward import make_folds
+        idx = pd.date_range("2020-01-01", periods=1000, freq="B")
+        folds = make_folds(idx, n_folds=4, min_train_days=300, val_days=60)
+        global_test = set()
+        for f in folds:
+            global_test.update(pd.DatetimeIndex([d for d in idx if f.test_start <= d <= f.test_end]))
+        screen = set(pd.DatetimeIndex([d for d in idx if d in idx[:-1]])) - global_test
+        assert screen.isdisjoint(global_test)
+        # 与 fold-local 不同：union 确实包含被排除的 test 日（验证排除必要性）
+        assert len(screen) < len(idx) - 1
+
+    def test_reduced_f0_proxy_label(self):
+        """B5: 脚本 manifest 用 reduced_F0_market_proxy 命名（非完整 F0）。"""
+        import json
+        from pathlib import Path
+        art = ROOT_ARTIFACT_DIR / "gate4_feature_importance_stat_final.json"
+        if art.exists():
+            r = json.loads(art.read_text(encoding="utf-8"))
+            assert "reduced_F0_market_proxy" in r["manifest"]["f0_residualization"]

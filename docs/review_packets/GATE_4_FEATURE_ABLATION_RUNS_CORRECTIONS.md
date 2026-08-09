@@ -1,5 +1,9 @@
 # GATE 4 FEATURE ABLATION RUNS — CORRECTIONS（Train/Val-only 因子 screening，A1-A5）
 
+> **注记（STAT_FINALIZATION）**：本 packet 的 fold-local 隔离被评审 B1 判定不足（expanding 下后 fold
+> train 含前 fold test）；统计量（median-p Holm/BH、median-of-CI、p_bs）被 B2/B3/B4 判定无效。
+> 最终版本见 `GATE_4_FEATURE_ABLATION_RUNS_STAT_FINALIZATION.md`（全局 Test 隔离 + 有效多重检验）。
+>
 > 评审（`GATE_4_FEATURE_ABLATION_RUNS_REVIEWER_RESPONSE.md`）**REVISIONS_REQUIRED**（A1-A5），
 > `authorized_next: GATE_4_FEATURE_ABLATION_RUNS_CORRECTIONS`。本 packet 关闭 A1-A5。
 > handoff_id = **G4_FEATURE_ABLATION_RUNS_CORRECTIONS_001**。

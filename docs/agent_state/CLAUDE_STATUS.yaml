@@ -1,19 +1,19 @@
 protocol_version: 2
 actor: claude
-handoff_id: G4_FEATURE_ABLATION_RUNS_CORRECTIONS_001
+handoff_id: G4_FEATURE_ABLATION_RUNS_STAT_FINALIZATION_001
 state: READY_FOR_REVIEW
 
 gate: 4
-phase: GATE_4_FEATURE_ABLATION_RUNS_CORRECTIONS
-code_commit: 520d13a
-packet: docs/review_packets/GATE_4_FEATURE_ABLATION_RUNS_CORRECTIONS.md
+phase: GATE_4_FEATURE_ABLATION_RUNS_STAT_FINALIZATION
+code_commit: PENDING_SHA
+packet: docs/review_packets/GATE_4_FEATURE_ABLATION_RUNS_STAT_FINALIZATION.md
 
 progress:
-  current_task: Train/Val-only fold-local factor screening (A1-A5 corrections; no F1 feature significant; vol_ratio Test signal not robust)
+  current_task: global Test-free screening + valid dependence-aware multiple testing (B1-B5; no F1 feature significant)
 
 last_consumed_review:
-  handoff_id: G4_FEATURE_ABLATION_RUNS_001
-  decision: REVISIONS_REQUIRED
-  response: docs/reviewer_responses/GATE_4_FEATURE_ABLATION_RUNS_REVIEWER_RESPONSE.md
+  handoff_id: G4_FEATURE_ABLATION_RUNS_CORRECTIONS_001
+  decision: TARGETED_STATISTICAL_FINALIZATION_REQUIRED
+  response: docs/reviewer_responses/GATE_4_FEATURE_ABLATION_RUNS_CORRECTIONS_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-09T09:00:00+08:00
+updated_at: 2026-08-09T09:15:00+08:00

@@ -137,13 +137,13 @@ def _moving_block_indices(n: int, block_len: int, rng: np.random.Generator) -> n
 
 def block_bootstrap_ci(x: np.ndarray, y: np.ndarray, stat_fn, *,
                        n_boot: int = 1000, block_len: int = 20, seed: int = 0) -> dict:
-    """移动块 bootstrap 置信区间（时间序列依赖感知）。
+    """移动块 bootstrap percentile 置信区间（时间序列依赖感知；**描述性，非 null 检验**）。
 
-    重采样原始 (x, y) 的对齐（按位置，非按日期），对每 bootstrap 样本重算 stat_fn(x, y)，
-    返回 2.5%/97.5% 分位 CI + bootstrap 均值 + 双侧 p（CI 相对 0 的 bootstrap 极值比例）。
+    重采样原始 (x, y) 的对齐（按位置），对每 bootstrap 样本重算 stat_fn(x, y)，
+    返回 2.5%/97.5% 分位 CI + bootstrap 均值。**不含 p 值**——bootstrap 分布中心在观测统计量
+    附近，非 null-centered（B4）；显著性用 block_permutation_p。
 
     stat_fn(x, y) → float（如 spearman 或 tercile gap 的标量）。
-    仅用 x/y 均 finite 的对齐位置。
     """
     x = np.asarray(x, dtype=float)
     y = np.asarray(y, dtype=float)
@@ -153,11 +153,11 @@ def block_bootstrap_ci(x: np.ndarray, y: np.ndarray, stat_fn, *,
     bl = max(1, min(int(block_len), n))
     if n < 5:
         return {"ci_low": float("nan"), "ci_high": float("nan"), "mean": float("nan"),
-                "n": int(n), "p_bs": float("nan")}
+                "n": int(n)}
     obs = stat_fn(xx, yy)
     if not np.isfinite(obs):
         return {"ci_low": float("nan"), "ci_high": float("nan"), "mean": float("nan"),
-                "n": int(n), "p_bs": float("nan")}
+                "n": int(n)}
     rng = np.random.default_rng(seed)
     stats = np.empty(n_boot)
     n_ok = 0
@@ -169,13 +169,46 @@ def block_bootstrap_ci(x: np.ndarray, y: np.ndarray, stat_fn, *,
             n_ok += 1
     if n_ok < max(20, n_boot // 10):
         return {"ci_low": float("nan"), "ci_high": float("nan"), "mean": float("nan"),
-                "n": int(n), "p_bs": float("nan")}
+                "n": int(n)}
     stats = stats[:n_ok]
     low, high = np.percentile(stats, [2.5, 97.5])
-    # 双侧 bootstrap p：观测值相对 0 的极值比例
-    p_bs = 2.0 * min(float((stats >= obs).mean()), float((stats <= obs).mean()))
     return {"ci_low": float(low), "ci_high": float(high), "mean": float(np.mean(stats)),
-            "n": int(n), "p_bs": float(max(p_bs, 1e-12))}
+            "n": int(n)}
+
+
+def block_permutation_p(x: np.ndarray, y: np.ndarray, stat_fn, *,
+                        n_perm: int = 1000, block_len: int = 20, seed: int = 0) -> float:
+    """Block-shuffle permutation 的 null-centered 双侧 p（B2/B4）。
+
+    在 x 保持不变下，对 y 做移动块洗牌（保持时间连续 + 依赖结构近似），重算 stat_fn(x, y_shuffled)
+    得到 null 分布；p = 2 * min(P(null >= obs), P(null <= obs))，夹到 [1/n_perm, 1]。
+    """
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+    m = np.isfinite(x) & np.isfinite(y)
+    xx, yy = x[m], y[m]
+    n = len(xx)
+    bl = max(1, min(int(block_len), n))
+    if n < 5:
+        return float("nan")
+    obs = stat_fn(xx, yy)
+    if not np.isfinite(obs):
+        return float("nan")
+    rng = np.random.default_rng(seed)
+    # null 分布：打乱 y 的移动块
+    cnt_ge = 1  # +1 计入观测本身（保守）
+    cnt_le = 1
+    for _ in range(n_perm):
+        idx = _moving_block_indices(n, bl, rng)
+        y_shuf = yy[idx]
+        s = stat_fn(xx, y_shuf)
+        if not np.isfinite(s):
+            continue
+        cnt_ge += int(s >= obs)
+        cnt_le += int(s <= obs)
+    total = n_perm + 1
+    p = 2.0 * min(cnt_ge, cnt_le) / total
+    return float(max(p, 1.0 / total))
 
 
 def holm_adjust(pvals) -> np.ndarray:
