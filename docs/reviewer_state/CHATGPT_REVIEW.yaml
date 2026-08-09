@@ -1,18 +1,18 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_LONG_HORIZON_PROXY_PREP_FIX_001
-state: REVISIONS_REQUIRED
+handoff_id: G4_LONG_HORIZON_PROXY_PREP_FIX_002
+state: REVIEW_COMPLETE
 
 reviewed_packet:
   path: docs/review_packets/GATE_4_LONG_HORIZON_PROXY_PREP.md
-  commit: 89c549f868e1dbcaa4b197473c3b5dacba80121e
+  commit: 520a44e4229f4e7ea7110f2e5bf5a66735bd2409
 
 code_commit: f039d369d94295433132e17cf981b2eb6243c17a
 
-decision: PREP_FIX_SUBSTANTIALLY_ACCEPTED_BOND_FORMULA_FIX_REQUIRED
+decision: PREP_FIX_2_ACCEPTED_L2_PROXY_RUN_AUTHORIZED
 
 response:
-  path: docs/reviewer_responses/GATE_4_LONG_HORIZON_PROXY_PREP_FIX_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/GATE_4_LONG_HORIZON_PROXY_PREP_FIX_2_REVIEWER_RESPONSE.md
 
 passed:
   - TRACK_C_SCENARIO_LABELING_CORRECT
@@ -21,23 +21,19 @@ passed:
   - STAR_PROXY_NO_LONGER_DUPLICATES_CHINEXT
   - CASH_LIKE_PRIMARY_PROXY_IS_CARRY_ONLY_NEAR_ZERO_DURATION
   - UNIFORM_PRICE_RETURN_MAIN_PANEL_FROZEN
-  - CROSS_MARKET_CAUSAL_TIMING_SUBSTANTIALLY_CORRECTED
+  - CROSS_MARKET_CAUSAL_TIMING_FROZEN
+  - HKD_CNY_LAG1_FROZEN
+  - CN_DURATION_UNIT_SAFE_RETURN_FORMULA_FROZEN
+  - CN_DURATION_10BP_SYNTHETIC_TEST_REQUIRED
   - WINDOW_REDERIVED_TO_2800_INTERVALS
   - PRE_FROZEN_REGIME_REPORTING_DEFINED
   - PPO_SAC_TD3_EXCLUDED
-  - L2_NOT_EXECUTED
-
-revision_required:
-  - CN_DURATION_YIELD_UNITS_AND_RETURN_FORMULA_NOT_EXPLICITLY_FROZEN
-  - CN_DURATION_CARRY_MUST_BE_RETURN_SPACE_NOT_ADDITIVE_PRICE_CONSTANT
-  - HKD_CNY_TIMING_MUST_FOLLOW_CAUSAL_AVAILABILITY_RULE
+  - L2_PREP_COMPLETE
 
 authorized_next:
-  - GATE_4_LONG_HORIZON_PROXY_PREP_FIX_2
+  - GATE_4_LONG_HORIZON_PROXY_RUN
 
 forbidden_next:
-  - GATE_4_LONG_HORIZON_PROXY_RUN
-  - L2_PROXY_SCENARIO_EXECUTION
   - PPO
   - SAC
   - TD3
@@ -47,12 +43,13 @@ forbidden_next:
   - QMT_LIVE
 
 notes:
-  - The prior four material proxy-design issues are substantively accepted.
-  - Freeze CN_DURATION in unit-safe return space before L2: convert percent yield to decimal, use duration shock plus carry as return, then compound the proxy price.
-  - Add a synthetic +10bp test: delta_y=0.0010 and D_eff=7.5 implies about -0.75% pure duration return before carry.
-  - Missing yield dates must be forward-filled before computing one realized yield change; do not create repeated shocks across gap days.
-  - HKD/CNY must use a value known by the chosen decision cutoff; if publication timing is not proven, lag consistently with HK inputs.
-  - Return documentation/PREP-only handoff G4_LONG_HORIZON_PROXY_PREP_FIX_002; do not run L2 yet.
-  - L1 remains frozen and closed.
+  - L2 proxy scenario run is authorized under the frozen SCENARIO_NOT_STRICT_PIT_OOS contract.
+  - Derived window must fail-closed at 2015-01-28 through 2026-08-07 with 2800 decision/return intervals; any mismatch is a blocker.
+  - Implement the frozen 11-slot proxy mapping, return basis, lag rules, CN_DURATION formula, and provenance exactly as reviewed.
+  - tests/test_long_horizon_proxy.py and scripts/gate4_long_horizon_proxy.py --check must pass before the full run.
+  - No proxy substitution, parameter tuning, regime-boundary change, data repair after observing strategy results, or method-set change is authorized.
+  - Primary output is the no-cost research-return scenario table; project 1x cost sensitivity must remain separately labeled and non-executable.
+  - Return GATE_4_LONG_HORIZON_PROXY_RUN for review with annual/regime metrics, slot weights/concentration, and dependency diagnostics.
+  - L1 remains frozen and closed; PPO/SAC/TD3 remain excluded.
 
-updated_at: 2026-08-09T22:04:00+08:00
+updated_at: 2026-08-09T23:10:00+08:00
