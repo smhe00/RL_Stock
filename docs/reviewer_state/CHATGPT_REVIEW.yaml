@@ -1,41 +1,42 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_LONG_HORIZON_PROXY_RUN_001
+handoff_id: G4_LONG_HORIZON_PROXY_RUN_FIX_RERUN_001
 state: REVISIONS_REQUIRED
 
 reviewed_packet:
   path: docs/review_packets/GATE_4_LONG_HORIZON_PROXY_RUN.md
-  commit: 538e6881472e8ae2ef7d061db7328e52ab249481
+  commit: 0c8b9b4500fe73488c9bce442e583a9d53337f77
 
-code_commit: 00d7f64c1a0a632a6a0c0232a194ad8a42877228
+code_commit: aff4b341a4bed8f104b276947eff5232a984c037
 
-decision: L2_RUN_RESULTS_QUARANTINED_IMPLEMENTATION_FIX_RERUN_REQUIRED
+decision: FIX_RERUN_SUBSTANTIALLY_CORRECT_FX_CONVERSION_MISSING_FINAL_RERUN_REQUIRED
 
 response:
-  path: docs/reviewer_responses/GATE_4_LONG_HORIZON_PROXY_RUN_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/GATE_4_LONG_HORIZON_PROXY_RUN_FIX_RERUN_REVIEWER_RESPONSE.md
 
 passed:
   - TRACK_C_SCENARIO_LABELING_CORRECT
   - WINDOW_2800_PARITY_REPORTED
-  - SIX_METHOD_SET_AND_CANONICAL_PARAMS_REPORTED
-  - PROXY_MAPPING_AND_PROVENANCE_REPORTED
-  - CN_DURATION_UNIT_SAFE_FORMULA_IMPLEMENTED
-  - CASH_LIKE_CARRY_ONLY_IMPLEMENTED
-  - STAR_PROXY_DISTINCT_FROM_CHINEXT
+  - SIX_METHOD_SET_AND_CANONICAL_PARAMS_PRESERVED
+  - SIGNAL_PANEL_AND_REALIZED_RETURN_PANEL_SEPARATED
+  - LAGGED_NON_A_SIGNAL_TIMING_CORRECTED
+  - COMMON_RISK_OVERLAY_APPLIED_TO_ALL_FIVE_METHODS
+  - POST_OVERLAY_VIOLATIONS_ZERO
+  - MINVAR_RP_PATHOLOGICAL_CONCENTRATION_REMOVED
+  - NUMERIC_COST_SENSITIVITY_REPORTED
+  - STAR_POST2020_CALIBRATION_COMPUTED
+  - RAW_ARTIFACT_POPULATED
+  - FULL_TEST_SUITE_REPORTED_268_PASS
   - PPO_SAC_TD3_EXCLUDED
-  - FULL_TEST_SUITE_REPORTED_265_PASS
 
 revision_required:
-  - SIGNAL_PANEL_AND_REALIZED_RETURN_PANEL_CONFLATED_FOR_LAGGED_SLOTS
-  - LAGGED_HK_US_GOLD_RETURNS_MISALIGNED_WITH_FROZEN_T_TO_TPLUS1_INTERVAL
-  - COMMON_RISK_OVERLAY_NOT_APPLIED_TO_ALL_DETERMINISTIC_METHODS
-  - MINVAR_RP_MOMENTUM_VIOLATE_PROJECT_SINGLE_SLOT_25PCT_CAP
-  - COST_SENSITIVITY_HAS_NO_NUMERIC_RESULTS
-  - STAR_POST2020_CALIBRATION_NOT_COMPUTED
-  - RAW_ARTIFACT_EMPTY_PLACEHOLDER
+  - HKD_CNY_FROZEN_CONVERSION_NOT_IMPLEMENTED_FOR_HK_TECH_AND_HK_DIVIDEND
+  - HK_SIGNAL_LEVELS_MUST_USE_TMINUS1_CNY_CONVERTED_LEVEL
+  - HK_REALIZED_RETURNS_MUST_USE_CNY_CONVERTED_T_TO_TPLUS1_LEVELS
+  - FX_SPECIFIC_REGRESSION_TESTS_REQUIRED
 
 authorized_next:
-  - GATE_4_LONG_HORIZON_PROXY_RUN_FIX_RERUN
+  - GATE_4_LONG_HORIZON_PROXY_RUN_FX_FIX_RERUN
 
 forbidden_next:
   - ACCEPT_L2_RESULTS
@@ -49,14 +50,13 @@ forbidden_next:
   - QMT_LIVE
 
 notes:
-  - Current L2 numbers including MaxDiv Sharpe 1.183 / MaxDD -11.4% are quarantined diagnostic output and are not accepted as the final L2 result.
-  - Separate signal_panel from realized return_panel: lag non-A-share signal inputs, but assign decision-T weights to the frozen raw T->T+1 return interval.
-  - Apply RiskOverlayV0 project constraints to every executable deterministic method before realized returns: long-only, sum=1, per-slot <=25%, CHINEXT+STAR <=50%.
-  - The 100%/97.2%/84.1% max weights for MinVar/RP/Momentum demonstrate that the current runner bypassed the common project feasible set.
-  - No proxy, data source, parameter, date, regime, method-set, or result-informed strategy change is authorized during the correction.
-  - Add regression tests for signal/return timing separation and overlay feasibility; full tests and --check must pass before the single corrected rerun.
-  - Rerun packet must include numeric 1x cost sensitivity, actual STAR-vs-科创50 post-2020 calibration, and either a populated raw reproducibility artifact or removal of the empty raw-artifact claim.
-  - Preserve original 00d7f64 / 538e688 outputs as quarantined historical output; do not use them for strategy conclusions.
-  - L1 remains frozen and closed; L2 remains open pending corrected rerun review.
+  - The prior two implementation blockers are correctly fixed; current MaxDiv Sharpe ~1.012 / MaxDD ~-11.2% is materially more credible but remains quarantined pending FX correction.
+  - Approved PREP explicitly requires HKD->CNY using hkd_cny_boc with T-1 FX for decision signals; current fetch/panel code does not load or apply that FX series.
+  - Convert HSI/HSCEI economic levels to CNY before constructing both return_levels and the lagged signal_panel.
+  - Preserve signal/return separation: signal(T)=CNY return_level(T-1), realized return for decision T=CNY level(T+1)/CNY level(T)-1.
+  - Add synthetic FX tests and fail closed on 2800 parity / zero post-overlay violations.
+  - No proxy, source, parameter, date, method, regime, or strategy change is authorized.
+  - STAR 000986 vs 科创50 post-2020 corr ~0.1475 remains a significant disclosed basis-risk warning but is not authorization to change the frozen proxy in this rerun.
+  - Preserve both prior result generations as quarantined history; L1 remains frozen and closed.
 
-updated_at: 2026-08-09T23:15:00+08:00
+updated_at: 2026-08-09T23:40:00+08:00
