@@ -1,38 +1,37 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: CORRECTED_F0_RL_EXECUTION_PUBLICATION_BINDING_001
-state: REVISIONS_REQUIRED
+handoff_id: CORRECTED_F0_RL_EXECUTION_PUBLICATION_SCHEMA_CLOSEOUT_001
+state: REVIEW_COMPLETE
 
 reviewed_packet:
-  path: docs/review_packets/CORRECTED_F0_RL_EXECUTION_PUBLICATION_BINDING.md
-  commit: b8c07e50fb41e9129dccfef9c0d54f6c6f71fb85
+  path: docs/review_packets/CORRECTED_F0_RL_EXECUTION_PUBLICATION_SCHEMA_CLOSEOUT.md
+  commit: fe7e7f926c4e992f4d8d38b5636f86515307afdd
 
-code_commit: 6e183be8851da6a3ab745290c532892603f8b242
+code_commit: f5915f9b11a05dc8c564d50c788a4b21d9b7e305
 
-decision: TARGETED_CANONICAL_SCHEMA_BRIDGE_REQUIRED
+decision: APPROVED_FOR_CORRECTED_F0_RL_3SEED_EXECUTION
 
 response:
-  path: docs/reviewer_responses/CORRECTED_F0_RL_EXECUTION_PUBLICATION_BINDING_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/CORRECTED_F0_RL_EXECUTION_PUBLICATION_SCHEMA_CLOSEOUT_REVIEWER_RESPONSE.md
 
 passed:
-  - P1_RAW_RESULTS_TO_SEED_METRIC_RECOMPUTATION
-  - P2_RUN_DERIVED_STOP_EVIDENCE_AT_SEED_AGGREGATION
-  - P3_REAL_CANONICAL_TEST_MASK_SYNTHETIC
-  - CALLER_SUMMARY_NON_AUTHORITATIVE_DIRECTION
-  - NO_RL_TRAINING
-
-blocked:
-  - S1_CANONICAL_AGGREGATION_SCHEMA_INCOMPATIBLE_WITH_GO_NO_GO_EVALUATOR
-  - S2_NO_POSITIVE_RAW_TO_GO_END_TO_END_INTEGRATION_TEST
-  - S3_STOP_FLIP_TEST_FALSE_GREEN_FROM_PREEXISTING_SCHEMA_INCOMPLETENESS
+  - S1_CANONICAL_SCHEMA_BRIDGE
+  - S2_POSITIVE_RAW_TO_GO_END_TO_END
+  - S3_RAW_STOP_FLIPS_OTHERWISE_GO_ALGORITHM_TO_NO_GO
+  - CANONICAL_METRIC_NUMERIC_BINDING
+  - P1_P3_PUBLICATION_BINDING_RETAINED
+  - F1_F6_HARNESS_FINALIZATION_RETAINED
+  - H1_H7_EXECUTION_PREP_RETAINED
+  - REAL_ORDERED_475_TEST_MASK_PROOF
+  - CONFIG_SHA_AND_PUBLICATION_ORDER
+  - NO_RL_TRAINING_IN_CLOSEOUT
 
 authorized_next:
-  - CORRECTED_F0_RL_EXECUTION_PUBLICATION_SCHEMA_CLOSEOUT
+  - CORRECTED_F0_RL_3SEED
 
 forbidden_next:
-  - RL_RETRAINING
-  - CORRECTED_F0_RL_3SEED
   - GATE_4_10_SEED_FORMAL
+  - CONDITIONAL_FORMAL_ROBUSTNESS_EXECUTION
   - OPTUNA
   - HYPERPARAMETER_SWEEP
   - TEST_INFORMED_ALGO_SELECTION
@@ -44,11 +43,11 @@ forbidden_next:
   - SOUTHBOUND_EXECUTION
 
 notes:
-  - Raw F1-F4 aggregation now recomputes canonical seed-level return/risk metrics and derives stop evidence from actual runs, but the output schema is seed-centric while evaluate_go_nogo still expects algorithm-centric metric maps.
-  - Because of that mismatch, evaluate_go_nogo sees empty return/Sharpe/MaxDD maps, treats algorithms as incomplete/NO_GO, ignores seed-level stop_violations, and cannot use canonical Calmar for Pareto reporting.
-  - Existing 243-test success is false-green for this bridge: zero-return synthetic data expects NO_GO anyway, and the stop-violation test does not prove the stop caused NO_GO because the schema mismatch already causes NO_GO.
-  - Use one canonical schema end-to-end, then add a positive raw-results integration case that produces an algorithm GO/project PROMISING and a stop-flip case that turns the same otherwise-GO algorithm into NO_GO.
-  - Preserve the real exact 475-date mask proof and do not change frozen algorithms, seeds, thresholds, features, train budget, or Test-selection rules.
-  - No corrected F0 3-seed training is authorized yet. If the schema closeout passes without a new material defect, the intended next gate is CORRECTED_F0_RL_3SEED.
+  - The long execution-prep/publication-binding chain is closed sufficiently to authorize the frozen corrected F0 3-seed benchmark.
+  - Execute only canonical F0 dim 104, PPO/SAC/TD3, seeds [42,2026,7], folds F1-F4, train_passes 20, net [256,256], final endpoint only, using configs/rl_formal_protocol.yaml and the formal run_fold_rl_config/shared-constructor path.
+  - Nominal execution is 36 RL trainings. Any hard-stop, invariant failure, or execution exception must fail closed and be reported rather than repaired by Test-informed tuning.
+  - Preserve the exact configured algorithm x seed x fold raw result tree and all required series/evidence; final publication and GO/NO-GO must go through finalize_publish().
+  - Report all seed metrics and dispersion, EqualWeight hurdle result, MaxDiv Pareto reference, and stop/invariant status. Do not rank or select an algorithm from Test.
+  - A project PROMISING result does not authorize 10-seed robustness, live trading, Optuna, or any feature change. Stop for reviewer after the corrected F0 3-seed result packet.
 
-updated_at: 2026-08-09T11:53:00+08:00
+updated_at: 2026-08-09T12:08:00+08:00
