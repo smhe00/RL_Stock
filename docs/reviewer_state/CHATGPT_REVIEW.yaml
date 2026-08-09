@@ -1,20 +1,23 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_FEATURE_ABLATION_RUNS_STAT_FINALIZATION_001
+handoff_id: G4_FEATURE_ABLATION_RUNS_STAT_FINALIZATION_CORRECTIONS_001
 state: REVISIONS_REQUIRED
 
 reviewed_packet:
-  path: docs/review_packets/GATE_4_FEATURE_ABLATION_RUNS_STAT_FINALIZATION.md
-  commit: d93891e8a68c107cf045b32931e59d0de79d3c10
+  path: docs/review_packets/GATE_4_FEATURE_ABLATION_RUNS_STAT_FINALIZATION_CORRECTIONS.md
+  commit: b1f94520dce22c1bcccab7c0f2cb8f117a4af6b8
 
-code_commit: 6dd8b344564ca0cca1559c3ecf45840ee16d47f6
+code_commit: 4cc590f0e729ea1581445c5c82bf1fd4d219110b
 
-decision: TARGETED_TRANSITION_AND_RESAMPLING_CORRECTIONS_REQUIRED
+decision: TARGETED_RESAMPLING_CLOSEOUT_REQUIRED
 
 response:
-  path: docs/reviewer_responses/GATE_4_FEATURE_ABLATION_RUNS_STAT_FINALIZATION_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/GATE_4_FEATURE_ABLATION_RUNS_STAT_FINALIZATION_CORRECTIONS_REVIEWER_RESPONSE.md
 
 passed:
+  - C1_TEST_TRANSITION_QUARANTINE
+  - C4_NESTED_PANEL_CI_WORDING
+  - C5_PRIMARY_DEPENDENCE_SCALE_PREDECLARED_IN_DESIGN
   - B4_BOOTSTRAP_NULL_P_REMOVED
   - B5_REDUCED_F0_PROXY_LABEL_AND_NARROWED_CLAIM
   - NO_RL_RETRAINING
@@ -23,19 +26,16 @@ passed:
   - FROZEN_F1_CANDIDATE_SET_UNCHANGED
 
 partial_pass:
-  - B1_GLOBAL_TEST_EXCLUSION_DIRECTION
-  - B2_DEPENDENCE_NULL_TEST_DIRECTION
-  - B3_FOLD_SPECIFIC_BOOTSTRAP_CI
+  - C2_SEGMENT_AWARE_NULL_DIRECTION
+  - C3_SEGMENT_AWARE_RESAMPLING_DIRECTION
 
 blocked:
-  - C1_TEST_EXECUTION_TO_DECISION_DATE_SHIFT
-  - C2_BLOCK_PERMUTATION_IS_ACTUALLY_WITH_REPLACEMENT_BLOCK_RESAMPLE
-  - C3_RESAMPLING_CROSSES_QUARANTINED_GAPS_AFTER_ARRAY_COMPACTION
-  - C4_FOLD_CI_FALSE_INDEPENDENCE_WORDING
-  - C5_INFERENTIAL_BLOCK_LENGTH_NOT_SENSITIVITY_CHECKED_OR_CONSERVATIVELY_FROZEN
+  - D1_PRIMARY_60_DAY_BLOCK_PERMUTATION_DEGENERATE_ON_THREE_60_DAY_SEGMENTS
+  - D2_FOLD_BOOTSTRAP_STILL_CROSSES_QUARANTINED_GAPS
+  - D3_CONFIRMATORY_SIGNIFICANCE_WORDING_TOO_STRONG_UNTIL_D1_RESOLVED
 
 authorized_next:
-  - GATE_4_FEATURE_ABLATION_RUNS_STAT_FINALIZATION_CORRECTIONS
+  - GATE_4_FEATURE_ABLATION_DIAGNOSTIC_CLOSEOUT
 
 forbidden_next:
   - RL_FORMAL_PROTOCOL_PREP
@@ -52,13 +52,13 @@ forbidden_next:
   - SOUTHBOUND_EXECUTION
 
 notes:
-  - Frozen Test metrics are indexed by execution date; the first Test transition is decided at val_end and executed at test_start. Current same-date exclusion leaves each fold val_end in the screening panel, leaking up to four first-Test forward returns.
-  - The exact 475 Test execution-date mask must be mapped to preceding research-calendar decision dates, and the invariant must prove no diagnostic t->t+1 outcome has t+1 in the Test execution mask.
-  - block_permutation_p currently uses _moving_block_indices with replacement, so it is a moving-block resample rather than a true block permutation; the null mechanism must be accurately specified and implemented.
-  - After Test removal the compact arrays contain artificial adjacency across quarantined gaps; dependence resampling must be segment-aware and never cross those gaps.
-  - Fold development panels are expanding/nested, so their descriptive CIs are not independent.
-  - Confirmatory p-values currently use block_len=20 only despite 60-session F1 features; freeze a justified conservative scale or predeclare a robust sensitivity rule before rerunning.
-  - Current numerical findings remain descriptive negative evidence only; Holm/BH values are not final confirmatory inference yet.
-  - No feature may be added/removed because of current Test results.
+  - Canonical 475 Test execution dates are now correctly mapped to preceding decision dates; the transition invariant proves no diagnostic t->t+1 outcome lands on the frozen Test execution mask.
+  - The admissible panel consists of contiguous segments [359, 60, 60, 60]. With primary block_len=60, each 60-day segment is a single block, so those three segments are unchanged in every block permutation; only the 359-day segment is meaningfully randomized.
+  - Therefore p(60)/Holm/BH cannot yet be called a valid full-panel segment-aware confirmatory null test.
+  - The fold-specific bootstrap path still compacts dates after Test exclusion and uses moving blocks on the compact array, allowing blocks to cross quarantined gaps in later expanding folds.
+  - Preferred closeout is to retire formal p/Holm/BH and bootstrap-CI inferential claims and retain transition-quarantined descriptive point estimates/per-segment summaries, since this diagnostic must not drive feature selection.
+  - Alternatively, implement a genuinely non-degenerate per-segment null mechanism (for example segment-wise circular shift/random lag) and segment-aware bootstrap with tests.
+  - Final supported conclusion is descriptive negative evidence only: no large stable monotonic F1 association is seen on transition-quarantined development data, and the prior Test vol-ratio association does not reproduce with the same sign.
+  - Frozen F1 candidate set remains unchanged.
 
-updated_at: 2026-08-09T09:12:00+08:00
+updated_at: 2026-08-09T09:31:00+08:00
