@@ -111,7 +111,7 @@ C1 transition invariant；旧 block_permutation_p 测试更新为 segment 版）
 
 # 7. Git Commit
 
-`GATE_4_FEATURE_ABLATION_RUNS_STAT_FINALIZATION_CORRECTIONS` 提交 SHA：**`PENDING_SHA`**
+`GATE_4_FEATURE_ABLATION_RUNS_STAT_FINALIZATION_CORRECTIONS` 提交 SHA：**`4cc590f`**
 
 ```text
 src/china_etf/evaluation/factor_importance.py     ← +contiguous_segments / segment_block_permutation_p；移除 block_permutation_p
