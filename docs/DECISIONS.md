@@ -190,3 +190,18 @@ class TargetAssetWeights:
 - 时序 interval：Train=[start, eval_start) / Eval=[eval_start, end]，严格无重叠。
 - Track B 量化：共同 PIT 起点 2020-07-27（STAR/HSTECH 2020 上市），warmup 后 2021-07-22，
   只比 Track A 多 208 交易日（≈0.8 年）→ 不作为主实验（Track A 主 + Track C 机制 + B1 交叉）。
+
+## 2026-08-09
+
+### D-022 GATE_4_RL_NO_GO_CLOSEOUT（Reviewer 2026-08-09）
+
+- corrected F0 3-seed 正式结果（36/36 runs，0 stop 违规，config_sha256 `46c56bc9a204`，finalize_publish 通过）：
+  - PPO：median 年化 27.4% / Sharpe 1.617 / MaxDD -9.1%（1/3 seeds 过 Sharpe 1.64）
+  - SAC：median 年化 24.9% / Sharpe 1.527 / MaxDD -8.7%（0/3 seeds）
+  - TD3：median 年化 19.0% / Sharpe 1.210 / MaxDD -12.3%（0/3 seeds）
+- **project_level = NO_GO**：三者均未过 EqualWeight hurdle（Sharpe 1.64），且全部被 MaxDiv 风险前沿 Pareto 主导。
+- 经济对比：EqualWeight = 回报强基线（多数优化器/RL 未稳超，DeMiguel 论点）；MaxDiv = 风险调整前沿（Sharpe 2.77）。
+- **判定**：F0 PPO/SAC/TD3 分支 **closed for formal robustness**；不进 CONDITIONAL_ROBUSTNESS / 10-seed。
+- 未来假设：仅作为**新 pre-registered 实验**（需新 untouched forward 期 或 独立授权数据 regime）；
+  不得在同一 RESEARCH_BENCHMARK_TEST 上重训/调参/改特征。
+- 确定性策略（非 RL，如 MaxDiv/EW）保持当前 benchmark/fallback 路径；不启动新优化/live。
