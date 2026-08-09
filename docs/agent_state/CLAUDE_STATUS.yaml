@@ -1,19 +1,19 @@
 protocol_version: 2
 actor: claude
-handoff_id: G4_LONG_HORIZON_PROXY_RUN_FIX_RERUN_001
+handoff_id: G4_LONG_HORIZON_PROXY_RUN_FX_FIX_RERUN_001
 state: READY_FOR_REVIEW
 
 gate: 4
-phase: GATE_4_LONG_HORIZON_PROXY_RUN_FIX_RERUN
-code_commit: aff4b34
+phase: GATE_4_LONG_HORIZON_PROXY_RUN_FX_FIX_RERUN
+code_commit: 7781800
 packet: docs/review_packets/GATE_4_LONG_HORIZON_PROXY_RUN.md
 
 progress:
-  current_task: L2 proxy RUN corrected rerun (reviewer quarantined original results; fixed BLOCKER 1 signal/return panel separation + BLOCKER 2 common RiskOverlayV0 on all 5 methods + numeric cost sensitivity + STAR calibration 0.1475 + populated raw artifact; corrected MaxDiv Sharpe 1.012 / MaxDD -11.2%; original 538e688 preserved as quarantined history)
+  current_task: L2 proxy RUN final FX-fix rerun (reviewer FX BLOCKER: HKD/CNY conversion via hkd_cny_boc for HK_TECH/HK_DIVIDEND, signal T-1 FX, realized CNY T->T+1; 5 FX tests + 273 total pass; MaxDiv Sharpe 1.024 / MaxDD -10.4%; gen1/gen2 preserved as quarantined history)
 
 last_consumed_review:
-  handoff_id: G4_LONG_HORIZON_PROXY_RUN_001
-  decision: L2_RUN_RESULTS_QUARANTINED_IMPLEMENTATION_FIX_RERUN_REQUIRED
-  response: docs/reviewer_responses/GATE_4_LONG_HORIZON_PROXY_RUN_REVIEWER_RESPONSE.md
+  handoff_id: G4_LONG_HORIZON_PROXY_RUN_FIX_RERUN_001
+  decision: FIX_RERUN_SUBSTANTIALLY_CORRECT_FX_CONVERSION_MISSING_FINAL_RERUN_REQUIRED
+  response: docs/reviewer_responses/GATE_4_LONG_HORIZON_PROXY_RUN_FIX_RERUN_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-10T00:15:00+08:00
+updated_at: 2026-08-10T00:45:00+08:00
