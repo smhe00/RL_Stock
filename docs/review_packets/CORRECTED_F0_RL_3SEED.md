@@ -78,7 +78,7 @@ RL 结果相对 benchmark hurdle 判定；不跨 algo 选 winner（无 Test-info
 
 # 6. Git Commit
 
-`CORRECTED_F0_RL_3SEED` 提交 SHA：**`PENDING_SHA`**
+`CORRECTED_F0_RL_3SEED` 提交 SHA：**`de621a6`**
 
 ```text
 scripts/gate4_rl_formal_3seed.py            ← 3-seed 执行 runner（并行 --algo / --aggregate）
