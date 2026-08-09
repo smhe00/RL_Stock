@@ -1,37 +1,39 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_LONG_HORIZON_PROXY_PREP_001
+handoff_id: G4_LONG_HORIZON_PROXY_PREP_FIX_001
 state: REVISIONS_REQUIRED
 
 reviewed_packet:
   path: docs/review_packets/GATE_4_LONG_HORIZON_PROXY_PREP.md
-  commit: 41ce4dd36ac1264a28755b2f46cd4c97d895e5df
+  commit: 89c549f868e1dbcaa4b197473c3b5dacba80121e
 
 code_commit: f039d369d94295433132e17cf981b2eb6243c17a
 
-decision: PREP_REVISIONS_REQUIRED_L2_RUN_NOT_AUTHORIZED
+decision: PREP_FIX_SUBSTANTIALLY_ACCEPTED_BOND_FORMULA_FIX_REQUIRED
 
 response:
-  path: docs/reviewer_responses/GATE_4_LONG_HORIZON_PROXY_PREP_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/GATE_4_LONG_HORIZON_PROXY_PREP_FIX_REVIEWER_RESPONSE.md
 
 passed:
   - TRACK_C_SCENARIO_LABELING_CORRECT
   - TARGET_HISTORY_SPANS_2015_TO_2026
   - SIX_METHOD_SET_AND_CANONICAL_PARAMS_PRESERVED
+  - STAR_PROXY_NO_LONGER_DUPLICATES_CHINEXT
+  - CASH_LIKE_PRIMARY_PROXY_IS_CARRY_ONLY_NEAR_ZERO_DURATION
+  - UNIFORM_PRICE_RETURN_MAIN_PANEL_FROZEN
+  - CROSS_MARKET_CAUSAL_TIMING_SUBSTANTIALLY_CORRECTED
+  - WINDOW_REDERIVED_TO_2800_INTERVALS
   - PRE_FROZEN_REGIME_REPORTING_DEFINED
-  - PROXY_PROVENANCE_FIELDS_PRESENT
   - PPO_SAC_TD3_EXCLUDED
   - L2_NOT_EXECUTED
 
 revision_required:
-  - STAR_PRE2020_DUPLICATES_CHINEXT_RETURN_STREAM
-  - CASH_LIKE_2Y_DURATION_PROXY_NOT_CASH_LIKE
-  - EQUITY_RETURN_BASIS_MIXES_PRICE_RETURN_AND_TOTAL_RETURN
-  - CROSS_MARKET_INFORMATION_AND_RETURN_TIMING_NOT_UNAMBIGUOUS
-  - WINDOW_MUST_BE_REDERIVED_AFTER_PROXY_AND_TIMING_FIXES
+  - CN_DURATION_YIELD_UNITS_AND_RETURN_FORMULA_NOT_EXPLICITLY_FROZEN
+  - CN_DURATION_CARRY_MUST_BE_RETURN_SPACE_NOT_ADDITIVE_PRICE_CONSTANT
+  - HKD_CNY_TIMING_MUST_FOLLOW_CAUSAL_AVAILABILITY_RULE
 
 authorized_next:
-  - GATE_4_LONG_HORIZON_PROXY_PREP_FIX
+  - GATE_4_LONG_HORIZON_PROXY_PREP_FIX_2
 
 forbidden_next:
   - GATE_4_LONG_HORIZON_PROXY_RUN
@@ -45,12 +47,12 @@ forbidden_next:
   - QMT_LIVE
 
 notes:
-  - Do not execute L2 yet.
-  - Replace the 2015-2019 STAR mapping so it does not duplicate CHINEXT as an identical multi-year return series; find a distinct auditable technology/innovation proxy or return an alternative design for review.
-  - Make CASH_LIKE carry-dominated with near-zero duration; 2Y-duration construction may only be a sensitivity.
-  - Freeze a consistent equity return basis before results are observed; probe total-return variants first, otherwise define a uniform and explicitly labeled alternative.
-  - Freeze an exact causal market-time convention, including HK close/FX availability and the return interval to which T information applies.
-  - Re-derive the first/last usable dates and day count after the corrected proxy/timing design rather than assuming 2801 remains valid.
-  - L1 remains frozen and closed; no L1 artifacts/results may change.
+  - The prior four material proxy-design issues are substantively accepted.
+  - Freeze CN_DURATION in unit-safe return space before L2: convert percent yield to decimal, use duration shock plus carry as return, then compound the proxy price.
+  - Add a synthetic +10bp test: delta_y=0.0010 and D_eff=7.5 implies about -0.75% pure duration return before carry.
+  - Missing yield dates must be forward-filled before computing one realized yield change; do not create repeated shocks across gap days.
+  - HKD/CNY must use a value known by the chosen decision cutoff; if publication timing is not proven, lag consistently with HK inputs.
+  - Return documentation/PREP-only handoff G4_LONG_HORIZON_PROXY_PREP_FIX_002; do not run L2 yet.
+  - L1 remains frozen and closed.
 
-updated_at: 2026-08-09T21:56:00+08:00
+updated_at: 2026-08-09T22:04:00+08:00
