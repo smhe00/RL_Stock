@@ -9,7 +9,7 @@ reviewed_packet:
 
 code_commit: 7781800d4ce996a216aa1e08f1346504c2628b66
 
-decision: ARCH_PREP_SUBSTANTIALLY_CORRECT_THRESHOLD_SEMANTICS_FIX_REQUIRED
+decision: ARCH_PREP_SUBSTANTIALLY_CORRECT_SEMANTIC_FIX_REQUIRED
 
 response:
   path: docs/reviewer_responses/POST_L2_DETERMINISTIC_ARCHITECTURE_PREP_REVIEWER_RESPONSE.md
@@ -22,12 +22,10 @@ passed:
   - CANDIDATE_SET_C0_C4_FROZEN
   - PURE_PARENT_CONTROLS_RETAINED
   - NO_DENSE_ALPHA_SEARCH
+  - NO_DYNAMIC_RULE_IN_THIS_TRACK
   - STATIC_BLEND_ORDER_FROZEN
   - FINAL_RISK_OVERLAY_SPECIFIED
   - TURNOVER_COST_ON_FINAL_EXECUTABLE_PATH
-  - ACCEPTED_L2_TIMING_PRESERVED
-  - HK_CNY_FX_TREATMENT_PRESERVED
-  - T_TO_TPLUS1_REALIZED_RETURN_PRESERVED
   - FULL_EVALUATION_TABLE_FROZEN
   - PREFROZEN_STRESS_REGIMES_REUSED
   - R3_R5_R6_SEMANTICS_ACCEPTABLE
@@ -35,8 +33,12 @@ passed:
   - QMT_LIVE_REMAINS_FORBIDDEN
 
 revision_required:
+  - HK_RETURN_LEVEL_MUST_USE_SAME_DATE_HKD_CNY_NOT_TMINUS1_FX
+  - HK_SIGNAL_MUST_USE_TMINUS1_CONVERTED_CNY_LEVEL
+  - HK_REALIZED_RETURN_MUST_REMAIN_CONVERTED_CNY_T_TO_TPLUS1
   - R4_COST_INEQUALITY_REVERSED_MUST_BE_CUM_DELTA_GTE_MINUS_3PCT
-  - R1_R2_MUST_USE_EXACT_SAME_RUN_C0_VALUES_NOT_ROUNDED_DISPLAY_VALUES
+  - R1_R2_MUST_BIND_TO_EXACT_ACCEPTED_C0_VALUES_NOT_ROUNDED_DISPLAY_VALUES
+  - C0_C1_CONTROL_PATH_HANDLING_MUST_BE_EXPLICIT_AND_PARITY_CHECKED
 
 authorized_next:
   - POST_L2_DETERMINISTIC_ARCHITECTURE_PREP_CORRECTION
@@ -53,11 +55,13 @@ forbidden_next:
   - QMT_LIVE
 
 notes:
-  - PREP is otherwise substantively correct and close to RUN authorization.
-  - Correct R4 from <= -3.0pct to >= -3.0pct under net-minus-gross cum-delta convention.
-  - Freeze machine-evaluable R1 as candidate_calendar_cagr - C0_calendar_cagr >= 0.005.
-  - Freeze machine-evaluable R2 as candidate_maxdd >= C0_maxdd - 0.05.
-  - These are specification corrections only; do not alter candidate weights, parent parameters, panel, timing, FX, stress regimes, or threshold magnitudes.
+  - PREP is substantively correct and close to RUN authorization; candidate set C0-C4 must not change during correction.
+  - Correct HK semantics to return_level_hk_cny(t)=raw_hk_index_hkd(t)*hkd_cny(t); signal(T)=return_level(T-1); realized return for decision T=CNY level(T+1)/CNY level(T)-1.
+  - Correct R4 to cost_cum_delta=net-gross and pass iff cost_cum_delta >= -3.0 percentage points, or use an equivalent positive cost-drag <=3.0pct convention consistently.
+  - Accepted exact C0 MaxDiv metrics from gen3 artifact: calendar_cagr=0.059496; max_drawdown=-0.103874.
+  - Freeze R1 as candidate_calendar_cagr - C0_calendar_cagr >= 0.005 and R2 as candidate_max_drawdown >= C0_max_drawdown - 0.05; rounded 6.0%/-10.4% are display-only.
+  - C0/C1 must reuse exact accepted gen3 parent paths or be deterministically reconstructed with parity assertions before blends are evaluated.
   - No combined strategy result may be run before corrected PREP review.
+  - L2 remains closed and accepted; this revision applies only to architecture PREP.
 
-updated_at: 2026-08-10T00:26:00+08:00
+updated_at: 2026-08-10T00:27:00+08:00
