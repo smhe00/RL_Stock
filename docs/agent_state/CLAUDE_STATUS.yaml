@@ -5,7 +5,7 @@ state: READY_FOR_REVIEW
 
 gate: 4
 phase: GATE_4_FEATURE_ABLATION_DIAGNOSTIC_CLOSEOUT
-code_commit: PENDING_SHA
+code_commit: cad0d4b
 packet: docs/review_packets/GATE_4_FEATURE_ABLATION_DIAGNOSTIC_CLOSEOUT.md
 
 progress:

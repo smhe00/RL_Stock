@@ -95,7 +95,7 @@ C1 invariant / segments 测试保留）
 
 # 7. Git Commit
 
-`GATE_4_FEATURE_ABLATION_DIAGNOSTIC_CLOSEOUT` 提交 SHA：**`PENDING_SHA`**
+`GATE_4_FEATURE_ABLATION_DIAGNOSTIC_CLOSEOUT` 提交 SHA：**`cad0d4b`**
 
 ```text
 scripts/gate4_feature_importance_diagnostic_closeout.py  ← 描述性 closeout（无 inferential 统计）
