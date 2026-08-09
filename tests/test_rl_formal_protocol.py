@@ -186,97 +186,111 @@ class TestActiveDayAnnualization:
 
 class TestConfigBindingE1:
     def test_no_forbidden_overrides(self, monkeypatch):
-        """E1: formal run 禁止 pilot env overrides——存在则 fail-closed raise。"""
+        """E1/H1: formal run 禁止 pilot env overrides——存在则 fail-closed raise。"""
         from china_etf.evaluation.rl_formal import check_no_forbidden_overrides, FormalConfigError
         check_no_forbidden_overrides()  # 无 override 时不抛
         monkeypatch.setenv("GATE4_PILOT_PASSES", "10")
         with pytest.raises(FormalConfigError):
             check_no_forbidden_overrides()
 
-    def test_config_hash_deterministic(self):
+    def test_config_hash_deterministic_64hex(self):
+        """H2: config_sha256 为真 64-hex digest。"""
         from china_etf.evaluation.rl_formal import load_protocol_config
         a = load_protocol_config()["config_sha256"]
         b = load_protocol_config()["config_sha256"]
         assert a == b and len(a) == 64
+        assert all(c in "0123456789abcdef" for c in a)
 
-    def test_constructor_spy_receives_frozen_kwargs(self):
-        """E1: config 超参显式传入构造器（非 SB3 默认）。"""
-        from china_etf.evaluation.rl_formal import load_protocol_config
-        loaded = load_protocol_config()
-        cfg = loaded["config"]
-        # 复用 runner 的 dry-run spy 逻辑
-        from unittest import mock
-        captured = {}
-        import importlib
+    def test_shared_construct_model_receives_frozen_kwargs(self):
+        """H1: 经共享 _construct_model（非手动复制构造）收到 config 冻结超参。"""
+        from china_etf.evaluation.rl_formal import load_protocol_config, _construct_model
         from stable_baselines3 import PPO
-        name = "PPO"
-        algo_cfg = cfg["algorithms"][name]
+        from unittest import mock
+        cfg = load_protocol_config()["config"]
+        captured = {}
         def fake_init(self, policy, env, *, seed=None, policy_kwargs=None, verbose=0,
                       device="cpu", **kwargs):
-            captured[name] = {"seed": seed, "policy_kwargs": policy_kwargs,
-                              "device": device, "kwargs": kwargs}
+            captured["PPO"] = {"seed": seed, "policy_kwargs": policy_kwargs,
+                               "device": device, "kwargs": kwargs}
         with mock.patch.object(PPO, "__init__", fake_init):
-            PPO("MlpPolicy", object(), seed=42, policy_kwargs={"net_arch": list(cfg["net_arch"])},
-                verbose=0, device=cfg["device"][name], **dict(algo_cfg))
-        assert captured[name]["kwargs"] == dict(algo_cfg)
-        assert captured[name]["policy_kwargs"] == {"net_arch": [256, 256]}
+            _construct_model(PPO, "PPO", seed=42, cfg=cfg, gym_tr=object())
+        assert captured["PPO"]["kwargs"] == dict(cfg["algorithms"]["PPO"])
+        assert captured["PPO"]["policy_kwargs"] == {"net_arch": [256, 256]}
+        assert captured["PPO"]["seed"] == 42
 
 
 class TestRuntimeInvariantsE2:
-    def _pass_results(self, n=36):
-        # 合成通过结构：36 runs，execution_dates == mask，n_eval == len(mask)
+    FOLD_LENS = {"F1": 118, "F2": 118, "F3": 118, "F4": 121}
+
+    def _pass_results(self):
+        """H3: 真实 fold 长度 [118,118,118,121]，stitched 有序 475。"""
         per_algo = {}
         import pandas as pd
         mask_dates = pd.bdate_range("2023-11-24", periods=475, freq="B")
         mask_str = [str(d.date()) for d in mask_dates]
-        count = 0
+        offset = 0
         for a in ("PPO", "SAC", "TD3"):
             per_algo[a] = {}
             for seed in (42, 2026, 7):
                 per_algo[a][seed] = {}
                 for fold in ("F1", "F2", "F3", "F4"):
+                    n = self.FOLD_LENS[fold]
+                    seg = mask_str[offset:offset + n]
+                    offset = (offset + n) % 475
+                    costs = [0.001] * n
                     per_algo[a][seed][fold] = {
-                        "test": {"n_eval_steps": len(mask_str),
-                                 "series": {"execution_dates": list(mask_str),
-                                            "costs": [1.0], "fees": [1.0]}}}
-                    count += 1
+                        "test": {"n_eval_steps": n, "total_cost": sum(costs),
+                                 "series": {"execution_dates": list(seg), "costs": list(costs),
+                                            "net_returns": [0.0] * n, "cash": [1e6] * n,
+                                            "actual_weights": [[0.1] * 11] * n}}}
         return {"per_algorithm": per_algo}, mask_str
 
-    def test_invariants_pass(self):
+    def test_invariants_pass_real_fold_lengths(self):
         from china_etf.evaluation.rl_formal import validate_runtime_invariants
         results, mask = self._pass_results()
-        validate_runtime_invariants(results, mask)  # 不抛
+        validate_runtime_invariants(results, mask)  # 不抛（fold-segment + stitched 475）
 
-    def test_invariants_fail_wrong_execution_dates(self):
+    def test_fail_fold_length_mismatch(self):
         from china_etf.evaluation.rl_formal import validate_runtime_invariants, InvariantViolation
         results, mask = self._pass_results()
-        results["per_algorithm"]["PPO"][42]["F1"]["test"]["series"]["execution_dates"] = ["2020-01-01"]
+        # F1 应为 118；改成 100 → fold-segment 失败 + stitched 不匹配
+        results["per_algorithm"]["PPO"][42]["F1"]["test"]["series"]["execution_dates"] = \
+            results["per_algorithm"]["PPO"][42]["F1"]["test"]["series"]["execution_dates"][:100]
+        results["per_algorithm"]["PPO"][42]["F1"]["test"]["n_eval_steps"] = 100
         with pytest.raises(InvariantViolation):
             validate_runtime_invariants(results, mask)
 
-    def test_invariants_fail_wrong_n_steps(self):
+    def test_fail_cost_evidence_missing(self):
         from china_etf.evaluation.rl_formal import validate_runtime_invariants, InvariantViolation
         results, mask = self._pass_results()
-        results["per_algorithm"]["SAC"][2026]["F2"]["test"]["n_eval_steps"] = 100
+        del results["per_algorithm"]["TD3"][7]["F3"]["test"]["total_cost"]  # H4 证据缺失 → fail
         with pytest.raises(InvariantViolation):
             validate_runtime_invariants(results, mask)
 
-    def test_invariants_fail_cost_reconciliation(self):
+    def test_fail_raw_missing(self):
         from china_etf.evaluation.rl_formal import validate_runtime_invariants, InvariantViolation
         results, mask = self._pass_results()
-        results["per_algorithm"]["TD3"][7]["F3"]["test"]["series"]["costs"] = [1.0, 1.0]
+        del results["per_algorithm"]["SAC"][2026]["F2"]["test"]["series"]["net_returns"]  # H5
+        with pytest.raises(InvariantViolation):
+            validate_runtime_invariants(results, mask)
+
+    def test_fail_identity_mismatch(self):
+        from china_etf.evaluation.rl_formal import validate_runtime_invariants, InvariantViolation
+        results, mask = self._pass_results()
+        del results["per_algorithm"]["TD3"]  # H5 缺 algo → 身份不匹配
         with pytest.raises(InvariantViolation):
             validate_runtime_invariants(results, mask)
 
 
 class TestGoNoGoEvaluatorE4:
-    def _stitched(self, rets, sharpes, mdds, calmars):
+    def _stitched(self, rets, sharpes, mdds, calmars, seed_keys=(42, 2026, 7)):
         return {
-            "active_day_annualized_return": {s: r for s, r in zip([42, 2026, 7], rets)},
-            "sharpe": {s: x for s, x in zip([42, 2026, 7], sharpes)},
-            "max_drawdown": {s: x for s, x in zip([42, 2026, 7], mdds)},
+            "seed_keys": list(seed_keys),
+            "active_day_annualized_return": {s: r for s, r in zip(seed_keys, rets)},
+            "sharpe": {s: x for s, x in zip(seed_keys, sharpes)},
+            "max_drawdown": {s: x for s, x in zip(seed_keys, mdds)},
             "calmar_median": float(np.median(calmars)),
-            "n_seeds": 3, "stop_violations": 0,
+            "stop_violations": 0,
         }
 
     def test_per_algo_go(self):
@@ -295,29 +309,37 @@ class TestGoNoGoEvaluatorE4:
         assert out["per_algorithm"]["PPO"]["decision"] == "NO_GO"
         assert out["project_level"] == "NO_GO"
 
-    def test_project_promising_if_one_algo_go(self):
+    def test_incomplete_seeds_no_go(self):
+        """H6: seed 集不完整 → NO_GO/INCOMPLETE。"""
         from china_etf.evaluation.rl_formal import evaluate_go_nogo
         cfg = _cfg()
-        st_go = self._stitched([0.30, 0.28, 0.27], [1.7, 1.9, 1.5], [-0.06, -0.05, -0.08], [3.0, 3.5, 2.8])
-        st_nogo = self._stitched([0.20, 0.22, 0.21], [1.2, 1.3, 1.4], [-0.10, -0.09, -0.11], [2.0, 2.1, 2.2])
-        out = evaluate_go_nogo({"PPO": st_go, "SAC": st_nogo}, cfg)
-        assert out["project_level"] == "PROMISING"
-        assert out["per_algorithm"]["SAC"]["decision"] == "NO_GO"
-
-    def test_pareto_vs_maxdiv(self):
-        from china_etf.evaluation.rl_formal import evaluate_go_nogo
-        cfg = _cfg()
-        # 风险调整差于 MaxDiv（Sharpe 2.77）
-        st = self._stitched([0.25, 0.26, 0.24], [2.0, 2.1, 2.0], [-0.05, -0.04, -0.06], [4.0, 4.2, 3.8])
+        st = self._stitched([0.30, 0.28], [1.7, 1.9], [-0.06, -0.05], [3.0, 3.5], seed_keys=(42, 2026))
         out = evaluate_go_nogo({"PPO": st}, cfg)
-        assert out["pareto_vs_maxdiv"]["PPO"]["vs_max_div"] == "dominated"
-        assert "sharpe" in out["pareto_vs_maxdiv"]["PPO"]["dominated_dims"]
+        assert out["per_algorithm"]["PPO"]["status"] == "INCOMPLETE"
+        assert out["per_algorithm"]["PPO"]["decision"] == "NO_GO"
+
+    def test_pareto_true_dominance_not_dominated_when_mixed(self):
+        """H7: 一维更差 + 一维更好 → not dominated（非真 Pareto）。"""
+        from china_etf.evaluation.rl_formal import evaluate_go_nogo
+        cfg = _cfg()
+        # Sharpe 3.0 > MaxDiv 2.77 但 MaxDD -0.20 < -0.034（更差）→ 混合，非 dominated
+        st = self._stitched([0.30, 0.31, 0.29], [3.0, 3.1, 2.9], [-0.20, -0.19, -0.21], [1.5, 1.6, 1.4])
+        out = evaluate_go_nogo({"PPO": st}, cfg)
+        assert out["pareto_vs_maxdiv"]["PPO"]["pareto_dominated"] is False
+        assert "max_drawdown" in out["pareto_vs_maxdiv"]["PPO"]["underperforms_maxdiv_dimensions"]
+
+    def test_pareto_dominated_all_dims(self):
+        """H7: 全部维度 ≤ MaxDiv 且至少一严格 < → dominated。"""
+        from china_etf.evaluation.rl_formal import evaluate_go_nogo
+        cfg = _cfg()
+        st = self._stitched([0.15, 0.16, 0.14], [2.0, 2.1, 2.0], [-0.08, -0.07, -0.09], [2.0, 2.1, 1.9])
+        out = evaluate_go_nogo({"PPO": st}, cfg)
+        assert out["pareto_vs_maxdiv"]["PPO"]["pareto_dominated"] is True
 
     def test_no_test_based_ranking(self):
         from china_etf.evaluation.rl_formal import evaluate_go_nogo
         cfg = _cfg()
         out = evaluate_go_nogo({"PPO": {}, "SAC": {}, "TD3": {}}, cfg)
-        # 空 stitched → NO_GO（无 data），不 ranking
         for a in ("PPO", "SAC", "TD3"):
             assert out["per_algorithm"][a]["decision"] == "NO_GO"
         assert out["project_level"] == "NO_GO"

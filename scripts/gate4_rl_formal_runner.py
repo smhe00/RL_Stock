@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from china_etf.evaluation.rl_formal import (  # noqa: E402
+    _construct_model,
     check_no_forbidden_overrides,
     load_protocol_config,
 )
@@ -33,23 +34,18 @@ def _algo_classes():
 
 
 def dry_run_constructor_spy(cfg: dict) -> dict:
-    """E1：构造 spy——monkeypatch algo 构造器记录收到的 kwargs，不训练。"""
+    """H1：构造 spy——经共享 _construct_model（非手动复制），monkeypatch algo 构造器记录 kwargs，不 learn。"""
     from unittest import mock
     captured: dict[str, dict] = {}
     for name, cls in _algo_classes().items():
-        algo_cfg = cfg["algorithms"][name]
-        net = list(cfg["net_arch"])
-        device = cfg["device"][name]
-
         def fake_init(self, policy, env, *, seed=None, policy_kwargs=None, verbose=0,
                       device="cpu", **kwargs):
             captured[self.__class__.__name__] = {
                 "seed": seed, "policy_kwargs": policy_kwargs, "device": device, "kwargs": kwargs}
 
         with mock.patch.object(cls, "__init__", fake_init):
-            # 构造 spy（不 learn）
-            cls("MlpPolicy", object(), seed=42, policy_kwargs={"net_arch": net},
-                verbose=0, device=device, **dict(algo_cfg))
+            # 共享 runtime 构造路径（_construct_model）；无 learn
+            _construct_model(cls, name, seed=42, cfg=cfg, gym_tr=object())
     # 校验捕获的 kwargs 与 config 一致
     ok = True
     details = {}

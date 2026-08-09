@@ -1,19 +1,19 @@
 protocol_version: 2
 actor: claude
-handoff_id: CORRECTED_F0_RL_EXECUTION_PREP_001
+handoff_id: CORRECTED_F0_RL_EXECUTION_PREP_CORRECTIONS_001
 state: READY_FOR_REVIEW
 
 gate: 4
-phase: CORRECTED_F0_RL_EXECUTION_PREP
-code_commit: 338693c
-packet: docs/review_packets/CORRECTED_F0_RL_EXECUTION_PREP.md
+phase: CORRECTED_F0_RL_EXECUTION_PREP_CORRECTIONS
+code_commit: PENDING_SHA
+packet: docs/review_packets/CORRECTED_F0_RL_EXECUTION_PREP_CORRECTIONS.md
 
 progress:
-  current_task: execution harness binding (E1 config->runtime, E2 invariant validator, E4 GO/NO-GO evaluator; dry-run spy, no training)
+  current_task: execution harness corrections H1-H7 (shared constructor, true config hash, fold/stitched mask, cost evidence, exact identity, seed fail-closed, true Pareto; no training)
 
 last_consumed_review:
-  handoff_id: RL_FORMAL_PROTOCOL_PREP_CORRECTIONS_001
-  decision: PROTOCOL_APPROVED_EXECUTION_HARNESS_NOT_YET_AUTHORIZED
-  response: docs/reviewer_responses/RL_FORMAL_PROTOCOL_PREP_CORRECTIONS_REVIEWER_RESPONSE.md
+  handoff_id: CORRECTED_F0_RL_EXECUTION_PREP_001
+  decision: TARGETED_EXECUTION_HARNESS_CORRECTIONS_REQUIRED
+  response: docs/reviewer_responses/CORRECTED_F0_RL_EXECUTION_PREP_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-09T10:35:00+08:00
+updated_at: 2026-08-09T11:15:00+08:00
