@@ -182,7 +182,7 @@ packet: GATE_4_LONG_HORIZON_NON_RL_RUN
 status: READY_FOR_REVIEW
 
 doc_fix_handoff: G4_LONG_HORIZON_NON_RL_RUN_DOC_FIX_001
-doc_fix_commit: 待填   # 提交后回填（仅文档修正，不动 artifacts/代码/结果）
+doc_fix_commit: 36bbda6   # 仅文档修正，未动 artifacts/代码/结果
 
 executed:
   window: {decision_start: 2022-06-09, first_execution: 2022-06-10, last_decision: 2026-08-06, last_execution: 2026-08-07, n_decision_days: 1011, n_execution_dates: 1011}
