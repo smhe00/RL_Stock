@@ -1,19 +1,19 @@
 protocol_version: 2
 actor: claude
-handoff_id: CORRECTED_F0_RL_EXECUTION_HARNESS_FINALIZATION_001
+handoff_id: CORRECTED_F0_RL_EXECUTION_PUBLICATION_BINDING_001
 state: READY_FOR_REVIEW
 
 gate: 4
-phase: CORRECTED_F0_RL_EXECUTION_HARNESS_FINALIZATION
-code_commit: 765ccac
-packet: docs/review_packets/CORRECTED_F0_RL_EXECUTION_HARNESS_FINALIZATION.md
+phase: CORRECTED_F0_RL_EXECUTION_PUBLICATION_BINDING
+code_commit: PENDING_SHA
+packet: docs/review_packets/CORRECTED_F0_RL_EXECUTION_PUBLICATION_BINDING.md
 
 progress:
-  current_task: execution harness finalization F1-F6 (algo mismatch, missing n_eval, raw completeness, metric seed keys, Pareto finite, publication path; no training)
+  current_task: publication binding P1-P3 (canonical stitched aggregation from raw results, run-derived stop conditions, real-mask synthetic proof; no training)
 
 last_consumed_review:
-  handoff_id: CORRECTED_F0_RL_EXECUTION_PREP_CORRECTIONS_001
-  decision: TARGETED_HARNESS_FINALIZATION_REQUIRED
-  response: docs/reviewer_responses/CORRECTED_F0_RL_EXECUTION_PREP_CORRECTIONS_REVIEWER_RESPONSE.md
+  handoff_id: CORRECTED_F0_RL_EXECUTION_HARNESS_FINALIZATION_001
+  decision: TARGETED_PUBLICATION_METRIC_BINDING_REQUIRED
+  response: docs/reviewer_responses/CORRECTED_F0_RL_EXECUTION_HARNESS_FINALIZATION_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-09T11:30:00+08:00
+updated_at: 2026-08-09T11:45:00+08:00

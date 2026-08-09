@@ -329,16 +329,84 @@ def evaluate_go_nogo(per_algo_stitched: dict, cfg: dict) -> dict:
     }
 
 
-def finalize_publish(results: dict, config_envelope: dict, mask_dates, per_algo_stitched: dict) -> dict:
-    """F6：artifact 级 config provenance + publication 顺序（fail-closed）。
+def aggregate_raw_results(results: dict, cfg: dict, mask_dates) -> dict:
+    """P1/P2：从 validated raw results 重算 canonical stitched 指标 + 派生 stop violations。
+
+    每 (algo, seed)：有序 F1→F4 拼接 series.net_returns → 重算
+    active_day_annualized_return / sharpe / max_drawdown / calmar；
+    stop_violations 从 run 字段派生（save_load/nan/neg_cash/非 finite），字段缺失 → fail-closed。
+
+    返回 {algo: {seed: {active_day_annualized_return, sharpe, max_drawdown, calmar,
+                        stop_violations, n_seeds}}}
+    """
+    n_mask = len(mask_dates)
+    out: dict[str, dict] = {}
+    for algo, ag in results.get("per_algorithm", {}).items():
+        out[algo] = {}
+        for seed_key, seed_res in ag.items():
+            nr_all: list[float] = []
+            stop_violations = 0
+            missing_evidence: list[str] = []
+            for fold_name in ("F1", "F2", "F3", "F4"):
+                fm = seed_res.get(fold_name)
+                if fm is None:
+                    missing_evidence.append(f"{fold_name}: missing")
+                    continue
+                test = fm.get("test", {})
+                series = test.get("series", {})
+                nr = series.get("net_returns")
+                if nr is None:
+                    missing_evidence.append(f"{fold_name}: net_returns missing")
+                    continue
+                nr_all.extend(float(x) for x in nr)
+                # P2 stop conditions 从 run 字段派生（字段缺失 → fail-closed）
+                if "save_load_deterministic_identical" not in fm:
+                    missing_evidence.append(f"{fold_name}: save_load_deterministic_identical missing")
+                elif fm["save_load_deterministic_identical"] is False:
+                    stop_violations += 1
+                for k in ("nan_obs_or_reward", "negative_cash_count"):
+                    if k not in test:
+                        missing_evidence.append(f"{fold_name}: {k} missing")
+                    elif test[k] > 0:
+                        stop_violations += 1
+                if not np.isfinite(np.asarray(nr, dtype=float)).all():
+                    stop_violations += 1
+            if missing_evidence:
+                raise InvariantViolation(f"{algo}|{seed_key}: stop-condition evidence missing: {missing_evidence}")
+            nr = np.asarray(nr_all, dtype=float)
+            if len(nr) != n_mask:
+                raise InvariantViolation(f"{algo}|{seed_key}: stitched len {len(nr)} != {n_mask}")
+            cum = float(np.exp(np.log1p(nr).sum()) - 1.0)
+            active_ann = float((1.0 + cum) ** (252.0 / len(nr)) - 1.0)
+            vol = float(np.std(nr))
+            sharpe = float(np.mean(nr) / vol * np.sqrt(252)) if vol > 1e-12 else float("nan")
+            eq = np.exp(np.log1p(nr).cumsum())
+            mdd = float((eq / np.maximum.accumulate(eq) - 1.0).min()) if len(eq) else float("nan")
+            calmar = float(active_ann / abs(mdd)) if np.isfinite(active_ann) and abs(mdd) > 1e-12 else float("nan")
+            out[algo][int(seed_key)] = {
+                "active_day_annualized_return": active_ann,
+                "sharpe": sharpe,
+                "max_drawdown": mdd,
+                "calmar": calmar,
+                "stop_violations": stop_violations,
+                "n_seeds": len(ag),
+            }
+    return out
+
+
+def finalize_publish(results: dict, config_envelope: dict, mask_dates,
+                     caller_stitched: dict | None = None) -> dict:
+    """F6/P1：artifact 级 config provenance + canonical 聚合绑定（fail-closed）。
 
     1. 顶层 config_sha256 == config_envelope digest；
     2. 校验每 run config_sha256 == 顶层 == 当前 frozen digest（mismatch → 不 publish）；
     3. validate_runtime_invariants（失败 → raise，不 publish）；
-    4. 仅 invariant 通过后跑 evaluate_go_nogo；
-    5. 任何失败 → 不写最终 tracked artifact（本函数不写盘，返回可写 payload）。
+    4. aggregate_raw_results 得 canonical stitched（P1：GO/NO-GO 只信任 canonical）；
+    5. 若 caller_stitched 提供：与 canonical 逐字段对比，mismatch → raise（仅诊断，永不权威）；
+    6. evaluate_go_nogo(canonical_stitched)；
+    7. 任何失败 → 不写最终 tracked artifact（本函数不写盘，返回可写 payload）。
 
-    返回 {config_sha256, go_nogo, results}（publish-ready）。
+    返回 {config_sha256, go_nogo, canonical_stitched, results, published}。
     """
     cfg = config_envelope["config"]
     top_sha = config_envelope["config_sha256"]
@@ -357,12 +425,27 @@ def finalize_publish(results: dict, config_envelope: dict, mask_dates, per_algo_
     # invariant 校验（失败 raise）
     validate_runtime_invariants(results, mask_dates, cfg)
 
-    # 仅 invariant 通过后跑 GO/NO-GO
-    go_nogo = evaluate_go_nogo(per_algo_stitched, cfg)
+    # P1：canonical 聚合（GO/NO-GO 权威来源）
+    canonical = aggregate_raw_results(results, cfg, mask_dates)
+
+    # P1b：caller summary 仅诊断对比，mismatch fail-closed
+    if caller_stitched is not None:
+        for algo, ag in canonical.items():
+            for seed_key, m in ag.items():
+                cm = caller_stitched.get(algo, {}).get(seed_key, {})
+                for field in ("active_day_annualized_return", "sharpe", "max_drawdown"):
+                    if field in cm:
+                        if not np.isclose(cm[field], m[field], atol=1e-6):
+                            raise InvariantViolation(
+                                f"{algo}|{seed_key}: caller {field} {cm[field]} != canonical {m[field]}")
+
+    # 仅 canonical 通过后跑 GO/NO-GO
+    go_nogo = evaluate_go_nogo(canonical, cfg)
 
     return {
         "config_sha256": top_sha,
         "go_nogo": go_nogo,
+        "canonical_stitched": canonical,
         "results": results,
         "published": True,
     }

@@ -377,7 +377,9 @@ class TestHarnessFinalizationF1_F6:
                     costs = [0.001] * n
                     per_algo[a][seed][fold] = {
                         "config_sha256": sha,
+                        "save_load_deterministic_identical": True,
                         "test": {"n_eval_steps": n, "total_cost": sum(costs),
+                                 "nan_obs_or_reward": 0, "negative_cash_count": 0,
                                  "series": {"execution_dates": list(seg), "costs": list(costs),
                                             "net_returns": [0.0] * n, "cash": [1e6] * n,
                                             "actual_weights": [[0.1] * 11] * n,
@@ -454,17 +456,119 @@ class TestHarnessFinalizationF1_F6:
         top_sha = loaded["config_sha256"]
         results, mask = self._pass_results(sha="b" * 64)  # run sha 与顶层不同
         with pytest.raises(InvariantViolation):
-            finalize_publish(results, loaded, mask,
-                             {a: {} for a in ("PPO", "SAC", "TD3")})
+            finalize_publish(results, loaded, mask)
 
-    def test_f6_publish_passes(self):
-        """F6: hash 一致 + invariants + GO/NO-GO → published payload。"""
+    def test_f6_publish_passes_canonical(self):
+        """F6/P1: hash 一致 + invariants + canonical 聚合 → published payload（无 caller stitched）。"""
         from china_etf.evaluation.rl_formal import finalize_publish, load_protocol_config
         loaded = load_protocol_config()
         top_sha = loaded["config_sha256"]
         results, mask = self._pass_results(sha=top_sha)
-        stitched = {a: self._stitched([0.30, 0.28, 0.27], [1.7, 1.9, 1.5], [-0.06, -0.05, -0.08],
-                                      [3.0, 3.5, 2.8]) for a in ("PPO", "SAC", "TD3")}
-        payload = finalize_publish(results, loaded, mask, stitched)
+        payload = finalize_publish(results, loaded, mask)  # 无 caller → 纯 canonical
         assert payload["published"] is True
         assert payload["config_sha256"] == top_sha
+        assert payload["canonical_stitched"]["PPO"][42]["active_day_annualized_return"] == pytest.approx(0.0, abs=1e-9)
+
+
+class TestPublicationBindingP1_P3:
+    FOLD_LENS = {"F1": 118, "F2": 118, "F3": 118, "F4": 121}
+
+    def _pass_results(self, sha="a" * 64, ret_val=0.0):
+        per_algo = {}
+        import pandas as pd
+        mask_dates = pd.bdate_range("2023-11-24", periods=475, freq="B")
+        mask_str = [str(d.date()) for d in mask_dates]
+        offset = 0
+        for a in ("PPO", "SAC", "TD3"):
+            per_algo[a] = {}
+            for seed in (42, 2026, 7):
+                per_algo[a][seed] = {}
+                for fold in ("F1", "F2", "F3", "F4"):
+                    n = self.FOLD_LENS[fold]
+                    seg = mask_str[offset:offset + n]
+                    offset = (offset + n) % 475
+                    costs = [0.001] * n
+                    per_algo[a][seed][fold] = {
+                        "config_sha256": sha,
+                        "save_load_deterministic_identical": True,
+                        "test": {"n_eval_steps": n, "total_cost": sum(costs),
+                                 "nan_obs_or_reward": 0, "negative_cash_count": 0,
+                                 "series": {"execution_dates": list(seg), "costs": list(costs),
+                                            "net_returns": [ret_val] * n, "cash": [1e6] * n,
+                                            "actual_weights": [[0.1] * 11] * n,
+                                            "raw_weights": [[0.1] * 11] * n,
+                                            "post_risk_weights": [[0.1] * 11] * n}}}
+        return {"per_algorithm": per_algo}, mask_str
+
+    def test_p1_zero_raw_positive_caller_not_go(self):
+        """P1: 零 raw returns + 矛盾 caller summary（正 return）→ canonical NO_GO（caller 不权威）。"""
+        from china_etf.evaluation.rl_formal import finalize_publish, load_protocol_config
+        loaded = load_protocol_config()
+        top_sha = loaded["config_sha256"]
+        results, mask = self._pass_results(sha=top_sha, ret_val=0.0)  # 零 raw
+        contradictory = {a: {s: {"active_day_annualized_return": 0.30, "sharpe": 1.7,
+                                "max_drawdown": -0.06} for s in (42, 2026, 7)}
+                         for a in ("PPO", "SAC", "TD3")}
+        # caller 与 canonical（零收益）矛盾 → fail-closed
+        from china_etf.evaluation.rl_formal import InvariantViolation
+        with pytest.raises(InvariantViolation):
+            finalize_publish(results, loaded, mask, contradictory)
+
+    def test_p1_consistent_caller_passes(self):
+        """P1b: caller summary 与 canonical 一致 → publish 通过（仅对比提供字段）。"""
+        from china_etf.evaluation.rl_formal import finalize_publish, load_protocol_config
+        loaded = load_protocol_config()
+        top_sha = loaded["config_sha256"]
+        results, mask = self._pass_results(sha=top_sha, ret_val=0.0)
+        # 零收益 → canonical active_ann=0；只提供该字段避免 NaN sharpe 对比
+        consistent = {a: {s: {"active_day_annualized_return": 0.0} for s in (42, 2026, 7)}
+                      for a in ("PPO", "SAC", "TD3")}
+        payload = finalize_publish(results, loaded, mask, consistent)
+        assert payload["published"] is True
+
+    def test_p2_stop_violation_derived_from_run(self):
+        """P2: raw run 含 save_load False → 派生 stop_violations>0 → 该 algo NO_GO。"""
+        from china_etf.evaluation.rl_formal import finalize_publish, load_protocol_config
+        loaded = load_protocol_config()
+        top_sha = loaded["config_sha256"]
+        results, mask = self._pass_results(sha=top_sha)
+        results["per_algorithm"]["PPO"][42]["F1"]["save_load_deterministic_identical"] = False
+        payload = finalize_publish(results, loaded, mask)
+        # 该 algo 有 stop violation → 不能 GO
+        assert payload["canonical_stitched"]["PPO"][42]["stop_violations"] >= 1
+        assert payload["go_nogo"]["per_algorithm"]["PPO"]["decision"] == "NO_GO"
+
+    def test_p2_missing_stop_evidence_fails_closed(self):
+        """P2: stop-condition 字段缺失 → fail-closed。"""
+        from china_etf.evaluation.rl_formal import finalize_publish, load_protocol_config, InvariantViolation
+        loaded = load_protocol_config()
+        top_sha = loaded["config_sha256"]
+        results, mask = self._pass_results(sha=top_sha)
+        del results["per_algorithm"]["SAC"][2026]["F2"]["save_load_deterministic_identical"]
+        del results["per_algorithm"]["SAC"][2026]["F2"]["test"]["nan_obs_or_reward"]
+        with pytest.raises(InvariantViolation):
+            finalize_publish(results, loaded, mask)
+
+    def test_p3_real_mask_lengths(self):
+        """P3: synthetic 用真实 mask 长度（canonical stitched len==475）。"""
+        import sys
+        sys.path.insert(0, str(ROOT / "scripts"))
+        from china_etf.evaluation.rl_formal import finalize_publish, load_protocol_config
+        from gate4_rl_formal_runner import _real_mask_str
+        loaded = load_protocol_config()
+        top_sha = loaded["config_sha256"]
+        mask = _real_mask_str()
+        assert len(mask) == 475
+        # 用真实 mask 分段构造 synthetic（非 bdate）
+        results, _ = self._pass_results(sha=top_sha)
+        # 重写每 fold execution_dates 为真实 mask 段
+        offset = 0
+        for a in ("PPO", "SAC", "TD3"):
+            for seed in (42, 2026, 7):
+                for fold in ("F1", "F2", "F3", "F4"):
+                    n = self.FOLD_LENS[fold]
+                    seg = mask[offset:offset + n]
+                    offset = (offset + n) % 475
+                    results["per_algorithm"][a][seed][fold]["test"]["series"]["execution_dates"] = list(seg)
+        payload = finalize_publish(results, loaded, mask)
+        assert payload["published"] is True

@@ -67,13 +67,25 @@ def dry_run_constructor_spy(cfg: dict) -> dict:
     return {"ok": ok, "per_algo": details}
 
 
+def _real_mask_str() -> list[str]:
+    """P3：真实 folds + exact_test_mask（475 有序），非 arbitrary bdate。"""
+    adj = load_research_adj()
+    runner = WalkForwardRunner(
+        adj=adj, opens={}, closes={}, slots=list(SLOT_MAP.keys()),
+        slot_to_instrument={s: SLOT_MAP[s]["instrument"] for s in SLOT_MAP},
+        build_env=build_env,
+    )
+    folds = runner.make_folds(n_folds=4)
+    mask = exact_test_mask(folds, calendar=adj.index)
+    assert mask["exact_test_date_count"] == 475
+    return [str(d.date()) for d in mask["test_dates"]]
+
+
 def publish_synthetic(loaded: dict) -> dict:
-    """F6：synthetic no-training 结果走 finalize_publish（验证 publication 路径，不真实 publish）。"""
-    import pandas as pd
+    """F6/P3：synthetic no-training 结果走 finalize_publish（真实 mask，canonical 聚合，不真实 publish）。"""
     cfg = loaded["config"]
     sha = loaded["config_sha256"]
-    mask_dates = pd.bdate_range("2023-11-24", periods=475, freq="B")
-    mask_str = [str(d.date()) for d in mask_dates]
+    mask_str = _real_mask_str()  # 真实 475 mask（P3）
     per_algo = {}
     offset = 0
     for a in cfg["algorithms"]:
@@ -87,21 +99,19 @@ def publish_synthetic(loaded: dict) -> dict:
                 costs = [0.001] * n
                 per_algo[a][seed][fold] = {
                     "config_sha256": sha,
+                    "save_load_deterministic_identical": True,
                     "test": {"n_eval_steps": n, "total_cost": sum(costs),
+                             "nan_obs_or_reward": 0, "negative_cash_count": 0,
                              "series": {"execution_dates": list(seg), "costs": list(costs),
                                         "net_returns": [0.0] * n, "cash": [1e6] * n,
                                         "actual_weights": [[0.1] * 11] * n,
                                         "raw_weights": [[0.1] * 11] * n,
                                         "post_risk_weights": [[0.1] * 11] * n}}}
     results = {"per_algorithm": per_algo}
-    stitched = {a: {"seed_keys": list(cfg["seeds"]),
-                    "active_day_annualized_return": {s: 0.20 for s in cfg["seeds"]},
-                    "sharpe": {s: 1.2 for s in cfg["seeds"]},
-                    "max_drawdown": {s: -0.10 for s in cfg["seeds"]},
-                    "calmar_median": 2.0, "stop_violations": 0} for a in cfg["algorithms"]}
-    payload = finalize_publish(results, loaded, mask_str, stitched)
+    # P1：无 caller stitched —— GO/NO-GO 仅 canonical 聚合
+    payload = finalize_publish(results, loaded, mask_str)
     print(f"--publish-synthetic: published=True config_sha256={payload['config_sha256'][:12]} "
-          f"project_level={payload['go_nogo']['project_level']}")
+          f"project_level={payload['go_nogo']['project_level']} (real mask, canonical aggregation)")
     return payload
 
 
