@@ -1,52 +1,56 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP_CONSISTENCY_CLEANUP_001
-state: REVIEW_COMPLETE
+handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN_001
+state: REVISIONS_REQUIRED
 
 reviewed_packet:
-  path: docs/review_packets/POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP.md
-  commit: c780580c990fe5ed2a985af0752a2fb07ea77032
+  path: docs/review_packets/POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN.md
+  commit: 729e6dc76e01f1fbdda186411b85e1bf2d3d5fbe
 
-code_commit: 1ca71bb006cd4f82de1e10c3042bbd73395833e1
+code_commit: 13e29ac6f82cc87983641a2f432af4208b33e183
 
-decision: EXECUTION_REALISM_PREP_CONSISTENCY_CLEANUP_ACCEPTED_FROZEN_RUN_AUTHORIZED
+decision: EXECUTION_REALISM_RUN_INVALID_IMPLEMENTATION_CORRECTION_REQUIRED
 
 response:
-  path: docs/reviewer_responses/POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP_CONSISTENCY_CLEANUP_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN_REVIEWER_RESPONSE.md
 
 passed:
   - UNIQUE_READY_FOR_REVIEW_HANDOFF
-  - DOC_ONLY_CLEANUP_NO_RUNNER_OR_RESULTS
-  - STALE_DUPLICATE_FROZEN_BLOCK_REMOVED
-  - SINGLE_CANONICAL_EXECUTION_REALISM_CONTRACT_PRESENT
-  - CN_LARGE_MAPPING_CORRECTED_TO_510300_SH
-  - S4_BACKTEST_NOT_APPLICABLE_EXCLUDED_FROM_STOP
-  - SOUTHBOUND_LISTING_DATA_ELIGIBILITY_DATES_PRESERVED
-  - PRE_2024_05_06_STRUCTURAL_INELIGIBILITY_AND_CASH_PARKING_PRESERVED
-  - DATE_EFFECTIVE_03110_BOARD_LOT_100_TO_50_PRESERVED
-  - SAME_DAY_REVERSAL_UNKNOWN_NOT_RELIED_UPON_PRESERVED
-  - SOUTHBOUND_COST_MODEL_ROUTING_PRESERVED
-  - HK_ETF_STAMP_DUTY_ZERO_PRESERVED
-  - HK_T2_SETTLEMENT_NO_UNSETTLED_CASH_REUSE_PRESERVED
-  - PREMIUM_GUARD_HISTORICAL_NOT_EVALUABLE_PRESERVED
-  - S2_COMMON_CNY_BASE_AGGREGATION_PRESERVED
-  - MAXDIV_120_0P5_CORE_FROZEN
-  - L1_NOMINAL_1011_DAY_WINDOW_PRESERVED
-  - NO_PRELAUNCH_BACKFILL
-  - T_CLOSE_TO_NEXT_SESSION_OPEN_PRESERVED
-  - NO_RESULT_INFORMED_TUNING
+  - AUTHORIZED_FROZEN_RUN_WAS_ATTEMPTED
+  - FROZEN_11_SLOT_MAPPING_DECLARED
+  - FROZEN_03110_ELIGIBILITY_DATE_DECLARED
+  - PRE_ELIGIBILITY_CASH_PARKING_DECLARED
+  - DATE_EFFECTIVE_03110_BOARD_LOT_DECLARED
+  - SAME_DAY_REVERSAL_NOT_RELIED_UPON_DECLARED
+  - PREMIUM_GUARD_BACKTEST_NA_DECLARED
+  - S3_STRUCTURAL_ELIGIBILITY_FACT_PRESERVED
+  - NO_RESULT_INFORMED_MAPPING_WINDOW_THRESHOLD_CHANGE_REPORTED
   - PPO_SAC_TD3_REMAIN_EXCLUDED
   - QMT_LIVE_REMAINS_FORBIDDEN
 
-revision_required: []
+revision_required:
+  - MAXDIV_POLICY_DATE_AND_ACTION_INVERSION_BUG_INVALIDATES_TARGET_WEIGHT_PATH
+  - T1_OPEN_EXECUTION_CONTRACT_VIOLATED_BY_CLOSE_PRICE_TRADING
+  - SLOT_ORDER_DEPENDENT_REBALANCE_DOES_NOT_ENFORCE_TARGET_WEIGHTS
+  - HK_T2_SETTLEMENT_LEDGER_NOT_IMPLEMENTED_AND_PENDING_CASH_DOUBLE_SUBTRACTED
+  - SOUTHBOUND_LOCAL_HKD_COST_TRANSACTION_DATE_AND_FX_BASE_CONVERSION_NOT_IMPLEMENTED
+  - FROZEN_T_MINUS_1_HKD_CNY_TIMING_NOT_IMPLEMENTED
+  - S1_NOT_EVALUATED_ON_REQUIRED_ANNUAL_AND_FROZEN_STRESS_SUBPERIODS
+  - TESTS_DO_NOT_VALIDATE_CLAIMED_EXECUTION_MECHANICS
+  - PREMIUM_GUARD_TEST_HAS_UNCONDITIONAL_OR_TRUE
+  - DATA_SNAPSHOT_PROVENANCE_HASHES_MISSING
+  - REPORTED_EXECUTABLE_ECONOMICS_AND_S1_S2_NOT_ACCEPTED
 
 authorized_next:
-  - POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN
+  - POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN_CORRECTION
 
 forbidden_next:
   - FORWARD_PAPER_VALIDATION
   - PAPER
   - LIVE
+  - RESULT_INFORMED_MAPPING_CHANGE
+  - RESULT_INFORMED_WINDOW_CHANGE
+  - RESULT_INFORMED_STOP_THRESHOLD_CHANGE
   - RESULT_INFORMED_BLEND_WEIGHT_SEARCH
   - DENSE_ALPHA_SEARCH
   - DYNAMIC_ALPHA
@@ -59,11 +63,16 @@ forbidden_next:
   - QMT_LIVE
 
 notes:
-  - PREP consistency cleanup accepted; one frozen execution-realism RUN is authorized.
-  - The RUN must implement exactly the canonical packet contract and report exact implementation commit, tests, provenance, executable net metrics, annual/frozen stress subperiods, S1-S4 evaluation, fail-closed counts and any STOP condition.
-  - S3 remains intentionally frozen including structural ineligibility cash-parking events. If S3 triggers, report STOP; do not retune mapping, threshold, window or counting after seeing results.
-  - Historical PremiumGuard is NOT_EVALUABLE_HISTORICALLY and S4 is excluded from backtest STOP evaluation.
-  - No forward/paper/live or RL work is authorized until the RUN packet is reviewed.
+  - The structural 03110 pre-Southbound eligibility fact and the frozen S3 counting rule remain unchanged. A corrected run may therefore still STOP on S3; that is not permission to alter mapping, window or thresholds.
+  - The current +64.9% cumulative / 12.8% CAGR / Sharpe 0.911 / MaxDD -13.2% results are invalid for decision-making because the runner does not reproduce the frozen MaxDiv target path and trades at T+1 close rather than T+1 open.
+  - BaselinePolicy.__call__ uses env._i rather than the argument passed by the runner; env._i is not advanced. The runner also clips the raw action before applying w=(a+1)/2, corrupting weights.
+  - Rebalance must be plan-first, eligible-sells-first, then buys from settled cash; report target-vs-actual tracking and per-instrument fills/notional. Current artifact shows 03110 cost 0, so the claimed post-eligibility Southbound path was not exercised.
+  - Implement a dated HK T+2 settlement receivable ledger. Current single pending pool never ages/releases and is also subtracted from cash although it was not included in cash.
+  - For 03110, keep local HKD execution price for SouthboundETFCostModel, pass transaction_date and frozen T-1 fx_to_base, and aggregate notional/cost in CNY only after conversion.
+  - S1 must be evaluated on full period, calendar years and frozen stress regimes; current full-period hard-coded research CAGR is insufficient.
+  - Replace constant/tautological tests with behavioral regression tests, including policy parity, T+1-open fills, settlement release, target tracking, Southbound date-effective fee/FX conversion and PremiumGuard N/A without an unconditional pass.
+  - Bind the run to deterministic hashes/source identifiers for every local input file plus the exact research-reference artifact/commit.
+  - No later gate is authorized until the corrected frozen run is reviewed.
   - PPO/SAC/TD3 remain closed unless the user explicitly reopens them.
 
-updated_at: 2026-08-10T10:37:30+08:00
+updated_at: 2026-08-10T10:49:20+08:00
