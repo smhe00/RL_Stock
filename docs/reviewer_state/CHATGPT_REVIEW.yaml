@@ -1,50 +1,53 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_002_001
-state: REVIEW_COMPLETE
+handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_001
+state: REVISIONS_REQUIRED
 
 reviewed_packet:
-  path: docs/review_packets/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP.md
-  commit: c792e8d0cc8750a6f9e88796d4c624b167aba4b0
+  path: docs/review_packets/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN.md
+  commit: 8bda08aba97ba0b43821fa672599dd331585709a
 
-code_commit: null
+code_commit: 675f1eea5ea63397ae2d6e312eab282c17c7968e
 
-decision: MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_ACCEPTED_RUN_AUTHORIZED
+decision: MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_PROVISIONAL_ECONOMICS_PROMISING_MECHANICAL_CORRECTION_REQUIRED
 
 response:
-  path: docs/reviewer_responses/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_002_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_REVIEWER_RESPONSE.md
 
 passed:
   - UNIQUE_READY_FOR_REVIEW_HANDOFF
-  - PREP_CORRECTION_002_ONLY_NO_RUN_OR_BACKTEST
-  - MAXDIV_120_0P5_CORE_FROZEN
-  - M0_M1_M2_M3_CAPS_PREREGISTERED_UNCHANGED
-  - M2_PRINCIPAL_CHALLENGER_PRE_DESIGNATED
-  - CANONICAL_11_SLOT_VECTOR_PRESERVED_M1_M2_M3
-  - OPERATIONAL_CASH_SEPARATE_ACCOUNTING_SLEEVE
-  - M3_CASH_LIKE_CAP_ZERO_WITH_DIMENSION_PRESERVED
-  - TOTAL_NAV_TO_SLEEVE_CAP_TRANSFORMS_FROZEN
-  - UNIQUE_JOINT_EUCLIDEAN_PROJECTION_OBJECTIVE_FROZEN
-  - SLSQP_METHOD_INITIALIZATION_ITERATION_AND_FTOL_FROZEN
-  - NO_POST_RESULT_SOLVER_FALLBACK
-  - M0_EXACT_LEGACY_RISKOVERLAYV0_PATH_PRESERVED
-  - M0_ALL_1011_X_11_PARITY_TOLERANCE_FROZEN_1E_9
-  - INDEPENDENT_MINIMUM_DISTANCE_TEST_REQUIRED
-  - DUAL_GROUP_BINDING_AND_TRUE_INFEASIBLE_TESTS_REQUIRED
-  - MAXDD_MAGNITUDE_PER_10PPT_SIGN_FIXED
-  - L1_IMPLEMENTATION_COMMIT_RESULTS_RAW_SHA256_BOUND
-  - L1_T_TO_T1_CAUSAL_COST_CA_ENGINE_FROZEN
-  - FORWARD_SANITY_USES_ACTUAL_LATEST_POST_RISK_WEIGHTS
-  - VIABILITY_CRITERIA_8_ITEMS_FROZEN
-  - CRITERION_6_MATCHED_5_YEARS_PLUS_2_STRESS_SEGMENTS
+  - FROZEN_M0_M1_M2_M3_CAPS_PRESERVED
+  - MAXDIV_120_0P5_CORE_PRESERVED
+  - M2_PRINCIPAL_CHALLENGER_PRESERVED
+  - M0_ALL_1011_X_11_TARGET_PARITY_EXACT_ZERO
+  - PRIMARY_FULL_PERIOD_ECONOMICS_PROMISING_PROVISIONALLY
+  - M3_CORRECTLY_FAILS_FROZEN_SHARPE_1P20_SCREEN_PROVISIONALLY
+  - SLSQP_RESULT_SUCCESS_FAIL_CLOSED_PRESENT
+  - FINAL_SIMULTANEOUS_FEASIBILITY_CHECKS_PRESENT
+  - ANALYTIC_AND_DETERMINISM_PROJECTION_TESTS_PRESENT
+  - PYTHON_NUMPY_SCIPY_VERSIONS_RECORDED
   - NO_EXPECTED_RETURN_OPTIMIZER
   - STOPPED_03110_MAPPING_NOT_REPAIRED_OR_LIVE_READY
   - PPO_SAC_TD3_REMAIN_EXCLUDED
 
-revision_required: []
+revision_required:
+  - RESTORE_FROZEN_WATERFILL_SLSQP_INITIALIZATION_NOT_RAW_X0
+  - FORWARD_SANITY_USE_ACTUAL_TOTAL_NAV_WEIGHTS_NOT_SLEEVE_WEIGHTS
+  - ADD_END_TO_END_FORWARD_SANITY_ACTUAL_CANDIDATE_WEIGHT_TEST
+  - RAW_ARTIFACT_SEPARATE_SLEEVE_WEIGHTS_AND_TOTAL_NAV_SLOT_WEIGHTS
+  - SCALE_OR_EXPLICITLY_SEPARATE_TOTAL_NAV_TURNOVER_TRADED_NOTIONAL_AND_COST_FOR_95PCT_SLEEVE
+  - REMOVE_TAUTOLOGICAL_PARITY_OK_OR_TRUE_FROM_VIABILITY_CRITERION_8
+  - BIND_CRITERION_8_TO_ACTUAL_TEST_PROVENANCE_PARITY_SOLVER_VALIDITY
+  - CRITERION_6_USE_MATCHED_SUBPERIOD_CALENDAR_CAGR_NOT_252_OVER_N_ACTIVE_ANNUALIZATION
+  - FIX_WORST_CALENDAR_YEAR_RETURN_TO_COMPOUND_ALL_RETURNS_IN_YEAR
+  - ASSERT_FULL_M0_REQUIRED_METRIC_PARITY_INCLUDING_WORST_YEAR
+  - REGENERATE_PACKET_ANNUAL_STRESS_TABLE_FROM_CANONICAL_ARTIFACT
+  - EMBED_FORWARD_DURATION_YIELD_SNAPSHOT_DATE_VALUE_SOURCE_AND_SHA256
+  - DO_NOT_CLAIM_PRODUCTION_KKT_CHECK_UNLESS_ACTUALLY_EXECUTED
+  - RERUN_EXACT_SAME_M0_M3_AFTER_MECHANICAL_FIXES
 
 authorized_next:
-  - POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN
+  - POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_CORRECTION
 
 forbidden_next:
   - RESULT_INFORMED_CAP_SEARCH
@@ -70,14 +73,13 @@ forbidden_next:
   - RL_COMPARISON
 
 notes:
-  - PREP_CORRECTION_002 resolves the remaining pre-run projection and MaxDD-sign ambiguities. One frozen M0-M3 historical capital-efficiency RUN is authorized.
-  - RUN acceptance requires SLSQP result.success == true; any solver non-success/numerical/final-feasibility failure is fail-closed with candidate/date context and does not authorize fallback or solver substitution.
-  - The KKT/optimality check must not be circular by recursively reusing the same SLSQP projection as independent proof. Use direct stationarity/complementarity residual if practical, or the frozen independent analytic minimum-distance tests plus feasibility/objective checks.
-  - Record Python, NumPy and SciPy versions in provenance because the numerical solver is part of the frozen implementation contract.
-  - M0 parity must be validated before interpreting M1-M3 results; parity failure invalidates/stops the RUN.
-  - Full pre-registered metrics, annual/stress subperiods, allocation/cap-hit/turnover diagnostics, CE diagnostics and 7/8/9 percent required-risk-return sanity outputs are required for all M0-M3.
-  - M2 remains principal challenger; no result-informed cap search or new winner-selection threshold is allowed.
-  - The old 03110 execution-realism structural STOP remains separate and closed; this research RUN is non-executable concept validation only.
+  - Current primary economics are provisional rather than scientifically rejected: M1/M2 improve CAGR materially and M2 provisionally passes the 8-item screen, but required mechanical/artifact outputs are not contract-clean yet.
+  - Forward sanity currently passes sleeve-normalized weights into a total-NAV function, visibly producing defensive_w above the frozen caps for M1/M2/M3; corrected 8% risk-return sanity should be about 10.74%/10.14%/9.59% for M1/M2/M3 under the same 1.4% cash and 1.7114% duration assumptions.
+  - The raw artifact field named total_weights currently stores sleeve weights; correct before any execution-study reuse.
+  - M0 worst-calendar-year return currently does not match accepted L1 because the metric calculation drops the first return of the year.
+  - Packet annual/stress table materially disagrees with the result artifact and must be regenerated from one canonical formula path.
+  - Mechanical correction only: no candidate/cap/window/strategy/solver substitution or result-informed tuning is authorized.
+  - The old 03110 execution-realism STOP remains closed and separate.
   - PPO/SAC/TD3 remain closed unless the user explicitly reopens them.
 
-updated_at: 2026-08-10T16:07:49+08:00
+updated_at: 2026-08-10T19:22:00+08:00
