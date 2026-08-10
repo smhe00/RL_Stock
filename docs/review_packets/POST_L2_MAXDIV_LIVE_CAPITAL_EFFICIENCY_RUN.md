@@ -1,21 +1,34 @@
-# POST_L2 MAXDIV LIVE CAPITAL EFFICIENCY RUN — M0-M3 历史资本效率概念研究（RUN_CORRECTION）
+# POST_L2 MAXDIV LIVE CAPITAL EFFICIENCY RUN — M0-M3 历史资本效率概念研究（RUN_DOC_CLEANUP）
 
-> 评审（`POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_REVIEWER_RESPONSE.md`）
-> **MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_PROVISIONAL_ECONOMICS_PROMISING_MECHANICAL_CORRECTION_REQUIRED** →
-> 本版为 **RUN_CORRECTION**（10 项机械修正 + 重跑完全相同 M0-M3 实验一次）。
-> 先期授权（`POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_002_REVIEWER_RESPONSE.md`）
-> **MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_ACCEPTED_RUN_AUTHORIZED**。
-> handoff_id = **G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_CORRECTION_001**。
+> 评审（`POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_CORRECTION_REVIEWER_RESPONSE.md`）
+> **MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_CORRECTION_ACCEPTED_DOC_CONSISTENCY_CLEANUP_REQUIRED** →
+> 本版为 **RUN_DOC_CLEANUP**（仅文档/注释一致性清理；**不重跑实验、不生成/修改 artifact**）。
+> 先期评审（`POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_REVIEWER_RESPONSE.md`）
+> **PROVISIONAL_ECONOMICS_PROMISING_MECHANICAL_CORRECTION_REQUIRED**；先期授权
+> （`POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_002_REVIEWER_RESPONSE.md`）
+> **PREP_ACCEPTED_RUN_AUTHORIZED**。
+> handoff_id = **G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_DOC_CLEANUP_001**。
 
 ```yaml
-implementation_commit: 487fd00   # src/china_etf/risk/risk_overlay.py + runner + tests（10 项机械修正）
-result_artifact: artifacts/gate4_maxdiv_capital_efficiency_results.json + _raw.json
-handoff: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_CORRECTION_001
+implementation_commit: 487fd00   # src/china_etf/risk/risk_overlay.py + runner + tests（RUN_CORRECTION，被接受）
+result_artifact: artifacts/gate4_maxdiv_capital_efficiency_results.json + _raw.json（canonical，未改动）
+handoff: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_DOC_CLEANUP_001
 label: POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY
 scenario_not_strict_pit_oos: true
 ```
 
-> ## Revision Record（RUN_CORRECTION，评审 10 项机械修正）
+> ## Revision Record（RUN_DOC_CLEANUP，评审 6 项文档一致性清理；NO RERUN）
+>
+> 1. Packet 全期表 Sortino 对齐 canonical artifact（M1 1.752721 / M2 1.675018 / M3 1.624766）。
+> 2. Criterion-6 worst degradation 全文档对齐 canonical（M1 -0.020451 / M2 -0.025159 / M3 -0.029931）；
+>    移除陈旧 -2.06/-2.53/-3.01 与 -2.51/-2.53/-2.61。
+> 3. `2026 H1` 行更名为 `2026 YTD（至 2026-08-07）`（评估段超出 H1）。
+> 4. 全期表 turnover 列 = canonical total-NAV mean turnover（criterion 7 基础）；
+>    sleeve-normalized 单独标注。
+> 5. `RiskOverlayCE` docstring 移除生产 KKT 声明（仅注释；求解器行为不变）。
+> 6. canonical result artifact 与全部经济输出保持未改动（无重跑、无结果驱动调整）。
+
+> 先期 Revision Record（RUN_CORRECTION，评审 10 项机械修正，已被接受）
 >
 > 1. SLSQP x0 = bounded-simplex waterfill（冻结初始化），非 raw。
 > 2. Forward sanity 用实际 latest **total-NAV** 权重（0.95×sleeve）；defensive_w ≤ frozen cap；
@@ -76,12 +89,18 @@ python scripts/gate4_maxdiv_capital_efficiency.py --check: PASSED
 
 # 3. 全期结果（1011 决策日，历史研究 net 路径）
 
-| 候选 | cum | Calendar CAGR | Sharpe | Sortino | MaxDD | Calmar | mean 防御配置 | turnover |
+| 候选 | cum | Calendar CAGR | Sharpe | Sortino | MaxDD | Calmar | mean 防御配置 | total-NAV turnover |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| M0 legacy | +45.42% | 9.42% | 1.655 | 2.195 | -4.02% | 2.435 | 50.0% | 0.0114 |
-| M1 | +55.92% | 11.26% | 1.282 | 1.682 | -6.81% | 1.719 | 30.0% | 0.0131 |
-| **M2 principal** | **+58.15%** | **11.64%** | **1.219** | 1.584 | **-7.67%** | 1.579 | **25.0%** | 0.0136 |
-| M3 | +61.14% | 12.15% | 1.179 | 1.517 | -8.46% | 1.493 | 20.0% | 0.0137 |
+| M0 legacy | +45.42% | 9.42% | 1.655 | 2.195 | -4.02% | 2.435 | 50.0% | 0.011407 |
+| M1 | +55.92% | 11.26% | 1.282 | **1.752721** | -6.81% | 1.719 | 30.0% | 0.012455 |
+| **M2 principal** | **+58.15%** | **11.64%** | **1.219** | **1.675018** | **-7.67%** | 1.579 | **25.0%** | **0.012929** |
+| M3 | +61.14% | 12.15% | 1.179 | **1.624766** | -8.46% | 1.493 | 20.0% | 0.013006 |
+
+```text
+Sortino 与 turnover 列 = canonical artifact 值（Sortino: M1 1.752721 / M2 1.675018 / M3 1.624766；
+turnover 列 = total-NAV mean turnover，criterion 7 定义基础；sleeve-normalized turnover
+（M0 0.011407 / M1 0.01311 / M2 0.01361 / M3 0.01369）在 artifact 中单独报告）。
+```
 
 ```text
 M0 parity: max|diff| = 0.00e+00（与已接受 L1 post_risk_weights 全 1011x11 逐元素一致）-> PASS
@@ -93,13 +112,14 @@ M0 metrics 与已接受 L1 研究 MaxDiv 一致（cum 45.42% / CAGR 9.415% / Sha
 | 候选 | C1 CAGR≥7% | C2 Sharpe≥1.2 | C3 MaxDD≥-12% | C4 Calmar≥0.7 | C5 ≤M0+0.5ppt | C6 min 段退化≥-5ppt | C7 ≤1.5×M0 | C8 测试/parity | VIABLE |
 |---|---|---|---|---|---|---|---|---|---|
 | M0 | — | — | — | — | — | — | — | — | legacy |
-| M1 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ (-2.06ppt) | ✓ | ✓ | **TRUE** |
-| **M2** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ (-2.53ppt) | ✓ | ✓ | **TRUE** |
-| M3 | ✓ | **✗ (1.179)** | ✓ | ✓ | ✓ | ✓ (-3.01ppt) | ✓ | ✓ | **FALSE** |
+| M1 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ (-2.05ppt) | ✓ | ✓ | **TRUE** |
+| **M2** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ (-2.52ppt) | ✓ | ✓ | **TRUE** |
+| M3 | ✓ | **✗ (1.179)** | ✓ | ✓ | ✓ | ✓ (-2.99ppt) | ✓ | ✓ | **FALSE** |
 
 ```text
 Criterion 6 = 5 年度 + 2 stress 段 min matched CAGR degradation vs M0：
-  M1 worst -2.06ppt / M2 worst -2.53ppt / M3 worst -3.01ppt（全部 > -5ppt，通过）。
+  M1 worst -2.05ppt（-0.020451）/ M2 worst -2.52ppt（-0.025159）/ M3 worst -2.99ppt（-0.029931）
+  （全部 > -5ppt，通过；canonical artifact 值）。
 M3 仅 criterion 2（Sharpe 1.179 < 1.20）未达标 → 不进入后续执行研究。
 ```
 
@@ -147,15 +167,16 @@ required_risk_return(T) = (T - defensive_carry) / risk_asset_w（用实际 lates
 | 2023 | +5.94% | +5.09% | +4.85% | +4.72% |
 | 2024 | +18.84% | +22.83% | +23.54% | +24.67% |
 | 2025 | +12.56% | +18.14% | +19.59% | +20.99% |
-| 2026 H1 | +5.39% | +6.87% | +7.08% | +7.46% |
+| 2026 YTD（至 2026-08-07） | +5.39% | +6.87% | +7.08% | +7.46% |
 | weak 2022H2-2023 | +3.47% | +2.18% | +1.85% | +1.59% |
 | strong 2024-2026 | +13.17% | +17.12% | +17.99% | +19.03% |
 
 ```text
 上表从 gate4_maxdiv_capital_efficiency_results.json 的 subperiods calendar_cagr 直接提取
 （单一公式路径；packet 与 artifact 精确一致，仅显示舍入）。
-约束候选在 2022 弱市期 CAGR 低于 M0（M2 2022 -3.22% vs M0 -0.70%，差 -2.53ppt），
-但 criterion 6 用 7 段 min matched calendar-CAGR degradation，M2 worst = -2.53ppt > -5ppt 通过。
+约束候选在 2022 弱市期 CAGR 低于 M0（M2 2022 -3.22% vs M0 -0.70%，差 -2.52ppt），
+但 criterion 6 用 7 段 min matched calendar-CAGR degradation，M2 worst = -2.52ppt
+（-0.025159）> -5ppt 通过。
 强市期（2024-2026）约束候选大幅跑赢 M0（M2 +18.0% vs M0 +13.2%）。
 ```
 
@@ -202,9 +223,17 @@ M0/M1/M2 viable；M2 = principal challenger（pre-designated），8 项全过。
 
 ```yaml
 gate: POST_L2
-handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_CORRECTION_001
+handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_DOC_CLEANUP_001
 packet: POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN
 status: READY_FOR_REVIEW
+
+run_doc_cleanup_applied (6, reviewer ACCEPTED_DOC_CONSISTENCY_CLEANUP_REQUIRED; NO RERUN):
+  sortino_canonical: true           # M1 1.752721 / M2 1.675018 / M3 1.624766
+  criterion6_canonical: true        # M1 -0.020451 / M2 -0.025159 / M3 -0.029931（全文档）
+  year2026_label: true              # 2026 YTD（至 2026-08-07）
+  turnover_column: true             # total-NAV mean turnover（criterion 7 基础）；sleeve 单独标注
+  riskoverlayce_docstring: true     # 移除生产 KKT 声明（仅注释；求解器行为不变）
+  artifacts_unchanged: true         # canonical result artifact 未改动；无重跑
 
 run_correction_applied (10, reviewer PROVISIONAL_ECONOMICS_PROMISING_MECHANICAL_CORRECTION_REQUIRED):
   slsqp_waterfill_init: true        # x0 = bounded-simplex waterfill (frozen)
@@ -234,7 +263,8 @@ result (corrected rerun; primary economics unchanged from provisional):
 
 viability:
   M0: legacy; M1: TRUE; M2: TRUE (all 8 criteria); M3: FALSE (criterion 2 Sharpe 1.179)
-  criterion6_worst (calendar CAGR): M1 -2.51ppt / M2 -2.53ppt / M3 -2.61ppt (all > -5ppt)
+  criterion6_worst (calendar CAGR): M1 -2.05ppt (-0.020451) / M2 -2.52ppt (-0.025159) /
+                                    M3 -2.99ppt (-0.029931) (all > -5ppt)
 
 ce_diagnostics:
   cagr_per_10ppt: +0.89~+0.92ppt (M1-M3)

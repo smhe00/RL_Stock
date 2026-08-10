@@ -104,8 +104,9 @@ class RiskOverlayCE(RiskOverlayV0):
     C4 growth 组 / C5 defensive 组）：
         min_w  0.5 * ||w - raw||_2^2   s.t. C1-C5
     方法: scipy.optimize.minimize(method='SLSQP')（命名唯一，无 fallback）；
-    max_iter=200 / ftol=1e-12 / 终检 atol=1e-6；result.success 必须为 True，
-    任一收敛/KKT/可行性检查失败 → InfeasibleConstraints（fail-closed）。
+    max_iter=200 / ftol=1e-12 / 终检 atol=1e-6；result.success 必须为 True，任一收敛或
+    最终可行性检查失败 → InfeasibleConstraints（fail-closed）。
+    最优性由冻结的独立解析最小距离投影测试守护（无生产 KKT 残差检查）。
 
     语义: cap 作用于 rebalance target weights（同 RiskOverlayV0 V1）；actual 超限由
     下次再平衡纠正。M0 不经过本类（保持 legacy RiskOverlayV0 精确路径）。

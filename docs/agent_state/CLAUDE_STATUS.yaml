@@ -1,20 +1,20 @@
 protocol_version: 2
 actor: claude
-handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_CORRECTION_001
+handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_DOC_CLEANUP_001
 state: READY_FOR_REVIEW
 
 gate: POST_L2
-phase: POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_CORRECTION
+phase: POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_DOC_CLEANUP
 code_commit: 487fd00
 packet: docs/review_packets/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN.md
 
 progress:
-  current_task: RUN_CORRECTION (10 mechanical fixes + one M0-M3 rerun). Reviewer: MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_PROVISIONAL_ECONOMICS_PROMISING_MECHANICAL_CORRECTION_REQUIRED. Fixed: SLSQP x0=waterfill; forward sanity total-NAV weights (8% req = 10.74/10.14/9.59 M1/M2/M3, defensive_w<=cap); raw artifact sleeve vs total-NAV split; turnover total-NAV scale; criterion8=run_valid; criterion6=calendar CAGR; worst-year=prod(1+r)-1 (M0==-0.003933); packet table regenerated; yield snapshot embedded; no false KKT claim. Corrected rerun economics unchanged: M0 parity 0.0, M0 cum 45.42%/CAGR 9.42%/Sharpe 1.655/MDD -4.02%; M1 55.92%/11.26%/1.282/-6.81%; M2 principal 58.15%/11.64%/1.219/-7.67% viable; M3 61.14%/12.15%/1.179/-8.46% NOT viable (Sharpe<1.2). M0/M1/M2 HISTORICALLY_VIABLE. Tests 15 passed; --check PASSED.
+  current_task: RUN_DOC_CLEANUP (docs/comment consistency only; NO rerun; artifacts unchanged). Reviewer: MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_CORRECTION_ACCEPTED_DOC_CONSISTENCY_CLEANUP_REQUIRED. Corrected economics substantively accepted: M0 CAGR 9.4154%/Sharpe 1.6545/MaxDD -4.02%; M1 11.26%/1.2825/-6.81% viable; M2 principal 11.64%/1.2193/-7.67% viable (8/8); M3 12.15%/1.1789/-8.46% NOT viable (Sharpe<1.2). Applied 6 cleanups: Sortino canonical (M1 1.752721/M2 1.675018/M3 1.624766); criterion-6 worst canonical (M1 -0.020451/M2 -0.025159/M3 -0.029931); 2026 YTD label; turnover column = total-NAV canonical; RiskOverlayCE docstring no-KKT; artifacts preserved unchanged.
 
 last_consumed_review:
-  handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_001
-  decision: MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_PROVISIONAL_ECONOMICS_PROMISING_MECHANICAL_CORRECTION_REQUIRED
+  handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_CORRECTION_001
+  decision: MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_CORRECTION_ACCEPTED_DOC_CONSISTENCY_CLEANUP_REQUIRED
   state: REVISIONS_REQUIRED
-  response: docs/reviewer_responses/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_REVIEWER_RESPONSE.md
+  response: docs/reviewer_responses/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_CORRECTION_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-10T19:50:00+08:00
+updated_at: 2026-08-11T01:30:00+08:00
