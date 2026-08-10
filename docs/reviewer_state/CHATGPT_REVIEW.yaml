@@ -1,54 +1,49 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT_DOC_CLEANUP_001
+handoff_id: USER_SELECTED_G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_001
 state: REVIEW_COMPLETE
 
 reviewed_packet:
-  path: docs/review_packets/POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT.md
-  commit: cc17960fcbf0341d38881f2b8acfd1f78a5129c0
+  path: docs/reviewer_responses/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_AUTHORIZATION.md
+  commit: dc64d48adeeed53557952dea3c9396c9d617b80b
 
-code_commit: aabe0ca30aa9522ad34c682e49155d6cd6c18c4b
+code_commit: null
 
-decision: STOP_CLOSEOUT_DOC_CLEANUP_ACCEPTED_CLOSEOUT_COMPLETE_NO_BRANCH_AUTHORIZED
+decision: USER_SELECTED_FRESH_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_AUTHORIZED
 
 response:
-  path: docs/reviewer_responses/POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT_DOC_CLEANUP_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_AUTHORIZATION.md
 
 passed:
-  - UNIQUE_READY_FOR_REVIEW_HANDOFF
-  - DOC_ONLY_CLEANUP_NO_CODE_OR_EXPERIMENT_CHANGE
-  - S1_WORST_CORRECTED_TO_ACCEPTED_MINUS_0P006967
-  - ACCEPTED_CORRECTION_003_ECONOMICS_PRESERVED
-  - S2_PASS_VALUES_PRESERVED
-  - S3_FAIL_478_OF_1011_PRESERVED
-  - STRUCTURAL_PRE_ELIGIBILITY_461_DAYS_PRESERVED
-  - SOUTHBOUND_REAL_EXECUTION_EVIDENCE_PRESERVED
-  - CANONICAL_21_TEST_RECORD_PRESERVED
-  - PROVENANCE_NORMALIZED_TO_ACTUALLY_CONSUMED_INPUTS_AND_L1_ARTIFACTS
-  - IMPLEMENTATION_RESULT_PACKET_CLOSEOUT_AND_CLEANUP_COMMITS_DISTINGUISHED
-  - BRANCH_A_UNVERIFIED_TRADABILITY_CLAIM_REMOVED
-  - FUTURE_BRANCHES_A_TO_E_ALL_UNSELECTED
-  - NO_RESULT_INFORMED_MAPPING_WINDOW_THRESHOLD_CHANGE
-  - NO_NEW_BACKTEST_OR_RERUN
-  - PPO_SAC_TD3_REMAIN_EXCLUDED
-  - QMT_LIVE_FORWARD_PAPER_LIVE_REMAIN_FORBIDDEN
+  - PRIOR_EXECUTION_REALISM_STOP_EXPERIMENT_FORMALLY_CLOSED
+  - USER_EXPLICITLY_SELECTED_NEW_MAXDIV_CAPITAL_EFFICIENCY_RESEARCH_DIRECTION
+  - DETERMINISTIC_LONG_HORIZON_DIRECTION_PRESERVED
+  - MAXDIV_120_0P5_CORE_FROZEN
+  - M0_M1_M2_M3_TO_BE_PREREGISTERED_BEFORE_RUN
+  - M2_PRINCIPAL_CHALLENGER_PRE_DESIGNATED
+  - OPERATIONAL_CASH_SEPARATED_FROM_OPTIMIZER_FOR_M1_M2_M3
+  - NO_EXPECTED_RETURN_MODEL_INSIDE_OPTIMIZER
+  - FORWARD_RETURN_SANITY_AUDIT_ONLY
+  - STOPPED_03110_EXECUTION_MAPPING_NOT_SILENTLY_REPAIRED
+  - PPO_SAC_TD3_REMAIN_CLOSED
 
 revision_required: []
 
-authorized_next: []
+authorized_next:
+  - POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP
 
 forbidden_next:
+  - CAPITAL_EFFICIENCY_RUN
   - NEW_BACKTEST
-  - EXECUTION_REALISM_RERUN
+  - EXECUTION_UNIVERSE_REDESIGN
+  - INSTRUMENT_SUBSTITUTION
   - FORWARD_PAPER_VALIDATION
   - PAPER
   - LIVE
   - QMT_LIVE
-  - RESULT_INFORMED_INSTRUMENT_SUBSTITUTION
-  - RESULT_INFORMED_MAPPING_CHANGE
+  - RESULT_INFORMED_CAP_SEARCH
   - RESULT_INFORMED_WINDOW_CHANGE
-  - RESULT_INFORMED_STOP_THRESHOLD_CHANGE
-  - RESULT_INFORMED_BLEND_WEIGHT_SEARCH
+  - EXPECTED_RETURN_OPTIMIZATION
   - DENSE_ALPHA_SEARCH
   - DYNAMIC_ALPHA
   - PPO
@@ -59,12 +54,15 @@ forbidden_next:
   - RL_COMPARISON
 
 notes:
-  - STOP closeout documentation cleanup accepted; the frozen POST_L2 instrument execution-realism experiment is formally closed.
-  - Accepted CORRECTION_003 result remains cumulative return 0.472131, calendar CAGR 0.09738, Sharpe 1.737684, MaxDD -0.042365; S1 and S2 pass; S3 478/1011 = 47.28% fails; STOP remains true.
-  - Accepted S1 worst matched-subperiod degradation is year_2026 -0.006967 (about -0.70pct), net active-day CAGR 0.048620 versus research 0.055587.
-  - Cleanup changed only Claude-owned status/closeout documentation after the prior reviewer state; no source, test, data, artifact, mapping, window, threshold or experiment result changed.
-  - Branches A-E remain unselected. No future research branch is authorized automatically from this stopped experiment.
-  - Any future universe/window/eligibility redesign must be explicitly selected as a new research direction and begin with a fresh PREP review.
+  - This authorization is triggered by the user's explicit selection of a fresh research direction after the prior STOP experiment was closed; it is not an automatic continuation of that experiment.
+  - PREP ONLY. Claude must freeze the experiment contract and return READY_FOR_REVIEW before any capital-efficiency backtest/run.
+  - Freeze M0 legacy control, M1 <=30% total defensive capital, M2 principal challenger <=25%, and M3 <=20%, with fixed 5% operational cash outside the optimizer for M1-M3 and the exact total-NAV/investable-sleeve constraint transformation documented.
+  - Preserve MaxDiv lookback 120, shrinkage 0.5, RiskOverlayV0/project-constrained semantics and accepted L1 causal/reference bindings. No cap tuning after results.
+  - Historical operational-cash accounting should use the accepted CASH_LIKE research return proxy unless PREP identifies a contract inconsistency; current 1.4% cash yield is a user planning assumption for forward sanity only, not a historical rewrite.
+  - Forward sanity must report the residual risk-asset annual return required to reach 7%, 8% and 9% total portfolio return under a dated defensive-yield snapshot; do not optimize on these estimates.
+  - Historical viability criteria and full metric/subperiod/allocation/cap-hit/turnover plan are specified in the authorization response and must be frozen before RUN.
+  - Do not combine no-trade bands, execution-time optimization, universe replacement or alternative HK_DIVIDEND mapping into this first experiment.
+  - The prior 03110 structural S3 STOP remains a closed historical fact; this PREP must not claim the old execution mapping is live-ready.
   - PPO/SAC/TD3 remain closed unless the user explicitly reopens them.
 
-updated_at: 2026-08-10T14:26:43+08:00
+updated_at: 2026-08-10T15:24:26+08:00
