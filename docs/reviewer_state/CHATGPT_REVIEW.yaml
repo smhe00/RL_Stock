@@ -1,60 +1,60 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_001
-state: REVISIONS_REQUIRED
+handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_002_001
+state: REVIEW_COMPLETE
 
 reviewed_packet:
   path: docs/review_packets/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP.md
-  commit: d5baae7b01c2c5268955712dd1e857a502d35da1
+  commit: c792e8d0cc8750a6f9e88796d4c624b167aba4b0
 
 code_commit: null
 
-decision: MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_001_NEARLY_ACCEPTED_FINAL_PROJECTION_SPEC_CLEANUP_REQUIRED
+decision: MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_ACCEPTED_RUN_AUTHORIZED
 
 response:
-  path: docs/reviewer_responses/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_001_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_002_REVIEWER_RESPONSE.md
 
 passed:
   - UNIQUE_READY_FOR_REVIEW_HANDOFF
-  - PREP_CORRECTION_ONLY_NO_RUN_OR_BACKTEST
-  - CANONICAL_11_SLOT_VECTOR_FIXED_FOR_M1_M2_M3
+  - PREP_CORRECTION_002_ONLY_NO_RUN_OR_BACKTEST
+  - MAXDIV_120_0P5_CORE_FROZEN
+  - M0_M1_M2_M3_CAPS_PREREGISTERED_UNCHANGED
+  - M2_PRINCIPAL_CHALLENGER_PRE_DESIGNATED
+  - CANONICAL_11_SLOT_VECTOR_PRESERVED_M1_M2_M3
   - OPERATIONAL_CASH_SEPARATE_ACCOUNTING_SLEEVE
   - M3_CASH_LIKE_CAP_ZERO_WITH_DIMENSION_PRESERVED
-  - TOTAL_NAV_TO_SLEEVE_CAP_TRANSFORMS_EXPLICIT
-  - JOINT_CONSTRAINT_SET_C1_TO_C5_STATED
-  - FINAL_SIMULTANEOUS_FEASIBILITY_ASSERTIONS_PLANNED
-  - FORWARD_SANITY_USES_ACTUAL_LATEST_POST_RISK_TOTAL_NAV_WEIGHTS
-  - L1_IMPLEMENTATION_COMMIT_BOUND_F039D369D94295433132E17CF981B2EB6243C17A
-  - L1_RESULTS_AND_RAW_SHA256_VALUES_BOUND
+  - TOTAL_NAV_TO_SLEEVE_CAP_TRANSFORMS_FROZEN
+  - UNIQUE_JOINT_EUCLIDEAN_PROJECTION_OBJECTIVE_FROZEN
+  - SLSQP_METHOD_INITIALIZATION_ITERATION_AND_FTOL_FROZEN
+  - NO_POST_RESULT_SOLVER_FALLBACK
+  - M0_EXACT_LEGACY_RISKOVERLAYV0_PATH_PRESERVED
+  - M0_ALL_1011_X_11_PARITY_TOLERANCE_FROZEN_1E_9
+  - INDEPENDENT_MINIMUM_DISTANCE_TEST_REQUIRED
+  - DUAL_GROUP_BINDING_AND_TRUE_INFEASIBLE_TESTS_REQUIRED
+  - MAXDD_MAGNITUDE_PER_10PPT_SIGN_FIXED
+  - L1_IMPLEMENTATION_COMMIT_RESULTS_RAW_SHA256_BOUND
   - L1_T_TO_T1_CAUSAL_COST_CA_ENGINE_FROZEN
-  - OP_CASH_ACCOUNTING_RULE_EXPLICIT
+  - FORWARD_SANITY_USES_ACTUAL_LATEST_POST_RISK_WEIGHTS
+  - VIABILITY_CRITERIA_8_ITEMS_FROZEN
   - CRITERION_6_MATCHED_5_YEARS_PLUS_2_STRESS_SEGMENTS
-  - M0_M1_M2_M3_CAPS_UNCHANGED
-  - M2_PRINCIPAL_CHALLENGER_PRESERVED
   - NO_EXPECTED_RETURN_OPTIMIZER
   - STOPPED_03110_MAPPING_NOT_REPAIRED_OR_LIVE_READY
   - PPO_SAC_TD3_REMAIN_EXCLUDED
 
-revision_required:
-  - FREEZE_ONE_EXACT_DETERMINISTIC_JOINT_EUCLIDEAN_PROJECTION_ALGORITHM
-  - REMOVE_ACTIVE_SET_DYKSTRA_PLAIN_ALTERNATING_PROJECTION_OPTIONALITY
-  - DEFINE_FIXED_CONVERGENCE_TOLERANCE_MAX_ITER_AND_FAIL_CLOSED_KKT_FEASIBILITY_RULES
-  - ADD_REFERENCE_OR_ANALYTIC_TEST_FOR_MINIMUM_DISTANCE_PROJECTION_NOT_MERE_FEASIBILITY
-  - PRESERVE_LEGACY_RISKOVERLAYV0_PATH_EXACTLY_FOR_M0
-  - FIX_MAXDD_PER_10PPT_DIAGNOSTIC_TO_ABSOLUTE_DRAWDOWN_MAGNITUDE_CONVENTION
+revision_required: []
 
 authorized_next:
-  - POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_002
+  - POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN
 
 forbidden_next:
-  - CAPITAL_EFFICIENCY_RUN
-  - NEW_BACKTEST
   - RESULT_INFORMED_CAP_SEARCH
   - INTERMEDIATE_CAP_VALUES
+  - CAP_RETUNING
   - EXPECTED_RETURN_OPTIMIZATION
   - EXECUTION_UNIVERSE_REDESIGN
   - INSTRUMENT_SUBSTITUTION
   - NO_TRADE_BAND_SEARCH
+  - MINIMUM_TRADE_THRESHOLD_OPTIMIZATION
   - EXECUTION_TIME_OPTIMIZATION
   - FORWARD_PAPER_VALIDATION
   - PAPER
@@ -70,12 +70,14 @@ forbidden_next:
   - RL_COMPARISON
 
 notes:
-  - CORRECTION_001 resolves the prior substantive PREP ambiguities and is close to RUN-ready.
-  - The remaining projection-spec issue is material because different feasible-projection algorithms can return different M1-M3 target weights; ordinary alternating projections are not equivalent to the stated Euclidean projection objective.
-  - Freeze one exact deterministic projection solver/algorithm before observing results, with fixed tolerances, iteration limits, KKT/feasibility checks, and no fallback method selected after outcomes are known.
-  - M0 must continue through the exact legacy RiskOverlayV0 path and match accepted L1 post-risk target weights across all 1011 x 11 observations within a pre-frozen tolerance.
-  - The MaxDD per-10ppt diagnostic must use abs(MaxDD_candidate)-abs(MaxDD_M0) when labeled as drawdown-magnitude increase; signed MaxDD difference may be reported separately.
-  - No M0-M3 implementation/backtest is authorized until CORRECTION_002 is reviewed.
+  - PREP_CORRECTION_002 resolves the remaining pre-run projection and MaxDD-sign ambiguities. One frozen M0-M3 historical capital-efficiency RUN is authorized.
+  - RUN acceptance requires SLSQP result.success == true; any solver non-success/numerical/final-feasibility failure is fail-closed with candidate/date context and does not authorize fallback or solver substitution.
+  - The KKT/optimality check must not be circular by recursively reusing the same SLSQP projection as independent proof. Use direct stationarity/complementarity residual if practical, or the frozen independent analytic minimum-distance tests plus feasibility/objective checks.
+  - Record Python, NumPy and SciPy versions in provenance because the numerical solver is part of the frozen implementation contract.
+  - M0 parity must be validated before interpreting M1-M3 results; parity failure invalidates/stops the RUN.
+  - Full pre-registered metrics, annual/stress subperiods, allocation/cap-hit/turnover diagnostics, CE diagnostics and 7/8/9 percent required-risk-return sanity outputs are required for all M0-M3.
+  - M2 remains principal challenger; no result-informed cap search or new winner-selection threshold is allowed.
+  - The old 03110 execution-realism structural STOP remains separate and closed; this research RUN is non-executable concept validation only.
   - PPO/SAC/TD3 remain closed unless the user explicitly reopens them.
 
-updated_at: 2026-08-10T15:49:16+08:00
+updated_at: 2026-08-10T16:07:49+08:00
