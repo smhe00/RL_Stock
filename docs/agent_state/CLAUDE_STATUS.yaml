@@ -1,19 +1,19 @@
 protocol_version: 2
 actor: claude
-handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP_001
+handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP_CORRECTION_001
 state: READY_FOR_REVIEW
 
 gate: 4
-phase: POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP
+phase: POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP_CORRECTION
 code_commit: 1ca71bb
 packet: docs/review_packets/POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP.md
 
 progress:
-  current_task: Instrument execution-realism PREP freeze (architecture gate closed; MaxDiv core frozen; slot->11 real ETF mapping + listing dates; T close -> T+1 next-session open exec; 1x cost + 5bp slippage + lot + T+1 settlement + PremiumGuard; fail-closed pre-listing/no-quote/premium; STOP criteria S1-S4; net-vs-research loss attribution; no run)
+  current_task: Instrument execution-realism PREP correction (reviewer EXECUTION_REALISM_PREP_SUBSTANTIALLY_CORRECT_CONTRACT_FIX_REQUIRED: frozen HK_DIVIDEND=03110.HK audited mapping + HKEX/Southbound constraints; fee contract = repository MainlandETFCostModel (commission 0.00005, stamp 0, half_spread 1bp+slippage 2bp, no double-count); PremiumGuard availability-only (no premium-magnitude threshold); S2 denominator bps-of-traded-notional x1e4. No run.)
 
 last_consumed_review:
-  handoff_id: G4_POST_L2_DETERMINISTIC_ARCH_RUN_CORRECTION_001
-  decision: ARCH_RUN_CORRECTION_ACCEPTED_ARCHITECTURE_GATE_CLOSED_EXECUTION_REALISM_PREP_AUTHORIZED
-  response: docs/reviewer_responses/POST_L2_DETERMINISTIC_ARCHITECTURE_RUN_CORRECTION_REVIEWER_RESPONSE.md
+  handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP_001
+  decision: EXECUTION_REALISM_PREP_SUBSTANTIALLY_CORRECT_CONTRACT_FIX_REQUIRED
+  response: docs/reviewer_responses/POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-10T03:00:00+08:00
+updated_at: 2026-08-10T03:30:00+08:00

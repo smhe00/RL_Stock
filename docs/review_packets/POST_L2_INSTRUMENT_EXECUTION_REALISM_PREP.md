@@ -1,9 +1,25 @@
-# POST_L2 INSTRUMENT EXECUTION REALISM PREP — Instrument 级执行真实化实验（冻结契约）
+# POST_L2 INSTRUMENT EXECUTION REALISM PREP — Instrument 级执行真实化实验（冻结契约，修正版）
 
-> 评审（`POST_L2_DETERMINISTIC_ARCHITECTURE_RUN_CORRECTION_REVIEWER_RESPONSE.md`）
-> **ARCH_RUN_CORRECTION_ACCEPTED_ARCHITECTURE_GATE_CLOSED_EXECUTION_REALISM_PREP_AUTHORIZED**。
-> 本 packet 为 **PREP only**——冻结 instrument 级执行真实化实验设计，**不运行实验**。
-> handoff_id = **G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP_001**。
+> 评审（`POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP_REVIEWER_RESPONSE.md`）
+> **EXECUTION_REALISM_PREP_SUBSTANTIALLY_CORRECT_CONTRACT_FIX_REQUIRED** → 本 packet 为 **PREP 修正**。
+> **PREP only，不运行实验。** handoff_id = **G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP_CORRECTION_001**。
+
+> ## Revision Record（EXECUTION_REALISM_PREP_CORRECTION，评审 4 项契约修正）
+>
+> 1. **HK_DIVIDEND 映射**：冻结已审计 **03110.HK**（Gate-1 冻结 universe；有审计 listing/Southbound/lot/
+>    provenance；data/qmt/raw/HK_DIVIDEND_03110_HK_raw.csv 2021-01-11 起 + divid_events/03110.HK.csv
+>    官方派息）。显式建模 HKEX/Southbound 执行约束（Southbound eligible、T+0、HK lot、FX HKD->CNY）。
+>    513690.SH 为替代 instrument（不采用为执行路径；避免 instrument 替换需额外 provenance）。
+> 2. **费用契约 = 仓库 MainlandETFCostModel 现状**：commission 0.00005（万0.5）、ETF 印花税 0、
+>    exchange_fee 0（inclusion = UNKNOWN_PENDING_BROKER_FEE_AUDIT，待账户核实）、half_spread 1bp +
+>    slippage 2bp（**已含滑点**）。不虚构"万1~万3 + 印花税 0.05%"；不新增 5bp 滑点 overlay
+>    （避免与 half_spread/slippage_bps 双计）。
+> 3. **PremiumGuard = availability-only 历史语义**：IOPV 缺失/过期 → fail-closed 禁买（允许持有/卖出）；
+>    **无 premium-magnitude threshold**（当前实现不触发转 cash）；`close_to_official_nav_gap` 不得
+>    伪装成实时 premium 阈值。本历史执行真实化轨道不做"premium>阈值→cash"。
+> 4. **S2 分母冻结**：`fee_bps_of_traded_notional = total_fee/total_traded_notional × 1e4`；
+>    `slippage_bps_of_traded_notional = total_slippage/total_traded_notional × 1e4`（runner/artifact/
+>    STOP 同一约定）。
 
 ---
 
@@ -35,7 +51,7 @@ L1（真实 ETF 短窗）/ L2（scenario proxy 长窗）结果 frozen；PPO/SAC/
   CHINEXT      -> 159915.SZ（创业板ETF，2011-12-09）
   STAR         -> 588000.SH（科创50ETF，2020-11-16）
   HK_TECH      -> 513180.SH（恒生科技ETF，2021-05-25）
-  HK_DIVIDEND  -> 513690.SH（港股通红利ETF，2021-05-20）
+  HK_DIVIDEND  -> 03110.HK（恒生高股息，2021-01-11 起 raw 数据；审计冻结 universe）
   US_BROAD     -> 513500.SH（标普500ETF，2014-01-15）
   GOLD         -> 518880.SH（黄金ETF，2013-07-29）
   CN_DURATION  -> 511260.SH（十年国债ETF，2017-08-24）
@@ -43,7 +59,28 @@ L1（真实 ETF 短窗）/ L2（scenario proxy 长窗）结果 frozen；PPO/SAC/
 可执行窗口：全部 11 工具 finite 首日 + 252d warmup（= L1 窗口：决策 2022-06-09..2026-08-06，
   执行 2022-06-10..2026-08-07，1011 决策日）——复用已接受 L1 真实窗口，不重推。
 上市前：对应槽位不可交易 → 若窗口内某工具未上市，用 cash-like 停泊（fail-closed，见 §6）。
+
+## 2b. HK_DIVIDEND 执行约束（评审修正 #1，03110.HK 冻结）
+
+```text
+instrument: 03110.HK（恒生高股息，HKEX 上市）
+数据: data/qmt/raw/HK_DIVIDEND_03110_HK_raw.csv（open/close，2021-01-11 起 1116 行）
+     + data/qmt/meta/divid_events/03110.HK.csv（官方派息）→ 研究复权 TR
+FX: HKD->CNY hkd_cny_boc（T-1，与 L2 一致）
+执行约束（冻结）:
+  - Southbound 资格: 港股通可交易（Gate-1 审计）；本实验按 Southbound 可执行建模
+  - T+0 回转: HK 支持 T+0（盘中买卖）；本实验决策 T → T+1 开盘买入、T+1 可卖出
+  - Lot: HK 每手 100 股（港股通按整手；碎股不可市价）
+  - 结算: T+2 交收（HKEX）；本实验简化 T+1 到账（与 A股一致保守）——或明确 T+2（见 §4）
+  - 费用: HK 佣金 + 印花税（0.1% 双边）+ 交易费（0.00565%）+ 交易征费（0.0027%）
+    ——本实验 base case = 仓库 MainlandETFCostModel（境内简化），HK 费用作为 sensitivity
+    （明确标注非 Southbound 完整费率，评审 guard #6 同 L2 处理）
+  - 缺失/停牌: fail-closed（同 §6）
 ```
+
+> 注：513690.SH（境内 Track A wrapper）在 L1/L2 作研究序列；本执行真实化轨道采用 03110.HK
+> 以对齐审计冻结 universe，避免 instrument 替换需额外 provenance。HK 完整费率仅作 sensitivity，
+> 不冒充 Southbound 净收益。
 
 # 3. 执行日历 / next-session 语义（冻结）
 
@@ -57,16 +94,24 @@ HK/QDII（513180/513690/513500）：QDII 净值/价格反映前夜海外，T-1 �
   连续 N 日无报价则记 STOP 信号（见 §6）。
 ```
 
-# 4. 成本 / 费用 / 滑点 / 手数 / 结算（冻结）
+# 4. 成本 / 费用 / 滑点 / 手数 / 结算（冻结，评审修正 #2）
 
 ```text
-成本：现有 MainlandETFCostModel（1x）——佣金（万1~万3）+ 印花税（卖出 0.05% 现状/或 0.1%
-  历史）+ 过户费。HK/QDII 溢价/折价：PremiumGuard 对 US_BROAD 启用（513500 溢价监控，
-  requires_protection，与 corrected 路径一致）。
-滑点：每笔按 0.05%（bid-ask spread 保守近似），冻结。
-手数：A股 ETF 100 份整数倍；金额舍入到最小手数（不产生碎股）。现金残差保留。
-结算：T+1 交收；T 决策用 T-1 结算后现金 + 持仓（无 T+1 可用未到账资金用于 T 决策）。
-费用入账：成交时扣（佣金/印花税/过户费）；溢价保护触发时该槽位转为 cash（fail-closed）。
+费用契约 = 仓库 MainlandETFCostModel 现状（base case，不虚构）：
+  broker_commission_rate = 0.00005   # 单边万0.5
+  stamp_duty_rate = 0.0              # ETF 免印花税
+  exchange_fee_rate = 0.0            # inclusion = UNKNOWN_PENDING_BROKER_FEE_AUDIT（待账户核实）
+  half_spread_bps = 1.0              # 单边半价差（已含）
+  slippage_bps = 2.0                 # 单边滑点（已含）
+  → 不新增 5bp 滑点 overlay（避免与 half_spread/slippage_bps 双计）。
+HK/QDII（03110.HK / 513180 / 513690 / 513500）：
+  base case 也用 MainlandETFCostModel（境内简化，labeled）；HK 完整费率（佣金+印花税 0.1%
+  双边+交易费 0.00565%+征费 0.0027%）作单独 sensitivity（评审 guard #6，非 Southbound 完整）。
+PremiumGuard：availability-only 历史语义（评审修正 #3）——IOPV 缺失/过期 → fail-closed 禁买
+  （允许持有/卖出）；无 premium-magnitude threshold；close_to_official_nav_gap 不作实时阈值。
+手数：A股 ETF 100 份整数倍；HK 每手 100 股；金额舍入到最小手数（不产生碎股）。现金残差保留。
+结算：A股/HK 统一 T+1 交收（保守简化）；T 决策用 T-1 结算后现金 + 持仓（无未到账资金用于 T 决策）。
+费用入账：成交时扣（commission + half_spread + slippage）；不设"premium→cash"（当前实现不支持）。
 ```
 
 # 5. 数据 / 报价（冻结）
@@ -85,14 +130,18 @@ FX：HKD->CNY hkd_cny_boc（T-1，与 L2 一致）；USD 已含于 QDII 人民�
 Fail-closed：
   - 某工具上市前 → 该槽位现金停泊（权重转入 CASH_LIKE 槽位，若未上市则残差现金）；
   - T+1 无有效报价 → 权重保持不变（不强制成交），连续 ≥5 session 无报价 → STOP 信号；
-  - PremiumGuard 触发（US_BROAD 溢价超阈值）→ 该槽位转 cash，记录原因；
+  - PremiumGuard（availability-only）：IOPV 缺失/过期 → 禁买该槽位（允许持有/卖出），记录原因；
+    不设 premium-magnitude threshold（当前实现无该语义；close_to_official_nav_gap 不作实时阈值）；
   - 任何 NaN/非有限观察 → 抛错（不静默填 0）。
 STOP 判据（满足任一 → 停止并返回 blocker，不推进 forward/paper）：
   S1: 可执行净收益对任意子期（年度/stress regime）相对无成本 research 收益恶化 > 5pct CAGR
-      （成本+滑点+溢价不可吸收）；
-  S2: 平均每决策日费用 > 5bp 或滑点成本 > 10bp（超出冻结假设）；
-  S3: fail-closed 事件 > 1% 决策日（上市前停泊/无报价/溢价保护）；
-  S4: 溢价保护触发率 > 5% 决策日（US_BROAD 不可执行性证据）。
+      （成本+滑点不可吸收）；
+  S2: fee_bps_of_traded_notional > 5bp 或 slippage_bps_of_traded_notional > 10bp，其中
+      fee_bps_of_traded_notional = total_fee / total_traded_notional × 1e4
+      slippage_bps_of_traded_notional = total_slippage / total_traded_notional × 1e4
+      （runner/artifact/STOP 同一约定，评审澄清 #4）；
+  S3: fail-closed 事件 > 1% 决策日（上市前停泊/无报价/IOPV fail-closed）；
+  S4: IOPV fail-closed 禁买触发率 > 5% 决策日（US_BROAD 可执行性证据）。
 ```
 
 # 7. 评估指标 / 子期（冻结）
@@ -109,12 +158,15 @@ STOP 判据（满足任一 → 停止并返回 blocker，不推进 forward/paper
 # 8. 测试 / Invariants（冻结）
 
 ```text
-tests/test_instrument_execution_realism.py（新）：
-  - slot->instrument 映射精确 + 上市日期硬边界断言
+tests/test_instrument_execution_realism.py（新，评审修正后）：
+  - slot->instrument 映射精确（HK_DIVIDEND = 03110.HK 冻结）+ 上市日期硬边界断言
   - next-session 执行（决策 T → T+1 开盘；无同日/跨段）
-  - 成本/费用/滑点/手数入账 + 现金残差守恒
+  - 成本/费用/滑点/手数入账 + 现金残差守恒；费用契约 = 仓库 MainlandETFCostModel（万0.5、
+    印花税 0、half_spread 1bp + slippage 2bp，无双计）
   - T+1 交收时序（T 决策用 T-1 结算后现金）
-  - fail-closed（上市前现金停泊、无报价保持权重、溢价保护转 cash）
+  - fail-closed（上市前现金停泊、无报价保持权重、IOPV fail-closed 禁买；无 premium-magnitude
+    threshold 断言）
+  - S2 分母定义（fee/slippage bps of traded notional × 1e4）runner/artifact 一致
   - 无研究收益冒充可执行收益（net 路径独立）
   - 无 RL（runner 源码无 RL 导入/字面量）
 scripts/gate4_instrument_execution_realism.py --check：契约验证通过后执行（RUN 授权后）。
@@ -135,9 +187,15 @@ L1/L2 结果 frozen；本研究不升级为 strict PIT OOS 或 live 证据。
 
 ```yaml
 gate: 4
-handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP_001
+handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP_CORRECTION_001
 packet: POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP
 status: READY_FOR_REVIEW
+
+corrections_applied:
+  hk_dividend_mapping: frozen 03110.HK (audited Gate-1 universe, raw data 2021-01-11 + official events); HKEX/Southbound constraints modeled; 513690 not used as exec path
+  fee_contract: = repository MainlandETFCostModel (commission 0.00005, ETF stamp 0, exchange_fee 0 UNKNOWN_PENDING, half_spread 1bp + slippage 2bp); no new slippage overlay (no double-count); HK full fees only as labeled sensitivity
+  premium_guard: availability-only historical semantics (IOPV missing/stale -> fail-closed buy block; no premium-magnitude threshold; no close_to_official_nav_gap as disguised live threshold)
+  s2_denominator: fee_bps_of_traded_notional = total_fee/total_traded_notional*1e4; slippage same (runner/artifact/STOP consistent)
 
 frozen:
   strategy_core: MaximumDiversification (120/0.5, project-constrained RiskOverlayV0); no Momentum blend (architecture gate closed)
