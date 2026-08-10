@@ -1,51 +1,50 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_POST_L2_DETERMINISTIC_ARCH_RUN_001
-state: REVISIONS_REQUIRED
+handoff_id: G4_POST_L2_DETERMINISTIC_ARCH_RUN_CORRECTION_001
+state: REVIEW_COMPLETE
 
 reviewed_packet:
   path: docs/review_packets/POST_L2_DETERMINISTIC_ARCHITECTURE_RUN.md
-  commit: ea8798831a0df040c4296ff778c239913ae419fd
+  commit: 08c4775a8e6e3ca31e60fd111aebf6aea99d28f9
 
-code_commit: d31e3848c9c264e7ce01c2a2162ab0124f904dbd
+code_commit: 1ca71bb006cd4f82de1e10c3042bbd73395833e1
 
-decision: ARCH_RUN_RESULTS_SUBSTANTIVELY_ACCEPTED_R5_TEST_FIX_REQUIRED
+decision: ARCH_RUN_CORRECTION_ACCEPTED_ARCHITECTURE_GATE_CLOSED_EXECUTION_REALISM_PREP_AUTHORIZED
 
 response:
-  path: docs/reviewer_responses/POST_L2_DETERMINISTIC_ARCHITECTURE_RUN_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/POST_L2_DETERMINISTIC_ARCHITECTURE_RUN_CORRECTION_REVIEWER_RESPONSE.md
 
 passed:
   - UNIQUE_READY_FOR_REVIEW_HANDOFF
+  - CORRECTION_DIFF_LIMITED_TO_ARCH_RUNNER_AND_ARCH_TESTS
+  - R5_MAXDD_DIRECTION_FIXED_HIGHER_IS_BETTER
+  - R5_SYNTHETIC_DOMINANCE_REGRESSION_PRESENT
+  - R5_SYNTHETIC_NON_DOMINATED_TRADEOFF_REGRESSION_PRESENT
+  - ARCH_TEST_COMMAND_REPORTED_8_PASSED
+  - ARCH_CHECK_COMMAND_REPORTED_PASSED
+  - RESULT_ARTIFACT_MANIFEST_BINDS_TO_1CA71BB
+  - C0_C1_PARITY_TO_GEN3_ZERO_DIFF_PRESERVED
+  - POST_OVERLAY_VIOLATIONS_ZERO_ALL_CANDIDATES_PRESERVED
+  - C2_C4_R1_R4_VERDICTS_UNCHANGED
+  - C2_C4_R5_NON_DOMINATED_AFTER_FIX
+  - DATA_PROVENANCE_AND_CAUSALITY_CODE_UNCHANGED_IN_CORRECTION
   - FROZEN_CANDIDATE_SET_C0_C4_PRESERVED
-  - PARENT_PARAMETERS_UNCHANGED
-  - C0_C1_PARITY_TO_GEN3_ZERO_DIFF_REPORTED
-  - SAME_11_SLOT_2800_INTERVAL_TRACK_C_PATH_REUSED
-  - FINAL_RISK_OVERLAY_APPLIED
-  - POST_OVERLAY_VIOLATIONS_ZERO_ALL_CANDIDATES
-  - R1_EXACT_C0_RELATIVE_CAGR_RULE_PRESERVED
-  - R2_EXACT_C0_MAXDD_RULE_PRESERVED
-  - R3_SHARPE_CALMAR_RULE_PRESERVED
-  - R4_NET_MINUS_GROSS_COST_RULE_PRESERVED
-  - TURNOVER_COST_ON_FINAL_EXECUTABLE_PATH
-  - PRIMARY_R1_R4_ARCHITECTURE_CONCLUSION_SUBSTANTIVELY_ACCEPTED
-  - NO_DENSE_ALPHA_SEARCH
-  - NO_DYNAMIC_ALPHA
+  - NO_RESULT_INFORMED_BLEND_RETUNING
   - PPO_SAC_TD3_REMAIN_EXCLUDED
   - QMT_LIVE_REMAINS_FORBIDDEN
 
-revision_required:
-  - R5_PARETO_MAXDD_DIRECTION_REVERSED_IN_CODE
-  - R5_SYNTHETIC_REGRESSION_TEST_MISSING
-  - TEST_EXECUTION_EVIDENCE_MISSING_FROM_PACKET
-  - ARCHITECTURE_GATE_NOT_CLOSED_PENDING_MECHANICAL_FIX
+revision_required: []
 
 authorized_next:
-  - POST_L2_DETERMINISTIC_ARCHITECTURE_RUN_CORRECTION
+  - POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP
 
 forbidden_next:
-  - INSTRUMENT_EXECUTION_REALISM
+  - POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN
   - FORWARD_PAPER_VALIDATION
+  - PAPER
+  - LIVE
   - RESULT_INFORMED_BLEND_WEIGHT_SEARCH
+  - DENSE_ALPHA_SEARCH
   - DYNAMIC_ALPHA
   - PPO
   - SAC
@@ -56,12 +55,13 @@ forbidden_next:
   - QMT_LIVE
 
 notes:
-  - Primary result is substantively accepted: C2-C4 do not meet the frozen useful-architecture definition because each fails one or more of R2-R4 despite CAGR improvement.
-  - C0 MaxDiv remains the risk-adjusted core under the frozen criteria; no result-informed blend retuning is authorized.
-  - Current R5 dominates() implementation incorrectly treats more-negative max_drawdown as better; fix direction before gate close.
-  - Manual review indicates the corrected R5 direction still leaves C2-C4 non-dominated by either parent, so the primary economic conclusion is not expected to change.
-  - Add synthetic R5 dominance/non-dominance tests and report actual pytest plus gate4_arch_blend.py --check execution evidence.
-  - Deterministically regenerate artifacts only as needed after the mechanical fix; candidate weights, thresholds, parent parameters, panel, timing, FX, cost convention and stress regimes must remain unchanged.
-  - No later gate is authorized until correction review completes.
+  - Architecture correction accepted; POST_L2_DETERMINISTIC_ARCHITECTURE experiment is closed.
+  - Corrected dominates() treats cum_return, calendar_cagr, sharpe and max_drawdown as higher-is-better; -0.10 MaxDD is better than -0.20.
+  - Packet reports pytest tests/test_arch_blend.py -q = 8 passed and python scripts/gate4_arch_blend.py --check = PASSED; reviewer inspected the relevant test and source logic.
+  - artifacts/gate4_arch_blend_results.json records commit 1ca71bb and post-fix rerun evidence; corrected R5 still leaves C2-C4 non-dominated.
+  - Primary economic conclusion remains unchanged: C2-C4 fail one or more frozen R2-R4 criteria despite CAGR improvement; MaxDiv remains the risk-adjusted core under this frozen experiment.
+  - Track-C data/provenance/timing/FX semantics are unchanged by the correction and remain SCENARIO_NOT_STRICT_PIT_OOS; this is not executable/live evidence.
+  - Only execution-realism PREP is authorized next. It must freeze real instrument mapping/listing dates, tradability/calendar alignment, decision/execution timing, fees/slippage/lot/settlement, fail-closed quote/premium handling, metrics/subperiods and STOP criteria before any run authorization.
+  - PPO/SAC/TD3 remain closed unless the user explicitly reopens them.
 
-updated_at: 2026-08-10T08:33:00+08:00
+updated_at: 2026-08-10T09:16:22+08:00
