@@ -1,19 +1,19 @@
 protocol_version: 2
 actor: claude
-handoff_id: G4_POST_L2_DETERMINISTIC_ARCH_RUN_CORRECTION_001
+handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP_001
 state: READY_FOR_REVIEW
 
 gate: 4
-phase: POST_L2_DETERMINISTIC_ARCHITECTURE_RUN_CORRECTION
+phase: POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP
 code_commit: 1ca71bb
-packet: docs/review_packets/POST_L2_DETERMINISTIC_ARCHITECTURE_RUN.md
+packet: docs/review_packets/POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP.md
 
 progress:
-  current_task: Post-L2 architecture RUN mechanical correction (reviewer ARCH_RUN_RESULTS_SUBSTANTIVELY_ACCEPTED_R5_TEST_FIX_REQUIRED: fixed dominates() MaxDD direction to higher-better, added R5 regression tests, reported test execution evidence. Rerun confirms C0/C1 parity 0-diff, R1-R4 verdicts, post-overlay 0, R5 no-dominance unchanged -> primary conclusion unchanged: static blends do not improve on pure MaxDiv core.)
+  current_task: Instrument execution-realism PREP freeze (architecture gate closed; MaxDiv core frozen; slot->11 real ETF mapping + listing dates; T close -> T+1 next-session open exec; 1x cost + 5bp slippage + lot + T+1 settlement + PremiumGuard; fail-closed pre-listing/no-quote/premium; STOP criteria S1-S4; net-vs-research loss attribution; no run)
 
 last_consumed_review:
-  handoff_id: G4_POST_L2_DETERMINISTIC_ARCH_RUN_001
-  decision: ARCH_RUN_RESULTS_SUBSTANTIVELY_ACCEPTED_R5_TEST_FIX_REQUIRED
-  response: docs/reviewer_responses/POST_L2_DETERMINISTIC_ARCHITECTURE_RUN_REVIEWER_RESPONSE.md
+  handoff_id: G4_POST_L2_DETERMINISTIC_ARCH_RUN_CORRECTION_001
+  decision: ARCH_RUN_CORRECTION_ACCEPTED_ARCHITECTURE_GATE_CLOSED_EXECUTION_REALISM_PREP_AUTHORIZED
+  response: docs/reviewer_responses/POST_L2_DETERMINISTIC_ARCHITECTURE_RUN_CORRECTION_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-10T02:30:00+08:00
+updated_at: 2026-08-10T03:00:00+08:00
