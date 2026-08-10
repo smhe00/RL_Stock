@@ -1,4 +1,207 @@
 {
+  "metrics": {
+    "cum_return": 0.472131,
+    "calendar_cagr": 0.09738,
+    "active_day_annualized_return": 0.101189,
+    "annualized_vol": 0.056397,
+    "sharpe": 1.737684,
+    "sortino": 2.247524,
+    "max_drawdown": -0.042365,
+    "calmar": 2.3885
+  },
+  "subperiods": {
+    "calendar_years": {
+      "2022": {
+        "cum_return": 0.004140927219445478,
+        "calendar_cagr": 0.0074262168406571405,
+        "active_day_annualized_return": 0.0074660116312883495,
+        "annualized_vol": 0.043389181609053994,
+        "sharpe": 0.1931275362009403,
+        "sortino": 0.33623181389725004,
+        "max_drawdown": -0.03151365366194925,
+        "calmar": 0.23691355218208443
+      },
+      "2023": {
+        "cum_return": 0.06107387718456958,
+        "calendar_cagr": 0.06181467210882441,
+        "active_day_annualized_return": 0.06367632115613842,
+        "annualized_vol": 0.034454460405416255,
+        "sharpe": 1.8091207835464223,
+        "sortino": 2.9819961010996794,
+        "max_drawdown": -0.022038114987935398,
+        "calmar": 2.8893723982744235
+      },
+      "2024": {
+        "cum_return": 0.18771611590747206,
+        "calendar_cagr": 0.1878560730948584,
+        "active_day_annualized_return": 0.1961893981618137,
+        "annualized_vol": 0.06783149930233591,
+        "sharpe": 2.6756457399146063,
+        "sortino": 4.320096174644717,
+        "max_drawdown": -0.032474558158738454,
+        "calmar": 6.041326173025139
+      },
+      "2025": {
+        "cum_return": 0.13217019491204618,
+        "calendar_cagr": 0.1326529332333053,
+        "active_day_annualized_return": 0.13738749189266763,
+        "annualized_vol": 0.05843926745965515,
+        "sharpe": 2.232880149009157,
+        "sortino": 2.14752862441983,
+        "max_drawdown": -0.04236521805490223,
+        "calmar": 3.242931305454948
+      },
+      "2026": {
+        "cum_return": 0.027499690832557988,
+        "calendar_cagr": 0.04716517365633166,
+        "active_day_annualized_return": 0.04861960922409292,
+        "annualized_vol": 0.0700554977768303,
+        "sharpe": 0.7128408768560162,
+        "sortino": 0.934731372432559,
+        "max_drawdown": -0.04120942662261917,
+        "calmar": 1.1798176584530886
+      }
+    },
+    "stress_regimes": {
+      "2022H2-2023_weak_equity": {
+        "cum_return": 0.06546770688444559,
+        "calendar_cagr": 0.041620858170648534,
+        "active_day_annualized_return": 0.042720569484655524,
+        "annualized_vol": 0.03800909288269285,
+        "sharpe": 1.1197074248608303,
+        "sortino": 1.8629799102688405,
+        "max_drawdown": -0.03151365366194925,
+        "calmar": 1.3556209617242168
+      },
+      "2024-2026_strong_equity": {
+        "cum_return": 0.3816755323379717,
+        "calendar_cagr": 0.13250289616231226,
+        "active_day_annualized_return": 0.1382868407519917,
+        "annualized_vol": 0.0649846718576652,
+        "sharpe": 2.0261842735866744,
+        "sortino": 2.4906308699098894,
+        "max_drawdown": -0.04236521805490223,
+        "calmar": 3.2641597777871003
+      }
+    }
+  },
+  "s1_subperiods": {
+    "year_2022": {
+      "net_cagr": 0.007466,
+      "research_cagr": -0.007068,
+      "degradation": 0.014534,
+      "n_days": 140
+    },
+    "year_2023": {
+      "net_cagr": 0.063676,
+      "research_cagr": 0.06119,
+      "degradation": 0.002487,
+      "n_days": 242
+    },
+    "year_2024": {
+      "net_cagr": 0.196189,
+      "research_cagr": 0.196787,
+      "degradation": -0.000597,
+      "n_days": 242
+    },
+    "year_2025": {
+      "net_cagr": 0.137387,
+      "research_cagr": 0.130105,
+      "degradation": 0.007282,
+      "n_days": 243
+    },
+    "year_2026": {
+      "net_cagr": 0.04862,
+      "research_cagr": 0.055587,
+      "degradation": -0.006967,
+      "n_days": 144
+    },
+    "2022H2-2023_weak_equity": {
+      "net_cagr": 0.042721,
+      "research_cagr": 0.035645,
+      "degradation": 0.007075,
+      "n_days": 382
+    },
+    "2024-2026_strong_equity": {
+      "net_cagr": 0.138287,
+      "research_cagr": 0.137407,
+      "degradation": 0.00088,
+      "n_days": 629
+    }
+  },
+  "cost_aggregation": {
+    "total_fee_cny": 5676.86,
+    "total_slippage_cny": 3821.43,
+    "total_traded_notional_cny": 12738106.69,
+    "fee_bps_of_traded_notional": 4.457,
+    "slippage_bps_of_traded_notional": 3.0,
+    "cost_by_instrument": {
+      "510300.SH": 229.74,
+      "512100.SH": 259.09,
+      "512890.SH": 625.64,
+      "159915.SZ": 268.23,
+      "588000.SH": 368.41,
+      "513180.SH": 249.89,
+      "03110.HK": 1476.05,
+      "513500.SH": 645.44,
+      "518880.SH": 737.0,
+      "511260.SH": 415.26,
+      "511360.SH": 402.11
+    },
+    "notional_by_instrument": {
+      "510300.SH": 656409.2,
+      "512100.SH": 740256.42,
+      "512890.SH": 1787537.4,
+      "159915.SZ": 766365.6,
+      "588000.SH": 1052599.6,
+      "513180.SH": 713977.0,
+      "03110.HK": 735792.58,
+      "513500.SH": 1844121.4,
+      "518880.SH": 2105708.0,
+      "511260.SH": 1186444.3,
+      "511360.SH": 1148895.2
+    }
+  },
+  "execution": {
+    "fill_count": 7510,
+    "mean_target_tracking_error": 0.013611,
+    "fail_closed": {
+      "structural_ineligible_cash_parking": 461,
+      "no_quote_days": 18,
+      "distinct_fail_closed_days": 478,
+      "s3_fail_closed_pct": 47.28
+    },
+    "hk_dividend_diagnostic": {
+      "post_eligible_days": 550,
+      "mean_target_weight": 0.048042,
+      "max_target_weight": 0.092047,
+      "dates_target_notional_ge_one_board_lot": 533,
+      "attempted_orders": 217,
+      "actual_fills": 217,
+      "traded_notional_cny": 735792.58,
+      "note": "descriptive only; instrument/strategy unchanged"
+    }
+  },
+  "stop_criteria": {
+    "S1": {
+      "worst_subperiod_degradation": -0.006967,
+      "pass": true
+    },
+    "S2": {
+      "fee_bps": 4.457,
+      "slippage_bps": 3.0,
+      "pass": true
+    },
+    "S3": {
+      "fail_closed_pct": 47.28,
+      "structural_days": 461,
+      "no_quote_days": 18,
+      "overlap_days": 1,
+      "pass": false
+    },
+    "S4": "NOT_APPLICABLE (backtest mode)",
+    "STOP": true
+  },
   "manifest": {
     "gate": "POST_L2_INSTRUMENT_EXECUTION_REALISM",
     "label": "POST_L2_INSTRUMENT_EXECUTION_REALISM",
@@ -37,9 +240,10 @@
     "settlement": {
       "A_SHARE_T": 1,
       "HK_T": 2,
-      "session_calendar": "SH trading days"
+      "session_calendar": "A股: SH exec session T+1 buying-power (T+0 same-day reuse, T+1 withdrawal); 03110: 03110.HK tradable-session calendar T+2"
     },
     "premium_guard": "INSTRUMENT_BACKTEST = NOT_EVALUABLE_HISTORICALLY (N/A)",
+    "hk_price_source": "sina_qfq (akshare stock_hk_daily qfq==raw for 03110; QMT raw all-zero unavailable)",
     "no_rl": true,
     "data_provenance": {
       "data\\qmt\\raw\\CN_LARGE_510300_SH_raw.csv": "e9bff9adb17dc68163e19a1e009aefb931032ba0bd9a6b7da7d936cf2b22ca75",
@@ -48,11 +252,12 @@
       "data\\qmt\\raw\\CHINEXT_159915_SZ_raw.csv": "54fc7c22b55f0aef3fbce27dcf0d96e64b33a3a650e5f06253b9ba314ee39081",
       "data\\qmt\\raw\\STAR_588000_SH_raw.csv": "b992a10133af50164430682e74ac7c50c813ae039b571b0bf2e44e21385af6df",
       "data\\qmt\\raw\\HK_TECH_513180_SH_raw.csv": "47fbeb6f482b678b46552aa5b5599ca448f3e86058e3e570d159b2928b0abd82",
-      "data\\qmt\\raw\\HK_DIVIDEND_03110_HK_raw.csv": "903882bcf7e3fa3f53126b433ed180adb3f13f97da2c140537926c73e6810b13",
+      "data\\qmt\\raw\\HK_DIVIDEND_513690_SH_raw.csv": "f3a535f442d8b97291048286aef5d0de8ee9cb6babd3281b2237ee28f9191f67",
       "data\\qmt\\raw\\US_BROAD_513500_SH_raw.csv": "4dcc39e065cebe3b026c0b0cbb56f3b3b2eade4cb992f50ac4a5224ad0ea8859",
       "data\\qmt\\raw\\GOLD_518880_SH_raw.csv": "747a7fef91afc73574b2da405b78862cc968105c33bc4bbac1fb6eabe54b7066",
       "data\\qmt\\raw\\CN_DURATION_511260_SH_raw.csv": "058057ae765f86f259f7179cc7a3042ae976da0cfbe0cecdbb2964af3fc52023",
       "data\\qmt\\raw\\CASH_LIKE_511360_SH_raw.csv": "270b061c8846a595f52954f5a0f12bef680816cade57fb37639092d336858eb3",
+      "data\\qmt\\raw\\HK_DIVIDEND_03110_HK_sina_qfq.csv": "8fe78b389cbce7a8db5f772b6826733f4106628b9cced140009ea114f16d16a5",
       "data\\qmt\\meta\\hkd_cny_boc.csv": "83a3b559681dae9f3ac658211729f4635bf61568b1694b3c86d9d7d8508009aa",
       "data\\qmt\\meta\\divid_events\\03110.HK.csv": "4e7af46e8f1c1fc2e15781d13ace4285a07091992014f95dfa02b42c0a6f7a44",
       "data\\qmt\\meta\\divid_events\\510300.SH.csv": "1800c224db1b8e2670bf99adc6e605afe8c8da8b5435dc8864394d9db59c29d8",
@@ -62,195 +267,14 @@
       "data\\qmt\\meta\\divid_events\\513500.SH.csv": "7482e44d4d1896d98a79c6b4f56969406a5c226d61df4b814341fd4b660de03d",
       "data\\qmt\\meta\\divid_events\\513690.SH.csv": "2bfe7f0a485812dae9e1519bbd64bbddbc999b5313d5d3f1ecf82f4289c4f2e6"
     },
-    "l1_research_reference": "artifacts\\gate4_long_horizon_nonrl_results.json",
-    "started_at": "2026-08-10 11:18:43",
-    "commit": "16b8dd7"
-  },
-  "metrics": {
-    "cum_return": 0.480783,
-    "calendar_cagr": 0.098926,
-    "active_day_annualized_return": 0.102799,
-    "annualized_vol": 0.055188,
-    "sharpe": 1.800971,
-    "sortino": 2.477668,
-    "max_drawdown": -0.039021,
-    "calmar": 2.634434
-  },
-  "subperiods": {
-    "calendar_years": {
-      "2022": {
-        "cum_return": 0.02384966750562767,
-        "calendar_cagr": 0.043103259490766765,
-        "active_day_annualized_return": 0.04333829574097181,
-        "annualized_vol": 0.057202561172219786,
-        "sharpe": 0.7701157315947027,
-        "sortino": 1.752031764973083,
-        "max_drawdown": -0.02663186702475817,
-        "calmar": 1.6273097076026475
-      },
-      "2023": {
-        "cum_return": 0.06115466764340316,
-        "calendar_cagr": 0.06189647080689986,
-        "active_day_annualized_return": 0.06376065653520713,
-        "annualized_vol": 0.03447451231688745,
-        "sharpe": 1.8103888880495915,
-        "sortino": 2.983277058868419,
-        "max_drawdown": -0.022045108380243095,
-        "calmar": 2.8922813821296365
-      },
-      "2024": {
-        "cum_return": 0.18107283255058837,
-        "calendar_cagr": 0.18120746894091688,
-        "active_day_annualized_return": 0.189223053310688,
-        "annualized_vol": 0.06547330730507936,
-        "sharpe": 2.6803476413518306,
-        "sortino": 4.390792029835018,
-        "max_drawdown": -0.0314579134079922,
-        "calmar": 6.015117749755582
-      },
-      "2025": {
-        "cum_return": 0.12004750444272339,
-        "calendar_cagr": 0.12048365052165866,
-        "active_day_annualized_return": 0.12476039267644046,
-        "annualized_vol": 0.053250134353948646,
-        "sharpe": 2.235179967431801,
-        "sortino": 2.2384041280082796,
-        "max_drawdown": -0.038723140166288306,
-        "calmar": 3.2218562890479294
-      },
-      "2026": {
-        "cum_return": 0.030299274074500504,
-        "calendar_cagr": 0.05201684974749399,
-        "active_day_annualized_return": 0.053624690339834524,
-        "annualized_vol": 0.06438364007623436,
-        "sharpe": 0.843674309149016,
-        "sortino": 1.0731002171458461,
-        "max_drawdown": -0.03902128952282269,
-        "calmar": 1.3742418816905226
-      }
+    "l1_research_reference": {
+      "results_artifact": "artifacts\\gate4_long_horizon_nonrl_results.json",
+      "results_sha256": "917fe9663878990598a50ca13313beca7c4e367da2f7042234cb01fcfb6753a2",
+      "raw_artifact": "artifacts\\gate4_long_horizon_nonrl_raw.json",
+      "raw_sha256": "e1b9b32b78f2adecc60134faec18720574536d8e0c04436ae91fdf5864719fe9"
     },
-    "stress_regimes": {
-      "weak_2022H2_2023": {
-        "cum_return": 0.08646285363874306,
-        "calendar_cagr": 0.05477351892586868,
-        "active_day_annualized_return": 0.05623002478838046,
-        "annualized_vol": 0.044186430324994586,
-        "sharpe": 1.2601967261436182,
-        "sortino": 2.4221894946917915,
-        "max_drawdown": -0.02663186702475817,
-        "calmar": 2.11138125374787
-      },
-      "strong_2024_2026": {
-        "cum_return": 0.36293930603076485,
-        "calendar_cagr": 0.1265673564840717,
-        "active_day_annualized_return": 0.1320774096159958,
-        "annualized_vol": 0.060845804316270125,
-        "sharpe": 2.06975092210165,
-        "sortino": 2.6084052584813304,
-        "max_drawdown": -0.03902128952282269,
-        "calmar": 3.3847525602337316
-      }
-    }
-  },
-  "s1_subperiods": {
-    "year_2022": {
-      "net_cagr": 0.043338,
-      "research_cagr": 0.094154,
-      "degradation": -0.050816
-    },
-    "year_2023": {
-      "net_cagr": 0.063761,
-      "research_cagr": 0.094154,
-      "degradation": -0.030393
-    },
-    "year_2024": {
-      "net_cagr": 0.189223,
-      "research_cagr": 0.094154,
-      "degradation": 0.095069
-    },
-    "year_2025": {
-      "net_cagr": 0.12476,
-      "research_cagr": 0.094154,
-      "degradation": 0.030606
-    },
-    "year_2026": {
-      "net_cagr": 0.053625,
-      "research_cagr": 0.094154,
-      "degradation": -0.040529
-    },
-    "weak_2022H2_2023": {
-      "net_cagr": 0.05623,
-      "research_cagr": 0.094154,
-      "degradation": -0.037924
-    },
-    "strong_2024_2026": {
-      "net_cagr": 0.132077,
-      "research_cagr": 0.094154,
-      "degradation": 0.037923
-    }
-  },
-  "cost_aggregation": {
-    "total_fee_cny": 4935.81,
-    "total_slippage_cny": 4230.69,
-    "total_traded_notional_cny": 14102316.54,
-    "fee_bps_of_traded_notional": 3.5,
-    "slippage_bps_of_traded_notional": 3.0,
-    "cost_by_instrument": {
-      "510300.SH": 270.15,
-      "512100.SH": 318.49,
-      "512890.SH": 738.35,
-      "159915.SZ": 307.65,
-      "588000.SH": 424.86,
-      "513180.SH": 289.25,
-      "03110.HK": 0.0,
-      "513500.SH": 769.81,
-      "518880.SH": 853.78,
-      "511260.SH": 480.26,
-      "511360.SH": 483.21
-    },
-    "notional_by_instrument": {
-      "510300.SH": 771850.8,
-      "512100.SH": 909979.74,
-      "512890.SH": 2109578.6,
-      "159915.SZ": 879006.3,
-      "588000.SH": 1213874.4,
-      "513180.SH": 826418.3,
-      "03110.HK": 0.0,
-      "513500.SH": 2199448.9,
-      "518880.SH": 2439385.5,
-      "511260.SH": 1372177.1,
-      "511360.SH": 1380596.9
-    }
-  },
-  "execution": {
-    "fill_count": 7421,
-    "mean_target_tracking_error": 0.038149,
-    "fail_closed": {
-      "structural_ineligible_cash_parking": 461,
-      "no_quote_hold": 550
-    },
-    "hk_dividend_diagnostic": {
-      "post_eligible_days": 550,
-      "mean_target_weight": 0.048042,
-      "max_target_weight": 0.092047,
-      "note": "descriptive only; instrument/strategy unchanged"
-    }
-  },
-  "stop_criteria": {
-    "S1": {
-      "worst_subperiod_degradation": -0.050816,
-      "pass": false
-    },
-    "S2": {
-      "fee_bps": 3.5,
-      "slippage_bps": 3.0,
-      "pass": true
-    },
-    "S3": {
-      "fail_closed_pct": 45.598,
-      "pass": false
-    },
-    "S4": "NOT_APPLICABLE (backtest mode)",
-    "STOP": true
+    "started_at": "2026-08-10 12:03:51",
+    "provenance_count": 20,
+    "commit": "aabe0ca"
   }
 }

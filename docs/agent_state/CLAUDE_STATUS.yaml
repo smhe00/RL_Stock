@@ -1,19 +1,19 @@
 protocol_version: 2
 actor: claude
-handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN_CORRECTION_002
+handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN_CORRECTION_003
 state: READY_FOR_REVIEW
 
 gate: 4
-phase: POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN_CORRECTION_002
-code_commit: 16b8dd7
+phase: POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN_CORRECTION_003
+code_commit: aabe0ca
 packet: docs/review_packets/POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN.md
 
 progress:
-  current_task: Instrument execution-realism RUN CORRECTION_002 (8 fidelity fixes: T+1-open fills, post-fill net NAV, T+2 session calendar + receivables in NAV, 03110 HKD local + T-1 FX, corporate actions pop-once, S1 per-subperiod vs L1 research artifact, behavioral regression tests 12, provenance 19 files). net cum +48.1% / CAGR 9.9% / Sharpe 1.801 / MaxDD -3.9%. S1 FAIL (year_2022 net 4.3% vs research 9.4%, -5.08%>5pct), S2 PASS, S3 FAIL (45.6%), S4 N/A -> STOP true per frozen contract.
+  current_task: Instrument execution-realism RUN CORRECTION_003 (7 fidelity fixes: 03110 sina_qfq HKD x T-1 FX executable marks + Southbound exercised (attempted 217/fills 217); maxdiv exact parity to L1 post_risk (1011x11 diff 0.0); S1 per-subperiod research CAGR from L1 artifact (worst -0.84% PASS); S3 distinct fail-closed 478/1011=47.28% (structural 461 U no_quote 18); CA before sizing; HK T+2 03110 session calendar; provenance 20 inputs + L1 artifact SHA + commit). net cum +47.2% / CAGR 9.7% / Sharpe 1.738 / MaxDD -4.2%. S1 PASS, S2 PASS, S3 FAIL (47.28%), S4 N/A -> STOP true per frozen contract (S3).
 
 last_consumed_review:
-  handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN_CORRECTION_001
-  decision: EXECUTION_REALISM_RUN_CORRECTION_STILL_INVALID_SECOND_MECHANICAL_CORRECTION_REQUIRED
-  response: docs/reviewer_responses/POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN_CORRECTION_REVIEWER_RESPONSE.md
+  handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN_CORRECTION_002
+  decision: EXECUTION_REALISM_RUN_CORRECTION_002_INVALID_CORRECTION_003_REQUIRED
+  response: docs/reviewer_responses/POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN_CORRECTION_002_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-10T06:00:00+08:00
+updated_at: 2026-08-10T12:30:00+08:00
