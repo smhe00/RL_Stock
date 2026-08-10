@@ -1,20 +1,20 @@
 protocol_version: 2
 actor: claude
-handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_002_001
+handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_001
 state: READY_FOR_REVIEW
 
 gate: POST_L2
-phase: POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_002
-code_commit: null
-packet: docs/review_packets/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP.md
+phase: POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN
+code_commit: 675f1ee
+packet: docs/review_packets/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN.md
 
 progress:
-  current_task: PREP CORRECTION_002 (docs/contract only; no run/backtest). Reviewer: MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_001_NEARLY_ACCEPTED_FINAL_PROJECTION_SPEC_CLEANUP_REQUIRED (close to RUN-ready). Applied 2 narrow corrections: (1) freeze exactly ONE deterministic joint Euclidean projection = convex QP min 0.5||w-raw||^2 s.t. C1-C5 via scipy SLSQP (named), initial waterfill, max_iter 200 / ftol 1e-12 / atol 1e-6, KKT + feasibility fail-closed (InfeasibleConstraints), no fallback after results; M0 preserves exact legacy RiskOverlayV0 path (not routed through QP solver), M0 parity all-1011-day <= 1e-9; tests include independent minimum-distance analytic assertion + dual-group binding + truly infeasible + determinism. (2) MaxDD-per-10ppt = (abs(MaxDD_cand)-abs(MaxDD_M0))/(def_M0-def_cand)*0.10 magnitude convention; signed diff reported separately.
+  current_task: M0-M3 capital-efficiency RUN (reviewer-authorized MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_ACCEPTED_RUN_AUTHORIZED). M0 parity max|diff|=0.00 (<=1e-9) PASS; M0 metrics == accepted L1 MaxDiv (cum 45.42% / CAGR 9.42% / Sharpe 1.655 / MaxDD -4.02%). Results: M0 cum 45.42%/CAGR 9.42%/Sharpe 1.655/MDD -4.02%/def 50%; M1 55.92%/11.26%/1.282/-6.81%/30%; M2 principal 58.15%/11.64%/1.219/-7.67%/25% viable; M3 61.14%/12.15%/1.179/-8.46%/20% NOT viable (Sharpe<1.2). CE: +0.9ppt CAGR per 10ppt defensive reduction; +1.4ppt MaxDD magnitude. Forward sanity 8% target: M0 needs risk 14.4% vs M2 10.3%. M0/M1/M2 HISTORICALLY_VIABLE; M3 fail-closed. Tests 13 passed; --check PASSED. Provenance 24 entries + python/numpy/scipy versions.
 
 last_consumed_review:
-  handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_001
-  decision: MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_001_NEARLY_ACCEPTED_FINAL_PROJECTION_SPEC_CLEANUP_REQUIRED
-  state: REVISIONS_REQUIRED
-  response: docs/reviewer_responses/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_001_REVIEWER_RESPONSE.md
+  handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_002_001
+  decision: MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_ACCEPTED_RUN_AUTHORIZED
+  state: REVIEW_COMPLETE
+  response: docs/reviewer_responses/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_002_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-10T16:05:00+08:00
+updated_at: 2026-08-10T16:40:00+08:00
