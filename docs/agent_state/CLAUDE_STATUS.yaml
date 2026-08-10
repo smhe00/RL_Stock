@@ -1,7 +1,8 @@
 protocol_version: 2
 actor: claude
 handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT_DOC_CLEANUP_001
-state: READY_FOR_REVIEW
+state: REVIEW_COMPLETE
+status: EXPERIMENT_CLOSED
 
 gate: 4
 phase: POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT_DOC_CLEANUP
@@ -9,11 +10,12 @@ code_commit: aabe0ca
 packet: docs/review_packets/POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT.md
 
 progress:
-  current_task: STOP_CLOSEOUT DOC_CLEANUP (docs consistency only; no code/experiment change). Reviewer: STOP_CLOSEOUT_SUBSTANTIVELY_ACCEPTED_DOC_CONSISTENCY_CLEANUP_REQUIRED. Applied 5 cleanups: (1) S1 worst corrected to -0.70% (-0.006967, net 4.86% vs research 5.56%); (2) canonical provenance (21 tests + 20 inputs + L1 artifacts SHA256, no stale counts); (3) commits bound distinctly (impl aabe0ca / result+packet 7dfabcd / closeout 8166ffd / cleanup new); (4) branch A softened (513690.SH only as fresh-PREP-verify example, no tradability assertion); (5) all branches A-E unselected. STOP preserved: S1/S2 PASS, S3 FAIL 478/1011=47.28%, STOP true.
+  current_task: EXPERIMENT CLOSED. Reviewer: STOP_CLOSEOUT_DOC_CLEANUP_ACCEPTED_CLOSEOUT_COMPLETE_NO_BRANCH_AUTHORIZED (REVIEW_COMPLETE, authorized_next=[]). POST_L2 instrument execution-realism experiment formally closed as valid frozen STOP. Accepted CORRECTION_003 result: cum +47.21% / CAGR 9.74% / Sharpe 1.738 / MaxDD -4.24%; S1 PASS (worst year_2026 -0.006967), S2 PASS (fee 4.457bp / slippage 3.000bp), S3 FAIL (478/1011=47.28%), STOP TRUE. Structural STOP: HK_DIVIDEND=03110.HK not Southbound-eligible 461 days in window. Branches A-E unselected; any future redesign needs explicit selection + fresh PREP. PPO/SAC/TD3 closed; QMT live / FORWARD / PAPER / LIVE forbidden.
 
 last_consumed_review:
-  handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT_001
-  decision: STOP_CLOSEOUT_SUBSTANTIVELY_ACCEPTED_DOC_CONSISTENCY_CLEANUP_REQUIRED
-  response: docs/reviewer_responses/POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT_REVIEWER_RESPONSE.md
+  handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT_DOC_CLEANUP_001
+  decision: STOP_CLOSEOUT_DOC_CLEANUP_ACCEPTED_CLOSEOUT_COMPLETE_NO_BRANCH_AUTHORIZED
+  state: REVIEW_COMPLETE
+  response: docs/reviewer_responses/POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT_DOC_CLEANUP_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-10T13:40:00+08:00
+updated_at: 2026-08-10T14:30:00+08:00
