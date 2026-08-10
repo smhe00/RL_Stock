@@ -283,18 +283,18 @@ def _viability(cands: dict, m0_name: str) -> dict:
         crit5 = m["calendar_cagr"] - m0["metrics"]["calendar_cagr"] >= -0.005
         # criterion 6: min matched CAGR degradation across 5 years + 2 stress
         seg_degs = []
-        for seg in m["subperiods"]["calendar_years"]:
+        for seg in c["subperiods"]["calendar_years"]:
             if seg in m0["subperiods"]["calendar_years"]:
                 cand_cagr = _cagr_of(c["sub_ret"][seg])
                 m0_cagr = _cagr_of(m0["sub_ret"][seg])
                 seg_degs.append(cand_cagr - m0_cagr)
-        for seg in m["subperiods"]["stress_regimes"]:
+        for seg in c["subperiods"]["stress_regimes"]:
             if seg in m0["subperiods"]["stress_regimes"]:
                 cand_cagr = _cagr_of(c["sub_ret"][seg])
                 m0_cagr = _cagr_of(m0["sub_ret"][seg])
                 seg_degs.append(cand_cagr - m0_cagr)
         crit6 = (min(seg_degs) >= -0.05) if seg_degs else False
-        crit7 = m["mean_turnover"] <= 1.5 * m0["metrics"]["mean_turnover"] + 1e-12
+        crit7 = c["mean_turnover"] <= 1.5 * m0["mean_turnover"] + 1e-12
         crit8 = bool(c["parity_ok"])
         out[name] = {"is_m0": False, "viable": bool(all([crit1, crit2, crit3, crit4,
                                                          crit5, crit6, crit7, crit8])),
