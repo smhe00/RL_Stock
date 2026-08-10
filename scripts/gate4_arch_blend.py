@@ -71,6 +71,18 @@ C0_mdd = C0_METRICS["max_drawdown"]
 COST_BPS = 0.00035  # 1x Mainland 近似（与 L2 一致）
 
 
+def dominates(a: dict, b: dict) -> bool:
+    """Pareto 支配（R5，评审修正：全部 4 维 higher-better，含 MaxDD）。
+
+    a 支配 b iff a 在 cum_return/calendar_cagr/sharpe/max_drawdown 全部不劣且至少一项严格更优。
+    MaxDD higher-better：-0.10 优于 -0.20。
+    """
+    dims = ["cum_return", "calendar_cagr", "sharpe", "max_drawdown"]
+    le_all = all(a[k] >= b[k] - 1e-9 for k in dims)
+    strict_any = any(a[k] > b[k] + 1e-9 for k in dims)
+    return le_all and strict_any
+
+
 def build_panels():
     signal_panel, return_levels, cal = _l2.build_panel()
     ds = pd.Timestamp(FROZEN["decision_start"])
@@ -207,24 +219,6 @@ def main() -> None:
               f"postV={r['overlay_violations']['post_overlay_count']} "
               f"R1={crit['R1_cagr_gain_ge_0.5pct']} R2={crit['R2_maxdd_deg_le_5pct']} "
               f"R3={crit['R3_sharpe_ge_0.80_and_calmar_ge_0.40']} R4={crit['R4_cost_delta_ge_-3pct']}", flush=True)
-
-    # Pareto 检查（R5）：C2-C4 vs C0/C1 在 cum/cagr/Sharpe/MaxDD
-    def dominates(a, b):
-        """a 支配 b iff a 在全部维度不劣且至少一项更优。"""
-        dims = [("cum_return", True), ("calendar_cagr", True), ("sharpe", True), ("max_drawdown", False)]
-        le_all = True
-        for key, higher_better in dims:
-            av, bv = a[key], b[key]
-            if higher_better:
-                if not (av >= bv - 1e-9):
-                    le_all = False
-            else:
-                if not (av <= bv + 1e-9):
-                    le_all = False
-        strict_any = any(
-            (a[k] > b[k] + 1e-9) if hb else (a[k] < b[k] - 1e-9)
-            for k, hb in dims)
-        return le_all and strict_any
 
     parents = {lbl: results["candidates"][lbl]["metrics"] for lbl in ("C0_MaxDiv_100", "C1_Momentum_100")}
     for lbl in ("C2_75_25", "C3_50_50", "C4_25_75"):

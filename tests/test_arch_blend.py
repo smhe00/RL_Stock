@@ -92,6 +92,30 @@ def test_cost_on_final_executable_path() -> None:
     assert cost["cum_return_net_1x"] <= cost["cum_return_no_cost"] + 1e-9
 
 
+def test_r5_pareto_maxdd_higher_is_better() -> None:
+    """评审 R5 修正回归：MaxDD 为 higher-better（-0.10 优于 -0.20）。"""
+    # A: 相同/更优 return/cagr/Sharpe 且 MaxDD -10%（优于 -20%）
+    A = {"cum_return": 0.50, "calendar_cagr": 0.05, "sharpe": 1.0, "max_drawdown": -0.10}
+    B = {"cum_return": 0.40, "calendar_cagr": 0.04, "sharpe": 0.8, "max_drawdown": -0.20}
+    assert arch.dominates(A, B), "A（更高 MaxDD）应支配 B"
+    assert not arch.dominates(B, A), "B 不应支配 A"
+
+
+def test_r5_non_dominated_tradeoff() -> None:
+    """评审 R5 回归：高收益但差 MaxDD/Sharpe 的非支配 trade-off（C0 vs blend 几何）。"""
+    # C0 型：Sharpe/MaxDD 更优但 cum 更低
+    c0_like = {"cum_return": 0.60, "calendar_cagr": 0.06, "sharpe": 1.0, "max_drawdown": -0.10}
+    # blend 型：cum 更高但 Sharpe/MaxDD 更差
+    blend_like = {"cum_return": 0.75, "calendar_cagr": 0.075, "sharpe": 0.7, "max_drawdown": -0.25}
+    assert not arch.dominates(c0_like, blend_like), "C0 型不支配 blend 型（blend 有更高 return）"
+    assert not arch.dominates(blend_like, c0_like), "blend 型不支配 C0 型（C0 有更好 Sharpe/MaxDD）"
+    # 完全支配例：C1 型（高收益高回撤）不支配任何维度都更差的候选
+    c1_like = {"cum_return": 0.80, "calendar_cagr": 0.08, "sharpe": 0.57, "max_drawdown": -0.44}
+    worse = {"cum_return": 0.70, "calendar_cagr": 0.07, "sharpe": 0.55, "max_drawdown": -0.40}
+    # worse 的 MaxDD -0.40 优于 C1 的 -0.44 → 无支配
+    assert not arch.dominates(c1_like, worse)
+
+
 def test_no_rl_no_dense() -> None:
     src = Path(ROOT / "scripts" / "gate4_arch_blend.py").read_text(encoding="utf-8")
     for tok in ("PPO", "SAC", "TD3", "stable_baselines3"):
