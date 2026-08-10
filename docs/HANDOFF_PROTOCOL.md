@@ -1,53 +1,59 @@
-# Claude Code ↔ ChatGPT Reviewer Handoff Protocol
+# Claude Code ↔ Local Codex Reviewer Handoff Protocol
 
-Version: 2.1
+Version: 3.0
 
-## 1. Source of truth
+## 1. Source of truth and transport
 
-GitHub repository `smhe00/RL_Stock` is the shared state and message bus.
+The established GitHub file protocol remains authoritative at gate handoffs.
+The local migration changes reviewer latency and execution location, not the
+ownership or STOP-GATE model.
 
 ```text
-Claude Code = Developer / experiment runner
-ChatGPT     = Reviewer / research gatekeeper
-GitHub      = shared state + handoff channel
+Claude Code = developer / experiment runner
+Local Codex = reviewer / research gatekeeper
+GitHub      = gate/checkpoint transport + audit history
 ```
 
-Chat history is not authoritative. Repository state is authoritative.
+Claude pushes only at a gate, blocker, test failure, or useful checkpoint. The
+local watcher runs `git fetch origin main` every 60 seconds. It does not require
+minute-by-minute progress commits, and it never starts Claude.
+
+Chat history is not authoritative. The current `origin/main` protocol files and
+the exact commits/artifacts they reference are authoritative.
 
 ## 2. Directory ownership
 
 ```text
 docs/
 ├─ review_packets/                 # Claude writes
-├─ reviewer_responses/             # ChatGPT writes
+├─ reviewer_responses/             # Local Codex reviewer writes
 ├─ agent_state/
 │  └─ CLAUDE_STATUS.yaml           # Claude writes only
 ├─ reviewer_state/
-│  └─ CHATGPT_REVIEW.yaml          # ChatGPT writes only
-└─ HANDOFF_PROTOCOL.md             # protocol; change only deliberately
-
-scripts/
-└─ wait_for_reviewer.py            # local Claude polling helper
+│  └─ CHATGPT_REVIEW.yaml          # Reviewer writes only; name retained
+└─ HANDOFF_PROTOCOL.md             # change only deliberately
 ```
 
 Ownership rule:
 
 ```text
 Claude never edits CHATGPT_REVIEW.yaml or reviewer_responses/*
-ChatGPT never edits CLAUDE_STATUS.yaml or review_packets/*
+Reviewer never edits CLAUDE_STATUS.yaml or review_packets/*
 ```
 
-This prevents push conflicts and stale handoff overwrites.
+The watcher invokes `codex exec` in a read-only sandbox. Codex returns a
+schema-validated decision; the watcher alone writes the two reviewer-owned
+outputs.
 
 ## 3. Claude status schema
 
 `docs/agent_state/CLAUDE_STATUS.yaml`
 
 ```yaml
-protocol_version: 2
+protocol_version: 3
 actor: claude
 handoff_id: G4_EVAL_FIX_001
-state: RUNNING
+state: READY_FOR_REVIEW
 
 gate: 4
 phase: GATE_4_EVAL_FIX
@@ -62,10 +68,10 @@ last_consumed_review:
   decision: PILOT_MECHANICS_PASS_FORMAL_NOT_AUTHORIZED
   response: docs/reviewer_responses/GATE_4_3_SEED_PILOT_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-09T01:30:00+08:00
+updated_at: 2026-08-11T01:30:00+08:00
 ```
 
-Allowed Claude states:
+Recognized Claude states:
 
 ```text
 RUNNING
@@ -73,15 +79,18 @@ READY_FOR_REVIEW
 BLOCKED
 TEST_FAILED
 WAITING_FOR_REVIEW
+REVIEW_COMPLETE
 ```
 
-## 4. ChatGPT reviewer state schema
+Only `READY_FOR_REVIEW`, `BLOCKED`, and `TEST_FAILED` trigger a review.
 
-`docs/reviewer_state/CHATGPT_REVIEW.yaml`
+## 4. Reviewer state schema
+
+`docs/reviewer_state/CHATGPT_REVIEW.yaml` retains its path for compatibility.
 
 ```yaml
-protocol_version: 2
-actor: chatgpt_reviewer
+protocol_version: 3
+actor: codex_reviewer
 handoff_id: G4_EVAL_FIX_001
 state: REVIEW_COMPLETE
 
@@ -89,18 +98,17 @@ reviewed_packet:
   path: docs/review_packets/GATE_4_EVAL_FIX.md
   commit: abc1234
 
+reviewed_remote_head: abc1234
 decision: APPROVED
+
 response:
-  path: docs/reviewer_responses/GATE_4_EVAL_FIX_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/G4_EVAL_FIX_001_REVIEWER_RESPONSE.md
 
-authorized_next:
-  - GATE_4_FEATURE_ABLATION
-
-forbidden_next:
-  - GATE_4_10_SEED_FORMAL
+authorized_next: []
+forbidden_next: []
 ```
 
-Reviewer states:
+Terminal reviewer states:
 
 ```text
 REVIEW_COMPLETE
@@ -108,7 +116,7 @@ REVISIONS_REQUIRED
 BLOCKED
 ```
 
-## 5. Claude startup / resume sequence
+## 5. Claude startup and resume
 
 Every start or resume:
 
@@ -117,214 +125,164 @@ Every start or resume:
 2. git fetch origin main
 3. if worktree clean: git pull --ff-only
 4. read docs/HANDOFF_PROTOCOL.md
-5. read docs/agent_state/CLAUDE_STATUS.yaml
-6. read docs/reviewer_state/CHATGPT_REVIEW.yaml
-7. if reviewer handoff_id matches the pending handoff, read the referenced reviewer response
-8. execute only explicitly authorized_next
+5. read docs/agent_protocol/CURRENT_CANONICAL_STATE.md
+6. read docs/agent_state/CLAUDE_STATUS.yaml
+7. read docs/reviewer_state/CHATGPT_REVIEW.yaml
+8. consume a response only when handoff_id matches
+9. execute only explicitly authorized_next
 ```
 
-Silence is not approval.
+Silence, elapsed time, passing tests, or a watcher event is not approval.
 
-## 6. Claude → ChatGPT handoff
+## 6. Claude to reviewer handoff
 
-When a gate/sub-gate is complete:
+When a gate/sub-gate is complete or blocked:
 
 ```text
-1. finish tests / results
+1. finish the allowed tests/results
 2. create or update docs/review_packets/<PACKET>.md
 3. update CLAUDE_STATUS.yaml
-4. set unique handoff_id
-5. set state = READY_FOR_REVIEW
-6. commit all intended developer changes
-7. push main
-8. verify remote commit SHA
-9. ensure working tree clean
+4. set a unique handoff_id
+5. set state READY_FOR_REVIEW, BLOCKED, or TEST_FAILED
+6. bind packet and code_commit to the exact evidence
+7. commit all intended Claude-owned/developer changes
+8. push main as the gate/checkpoint
+9. verify remote commit SHA and clean worktree
 10. STOP coding across the gate
-11. run scripts/wait_for_reviewer.py <handoff_id>
 ```
 
-The packet must record the exact implementation/result commit being reviewed.
+For `BLOCKED` or `TEST_FAILED`, record failure reason, failed command/test, last
+successful commit, working-tree state, and recommended recovery point. A packet
+is recommended; `READY_FOR_REVIEW` requires one.
 
-## 7. ChatGPT pre-write sync guard — HARD REQUIREMENT
+## 7. Local fetch monitor
 
-Before **any GitHub write batch**, ChatGPT must synchronize against the latest remote repository state. This is mandatory even if the repository was read only a few minutes earlier.
-
-Because ChatGPT uses the GitHub connector rather than a local worktree, the equivalent of `git fetch/pull` is:
+The watcher performs one bounded scan every 60 seconds:
 
 ```text
-1. read the latest main HEAD / recent commits
-2. read docs/agent_state/CLAUDE_STATUS.yaml from current main
-3. identify whether Claude has pushed a newer code/status/packet commit
-4. if state = READY_FOR_REVIEW / BLOCKED / TEST_FAILED:
-      read the matching packet and exact code_commit before writing
-5. if state = RUNNING:
-      default to READ ONLY; do not write roadmap/review files that could race Claude
-6. verify the handoff_id being reviewed still matches current CLAUDE_STATUS
-7. bind the reviewer response to the exact packet path + code_commit
+1. git fetch origin main
+2. read origin/main:docs/agent_state/CLAUDE_STATUS.yaml
+3. ignore RUNNING / WAITING_FOR_REVIEW / REVIEW_COMPLETE
+4. check READY_FOR_REVIEW / BLOCKED / TEST_FAILED
+5. reject an already-seen handoff_id
+6. verify the READY packet exists on origin/main
+7. capture remote HEAD and status/packet/reviewer-state digests
+8. invoke the read-only local Codex review entry
 ```
 
-Immediately before the first write, ChatGPT must verify that `main` and `CLAUDE_STATUS` have not changed since the review decision was formed.
+Fetch failure is logged as operational metadata and retried on the next minute.
+The watcher never pulls a dirty worktree and never auto-resolves divergence.
 
-For multi-file reviewer writes:
+## 8. Pre-write sync guard — HARD REQUIREMENT
+
+The web reviewer guard remains in force. Before any reviewer write, the watcher
+fetches again and verifies:
 
 ```text
-write reviewer response
-→ re-read latest main HEAD + CLAUDE_STATUS
-→ only if the same handoff is still waiting, update CHATGPT_REVIEW.yaml
+origin/main HEAD unchanged
+CLAUDE_STATUS digest unchanged
+handoff_id and trigger state unchanged
+packet digest unchanged
+pre-existing reviewer-state digest unchanged
 ```
 
-If the remote HEAD changes unexpectedly at any point:
+Then it fast-forwards a clean local `main` to the reviewed remote HEAD and writes
+the reviewer response.
+
+Before writing `CHATGPT_REVIEW.yaml`, it fetches and verifies the same remote
+snapshot again.
+
+If anything changes unexpectedly:
 
 ```text
 STOP WRITE
-re-fetch latest main
-inspect the new commit(s)
-re-read CLAUDE_STATUS
-re-evaluate the intended write
+do not overwrite Claude-owned files
+do not force-push
+do not auto-retry the same handoff_id
 ```
 
-Never force-push and never overwrite Claude-owned files.
+If the change occurs between the response and reviewer-state writes, the local
+response may remain as an uncommitted audit artifact, but reviewer state is not
+advanced.
 
-The purpose of this guard is to prevent the reviewer from publishing a stale decision after Claude has already completed or advanced a handoff.
+## 9. Reviewer sequence
 
-## 8. ChatGPT review sequence
-
-Triggered by either:
+Local Codex:
 
 ```text
-user says “检查进展”
+1. use the GitHub skill/connector to orient to smhe00/RL_Stock
+2. read AGENTS.md and docs/agent_protocol/*
+3. inspect origin/main CLAUDE_STATUS and matching packet
+4. inspect exact commit/diff/source/tests/results
+5. preserve canonical constraints and STOP gates
+6. do not run a new financial backtest or experiment
+7. return a schema-valid terminal review result
 ```
 
-or hourly watchdog.
-
-ChatGPT:
+The watcher (numbering continues independently):
 
 ```text
-1. perform the Section 7 pre-write sync guard
-2. read CLAUDE_STATUS.yaml
-3. check READY_FOR_REVIEW / BLOCKED / TEST_FAILED
-4. read the packet
-5. inspect exact commit/diff/source/tests/results
-6. re-check latest main HEAD + CLAUDE_STATUS before writing
-7. write docs/reviewer_responses/<PACKET>_REVIEWER_RESPONSE.md
-8. re-check latest main HEAD + CLAUDE_STATUS
-9. write/update docs/reviewer_state/CHATGPT_REVIEW.yaml only if the same handoff is still pending
-10. notify user only when there is a meaningful decision/blocker
+7. apply the first pre-write sync guard
+8. write reviewer_responses/<handoff_id>_REVIEWER_RESPONSE.md
+9. apply the second pre-write sync guard
+10. write CHATGPT_REVIEW.yaml
+11. stage exactly those two reviewer-owned files
+12. commit them as a gate checkpoint
+13. fetch/check once more and push without force
 ```
 
-ChatGPT must not edit Claude-owned files.
+If `publish_checkpoint = false`, steps 11–13 are manual. No automated review may
+authorize a new research branch unless the user explicitly authorized that exact
+branch; default `authorized_next` is empty.
 
-## 9. Claude waits for reviewer by fetch, not pull
+## 10. Handoff identity and de-duplication
 
-While waiting, use `git fetch`, not repeated `git pull`.
+Every request/review pair has a unique `handoff_id`. A handoff is claimed before
+Codex starts and is processed at most once automatically, including after watcher
+restart.
 
-Recommended poll interval: 60–120 seconds.
-
-When the expected `handoff_id` appears in `origin/main:docs/reviewer_state/CHATGPT_REVIEW.yaml` with a terminal reviewer state:
-
-```text
-REVIEW_COMPLETE
-REVISIONS_REQUIRED
-BLOCKED
-```
-
-then:
+`FAILED` and `STOP WRITE` do not loop. Normally Claude issues a new handoff ID
+after changing the handoff. An operator may explicitly retry only after inspecting
+the failure:
 
 ```text
-1. verify worktree clean
-2. git pull --ff-only
-3. read CHATGPT_REVIEW.yaml
-4. read referenced reviewer response
-5. update CLAUDE_STATUS.yaml to RUNNING if work is authorized
-6. execute only authorized_next
-```
-
-## 10. Handoff identity
-
-Every request/review pair has a unique ID, for example:
-
-```text
-G4_3SEED_001
-G4_EVAL_FIX_001
-G4_FEATURE_ABLATION_001
-G4_NON_RL_HORSE_RACE_001
+scripts/start_local_reviewer.ps1 -RetryHandoff <ID> -Once
 ```
 
 Never consume a reviewer response for a different handoff ID.
 
-## 11. Failure protocol
+## 11. Git conflict and checkpoint rules
 
-If a stop condition or test failure occurs, Claude writes:
+- Normal synchronization uses `git fetch` and `git pull --ff-only` or
+  `git merge --ff-only origin/main` on a clean `main`.
+- Never force-push, rebase automatically, discard work, or auto-resolve a
+  divergence.
+- Reviewer checkpoints contain only the response and reviewer-state files.
+- A push rejection is a failure signal, not permission to retry more strongly.
+- GitHub carries gate/checkpoint handoffs; it is not a high-frequency progress
+  log.
 
-```yaml
-state: BLOCKED
-```
+## 12. Gate and research safety
 
-or
+- Passing tests does not authorize the next gate.
+- Do not automatically relax research constraints or select a post-result branch.
+- Do not start Claude, a trading prototype, a new financial backtest, paper/live
+  trading, or QMT activity.
+- Preserve MaxDiv `120/0.5`, M2 canonical state, the unresolved `03110.HK` STOP,
+  closed PPO/SAC/TD3, and `authorized_next: []` unless the user explicitly changes
+  them.
 
-```yaml
-state: TEST_FAILED
-```
+## 13. Logging
 
-and records:
-
-```text
-failure reason
-failed command/test
-last successful commit
-working-tree state
-recommended recovery point
-```
-
-Then push and stop.
-
-## 12. Git conflict rules
-
-Before pulling:
+Logs are local, rotating, and ignored:
 
 ```text
-git status --short
+runtime/local_reviewer/logs/local_reviewer.log
 ```
 
-If dirty with unrelated work, do not auto-merge or discard.
-
-Normal synchronization must use:
-
-```text
-git pull --ff-only
-```
-
-Never force-push `main`.
-
-Any non-fast-forward or stale-SHA failure on the ChatGPT side must be treated as a signal to re-run the Section 7 pre-write sync guard, not as a reason to force the write.
-
-## 13. Long-running runs
-
-While `RUNNING`, Claude may push status at natural milestones, but should not create noisy minute-by-minute commits.
-
-Useful milestones:
-
-```text
-seed batch complete
-major test suite complete
-blocking failure
-READY_FOR_REVIEW
-```
-
-ChatGPT may read progress while Claude is running, but should avoid repository writes unless issuing an explicit reviewer response to a completed handoff.
-
-## 14. Gate rule
-
-Passing tests does not authorize the next gate.
-
-Only `authorized_next` in the matching `CHATGPT_REVIEW.yaml` / reviewer response authorizes cross-gate work.
-
-## 15. Legacy status
-
-`docs/CODEX_AGENT_STATUS.md` may remain as historical context, but the machine-readable primary status is now:
-
-```text
-docs/agent_state/CLAUDE_STATUS.yaml
-```
+They contain only timestamps, operational event names, sanitized handoff IDs,
+states, and exit/result codes. They must not contain prompts, packet contents,
+model output, positions, account identifiers, orders, credentials, or
+market/account data.
 
 ## END

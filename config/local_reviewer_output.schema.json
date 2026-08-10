@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "handoff_id": {"type": "string", "minLength": 1},
+    "reviewer_state": {
+      "type": "string",
+      "enum": ["REVIEW_COMPLETE", "REVISIONS_REQUIRED", "BLOCKED"]
+    },
+    "decision": {"type": "string", "minLength": 1},
+    "response_markdown": {"type": "string", "minLength": 1},
+    "passed": {"type": "array", "items": {"type": "string"}},
+    "revision_required": {"type": "array", "items": {"type": "string"}},
+    "authorized_next": {"type": "array", "items": {"type": "string"}},
+    "forbidden_next": {"type": "array", "items": {"type": "string"}},
+    "notes": {"type": "array", "items": {"type": "string"}},
+    "reviewed_packet": {"type": "string"},
+    "reviewed_commit": {"type": "string"}
+  },
+  "required": [
+    "handoff_id",
+    "reviewer_state",
+    "decision",
+    "response_markdown",
+    "passed",
+    "revision_required",
+    "authorized_next",
+    "forbidden_next",
+    "notes",
+    "reviewed_packet",
+    "reviewed_commit"
+  ],
+  "additionalProperties": false
+}
+

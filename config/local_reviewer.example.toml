@@ -1,0 +1,17 @@
+# Local paths are resolved from the repository root.
+poll_interval_seconds = 60.0
+codex_command = "codex"
+codex_timeout_seconds = 1800
+runtime_dir = "runtime/local_reviewer"
+output_schema = "config/local_reviewer_output.schema.json"
+max_log_bytes = 1048576
+log_backups = 3
+remote = "origin"
+remote_branch = "main"
+
+# A terminal reviewer response is a gate checkpoint. The watcher commits only
+# reviewer-owned outputs and pushes without force. Set false for manual publish.
+publish_checkpoint = true
+
+# Fail closed: automated reviews cannot authorize a new branch.
+allow_authorized_next = false

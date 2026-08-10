@@ -17,7 +17,11 @@ venv/
 # Local secrets / overrides
 *.local.yaml
 *.local.json
+*.local.toml
 config.json
+
+# Local Codex reviewer runtime (operational logs/state/results never enter Git)
+/runtime/local_reviewer/
 
 # IDE / OS
 .idea/
