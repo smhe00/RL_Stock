@@ -93,3 +93,94 @@ class RiskOverlayV0:
         if diff > 1e-5:
             raise InfeasibleConstraints(f"waterfill residual diff={diff:.2e}")
         return w
+
+
+class RiskOverlayCE(RiskOverlayV0):
+    """POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY — M1-M3 joint Euclidean projection.
+
+    在 M0 的 legacy RiskOverlayV0（per-asset caps + growth 组 cap）基础上增加
+    defensive 组 cap（CASH_LIKE+CN_DURATION），并以唯一确定性凸 QP 投影求解
+    joint intersection（C1 long-only / C2 simplex / C3 per-slot caps /
+    C4 growth 组 / C5 defensive 组）：
+        min_w  0.5 * ||w - raw||_2^2   s.t. C1-C5
+    方法: scipy.optimize.minimize(method='SLSQP')（命名唯一，无 fallback）；
+    max_iter=200 / ftol=1e-12 / 终检 atol=1e-6；result.success 必须为 True，
+    任一收敛/KKT/可行性检查失败 → InfeasibleConstraints（fail-closed）。
+
+    语义: cap 作用于 rebalance target weights（同 RiskOverlayV0 V1）；actual 超限由
+    下次再平衡纠正。M0 不经过本类（保持 legacy RiskOverlayV0 精确路径）。
+    """
+
+    def __init__(
+        self,
+        slots: list[str],
+        *,
+        caps: np.ndarray,
+        growth_max: float = 0.50,
+        growth_slots: tuple[str, ...] = ("CHINEXT", "STAR"),
+        def_max: float,
+        def_slots: tuple[str, ...] = ("CASH_LIKE", "CN_DURATION"),
+    ) -> None:
+        self.slots = list(slots)
+        self.caps = np.asarray(caps, dtype=float)
+        assert len(self.caps) == len(self.slots), "caps length must equal slots"
+        self.cap_index = {s: i for i, s in enumerate(self.slots)}
+        self.growth_idx = [self.cap_index[s] for s in growth_slots if s in self.cap_index]
+        self.growth_max = float(growth_max)
+        self.def_idx = [self.cap_index[s] for s in def_slots if s in self.cap_index]
+        self.def_max = float(def_max)
+        self.max_iter = 200
+        self.ftol = 1e-12
+        self.atol = 1e-6
+
+    def apply(self, raw: pd.Series) -> pd.Series:
+        import scipy.optimize as so
+        v = np.asarray(raw.reindex(self.slots).values, dtype=float)
+        v = np.clip(v, 0.0, None)
+        n = len(self.slots)
+        caps = self.caps
+        # 可行性预检: per-slot caps 之和必须 >= 1
+        if caps.sum() < 1.0 - 1e-9:
+            raise InfeasibleConstraints(f"sum(caps)={caps.sum():.3f} < 1")
+
+        def obj(w):
+            return 0.5 * np.dot(w - v, w - v)
+
+        def jac(w):
+            return w - v
+
+        # C2 simplex 等式（独立元素）；C4/C5 组不等式（各独立 LinearConstraint）
+        eq_cons = {"type": "eq", "fun": lambda w: w.sum() - 1.0,
+                   "jac": lambda w: np.ones(n)}
+        constraints = [eq_cons]
+        if self.growth_idx:
+            A_growth = np.zeros((1, n))
+            A_growth[0, self.growth_idx] = 1.0
+            constraints.append(
+                so.LinearConstraint(A_growth, lb=-np.inf, ub=self.growth_max))
+        if self.def_idx:
+            A_def = np.zeros((1, n))
+            A_def[0, self.def_idx] = 1.0
+            constraints.append(
+                so.LinearConstraint(A_def, lb=-np.inf, ub=self.def_max))
+
+        res = so.minimize(
+            obj, x0=v.copy(), jac=jac, method="SLSQP",
+            bounds=[(0.0, float(c)) for c in caps],
+            constraints=constraints,
+            options={"maxiter": self.max_iter, "ftol": self.ftol},
+        )
+        if not res.success:
+            raise InfeasibleConstraints(
+                f"SLSQP failed: success=False status={res.status} msg={str(res.message)[:120]}")
+        w = np.asarray(res.x, dtype=float)
+        # 最终同时可行性断言（final simultaneous assertions, fail-closed）
+        if not np.isclose(w.sum(), 1.0, atol=self.atol):
+            raise InfeasibleConstraints(f"projection sum={w.sum():.6f}")
+        if (w < -1e-9).any() or (w > caps + self.atol).any():
+            raise InfeasibleConstraints("projection violates per-slot caps")
+        if self.growth_idx and w[self.growth_idx].sum() > self.growth_max + self.atol:
+            raise InfeasibleConstraints("projection violates growth-group cap")
+        if self.def_idx and w[self.def_idx].sum() > self.def_max + self.atol:
+            raise InfeasibleConstraints("projection violates defensive-group cap")
+        return pd.Series(w, index=self.slots)
