@@ -1,19 +1,19 @@
 protocol_version: 2
 actor: claude
-handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT_001
+handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT_DOC_CLEANUP_001
 state: READY_FOR_REVIEW
 
 gate: 4
-phase: POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT
+phase: POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT_DOC_CLEANUP
 code_commit: aabe0ca
 packet: docs/review_packets/POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT.md
 
 progress:
-  current_task: Instrument execution-realism STOP CLOSEOUT (docs/decision synthesis only; no new backtest). Reviewer ACCEPTED CORRECTION_003 (EXECUTION_REALISM_RUN_CORRECTION_003_ACCEPTED_STOP_CONFIRMED, BLOCKED) and froze the STOP: S1 PASS (worst -0.84%), S2 PASS (fee 4.457bp / slippage 3.000bp), S3 FAIL (478/1011=47.28%: structural 461 U no_quote 18), STOP TRUE. Closeout separates (a) economic findings (net cum +47.21% / CAGR 9.74% / Sharpe 1.738 / MaxDD -4.24% close to L1 research) from (b) structural eligibility failure (03110.HK southbound_eligible_from 2024-05-06, 461 structural days). Future research branches A-E enumerated only, not executed/selected. No mapping/window/threshold change; PPO/SAC/TD3 remain closed; QMT live / FORWARD / PAPER / LIVE forbidden.
+  current_task: STOP_CLOSEOUT DOC_CLEANUP (docs consistency only; no code/experiment change). Reviewer: STOP_CLOSEOUT_SUBSTANTIVELY_ACCEPTED_DOC_CONSISTENCY_CLEANUP_REQUIRED. Applied 5 cleanups: (1) S1 worst corrected to -0.70% (-0.006967, net 4.86% vs research 5.56%); (2) canonical provenance (21 tests + 20 inputs + L1 artifacts SHA256, no stale counts); (3) commits bound distinctly (impl aabe0ca / result+packet 7dfabcd / closeout 8166ffd / cleanup new); (4) branch A softened (513690.SH only as fresh-PREP-verify example, no tradability assertion); (5) all branches A-E unselected. STOP preserved: S1/S2 PASS, S3 FAIL 478/1011=47.28%, STOP true.
 
 last_consumed_review:
-  handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN_CORRECTION_003
-  decision: EXECUTION_REALISM_RUN_CORRECTION_003_ACCEPTED_STOP_CONFIRMED
-  response: docs/reviewer_responses/POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN_CORRECTION_003_REVIEWER_RESPONSE.md
+  handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT_001
+  decision: STOP_CLOSEOUT_SUBSTANTIVELY_ACCEPTED_DOC_CONSISTENCY_CLEANUP_REQUIRED
+  response: docs/reviewer_responses/POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-10T12:45:00+08:00
+updated_at: 2026-08-10T13:40:00+08:00
