@@ -1,66 +1,53 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_CORRECTION_001
-state: REVISIONS_REQUIRED
+handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_DOC_CLEANUP_001
+state: REVIEW_COMPLETE
 
 reviewed_packet:
   path: docs/review_packets/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN.md
-  commit: 7a4474b04b2a719215a91dc6a90531f8e8f0b463
+  commit: 9841a2627a301673a7536a41fd23428490d286a5
 
 code_commit: 487fd0042f424a2061070c3da357f136420fcc2f
 
-decision: MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_CORRECTION_ACCEPTED_DOC_CONSISTENCY_CLEANUP_REQUIRED
+decision: MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_DOC_CLEANUP_ACCEPTED_RESEARCH_PHASE_COMPLETE
 
 response:
-  path: docs/reviewer_responses/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_CORRECTION_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_DOC_CLEANUP_REVIEWER_RESPONSE.md
 
 passed:
   - UNIQUE_READY_FOR_REVIEW_HANDOFF
-  - MECHANICAL_CORRECTION_ONLY_FROZEN_CANDIDATES_PRESERVED
+  - DOC_COMMENT_CLEANUP_ONLY_NO_RERUN
+  - CANONICAL_RESULT_ARTIFACTS_UNCHANGED
+  - NO_EXECUTABLE_LOGIC_CHANGE
+  - PACKET_SORTINO_VALUES_MATCH_CANONICAL_ARTIFACT
+  - PACKET_CRITERION6_VALUES_MATCH_CANONICAL_ARTIFACT
+  - 2026_SEGMENT_LABELED_YTD_THROUGH_2026_08_07
+  - TURNOVER_COLUMN_EXPLICIT_TOTAL_NAV_CANONICAL
+  - RISKOVERLAYCE_DOCSTRING_NO_FALSE_PRODUCTION_KKT_CLAIM
   - MAXDIV_120_0P5_CORE_PRESERVED
   - M2_PRINCIPAL_CHALLENGER_PRESERVED
-  - SLSQP_WATERFILL_INITIALIZATION_RESTORED
   - M0_ALL_1011_X_11_TARGET_PARITY_EXACT_ZERO
-  - M0_WORST_CALENDAR_YEAR_RETURN_MATCHES_ACCEPTED_L1
-  - FORWARD_SANITY_TOTAL_NAV_WEIGHTING_FIXED
-  - END_TO_END_FORWARD_SANITY_ACTUAL_CANDIDATE_TEST_PRESENT
-  - RAW_ARTIFACT_SLEEVE_AND_TOTAL_NAV_WEIGHTS_SEPARATED
-  - TOTAL_NAV_TURNOVER_NOTIONAL_COST_REPORTED
-  - TAUTOLOGICAL_PARITY_OK_REMOVED
-  - CRITERION_8_RUNTIME_VALIDITY_BOUND
-  - CRITERION_6_USES_MATCHED_CALENDAR_CAGR
-  - DURATION_YIELD_SNAPSHOT_DATE_VALUE_SOURCE_SHA256_BOUND
-  - PROJECTION_MANIFEST_DOES_NOT_CLAIM_PRODUCTION_KKT
-  - CORRECTED_RERUN_PRIMARY_ECONOMICS_UNCHANGED
   - M1_HISTORICALLY_VIABLE
   - M2_HISTORICALLY_VIABLE_ALL_8_CRITERIA
   - M3_FAILS_FROZEN_SHARPE_1P20_SCREEN
-  - FIFTEEN_BEHAVIORAL_TESTS_REPORTED_PASS
   - NO_RESULT_INFORMED_CAP_OR_PARAMETER_CHANGE
   - NO_EXPECTED_RETURN_OPTIMIZER
   - STOPPED_03110_MAPPING_NOT_REPAIRED_OR_LIVE_READY
   - PPO_SAC_TD3_REMAIN_EXCLUDED
 
-revision_required:
-  - PACKET_FULL_PERIOD_SORTINO_VALUES_MATCH_CANONICAL_ARTIFACT
-  - PACKET_CRITERION6_WORST_DEGRADATION_VALUES_MATCH_CANONICAL_ARTIFACT_EVERYWHERE
-  - RENAME_2026_H1_TO_2026_YTD_THROUGH_2026_08_07_OR_2026_SEGMENT
-  - CLARIFY_FULL_PERIOD_TURNOVER_AS_TOTAL_NAV_OR_EXPLICIT_SLEEVE_VS_TOTAL_NAV
-  - REMOVE_STALE_PRODUCTION_KKT_CLAIM_FROM_RISKOVERLAYCE_DOCSTRING
-  - PRESERVE_CANONICAL_RESULT_ARTIFACTS_UNCHANGED_NO_RERUN
+revision_required: []
 
-authorized_next:
-  - POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_DOC_CLEANUP
+authorized_next: []
 
 forbidden_next:
   - CAPITAL_EFFICIENCY_RERUN
-  - NEW_BACKTEST
+  - NEW_BACKTEST_WITHOUT_FRESH_PREP
   - RESULT_INFORMED_CAP_SEARCH
   - INTERMEDIATE_CAP_VALUES
   - CAP_RETUNING
   - EXPECTED_RETURN_OPTIMIZATION
-  - EXECUTION_UNIVERSE_REDESIGN
-  - INSTRUMENT_SUBSTITUTION
+  - EXECUTION_UNIVERSE_REDESIGN_WITHOUT_EXPLICIT_USER_SELECTION_AND_FRESH_PREP
+  - INSTRUMENT_SUBSTITUTION_WITHOUT_FRESH_PREP
   - NO_TRADE_BAND_SEARCH
   - MINIMUM_TRADE_THRESHOLD_OPTIMIZATION
   - EXECUTION_TIME_OPTIMIZATION
@@ -78,13 +65,14 @@ forbidden_next:
   - RL_COMPARISON
 
 notes:
-  - The corrected RUN economics are substantively accepted; no further experiment rerun is required.
-  - Canonical corrected economics: M0 CAGR 0.094154 / Sharpe 1.654531 / MaxDD -0.040172; M1 0.112629 / 1.282467 / -0.068107; M2 principal 0.116441 / 1.219346 / -0.076651; M3 0.121481 / 1.178854 / -0.084609.
-  - M2 passes all 8 pre-registered historical viability criteria; M3 fails only the frozen Sharpe >=1.20 screen and is excluded from next execution study.
-  - Corrected forward sanity with actual total-NAV weights: for an 8% portfolio target M0/M1/M2/M3 require risk-sleeve returns about 14.44%/10.74%/10.14%/9.59% under the labeled 1.4% cash and 1.7114% CN10Y assumptions.
-  - Remaining issues are documentation/source-comment consistency only: stale packet Sortino values; stale criterion-6 summary values; 2026 H1 label despite data through 2026-08-07; ambiguous turnover column; and a stale RiskOverlayCE docstring reference to production KKT checking.
-  - DOC_CLEANUP may modify only documentation/source comments/status. It must not regenerate or alter result artifacts or change executable logic.
-  - The old 03110 execution-realism structural STOP remains closed and separate. M2 is not yet executable/live-ready.
+  - The MaxDiv capital-efficiency research phase is complete. M2 is the accepted principal challenger for any future execution-oriented PREP.
+  - Canonical economics: M0 CAGR 0.094154 / Sharpe 1.654531 / MaxDD -0.040172 / defensive 0.50; M1 0.112629 / 1.282467 / -0.068107 / 0.30; M2 0.116441 / 1.219346 / -0.076651 / 0.25; M3 0.121481 / 1.178854 / -0.084609 / 0.20.
+  - M2 passes all 8 pre-registered historical viability criteria. M3 fails only the frozen Sharpe >= 1.20 screen and is excluded from the next execution study.
+  - Capital-efficiency tradeoff vs M0 is approximately +0.9 ppt CAGR per 10 ppt defensive reduction at a cost of approximately +1.4 to +1.5 ppt deeper MaxDD magnitude per 10 ppt reduction.
+  - Forward sanity under labeled cash 1.4% and CN10Y 1.7114% assumptions: an 8% portfolio target requires about 14.44% / 10.74% / 10.14% / 9.59% risk-sleeve return for M0/M1/M2/M3.
+  - Defensive caps bind throughout the 1011-day path, confirming the unconstrained MaxDiv preference for low-volatility CASH_LIKE/CN_DURATION and the motivation for the M2 capital-efficiency constraint.
+  - M2 is historical concept validation only, not executable/live-ready. The prior 03110.HK execution-realism structural STOP remains separate and unresolved.
+  - No future branch is automatically authorized. Any move toward execution must be explicitly selected by the user and start with a fresh PREP for executable universe/instrument mapping centered on M2.
   - PPO/SAC/TD3 remain closed unless the user explicitly reopens them.
 
-updated_at: 2026-08-11T01:20:00+08:00
+updated_at: 2026-08-11T01:33:00+08:00
