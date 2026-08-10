@@ -1,45 +1,56 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP_001
+handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP_CORRECTION_001
 state: REVISIONS_REQUIRED
 
 reviewed_packet:
   path: docs/review_packets/POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP.md
-  commit: aefd001e0478f59ab43a82ace3779b79fdc2cd53
+  commit: 2396fda84fb580ad9e270526af7f851e4e361268
 
 code_commit: 1ca71bb006cd4f82de1e10c3042bbd73395833e1
 
-decision: EXECUTION_REALISM_PREP_SUBSTANTIALLY_CORRECT_CONTRACT_FIX_REQUIRED
+decision: EXECUTION_REALISM_PREP_CORRECTION_PARTIAL_PASS_SOUTHBOUND_CONTRACT_FIX_REQUIRED
 
 response:
-  path: docs/reviewer_responses/POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP_CORRECTION_REVIEWER_RESPONSE.md
 
 passed:
   - UNIQUE_READY_FOR_REVIEW_HANDOFF
   - PREP_ONLY_NO_EXECUTION_REALISM_RUN
+  - HK_DIVIDEND_SILENT_513690_SUBSTITUTION_REMOVED
+  - HK_DIVIDEND_03110_PREFERRED_MAPPING_RESTORED
+  - MAINLAND_FEE_CONTRACT_MATCHES_MAINLANDETF_COST_MODEL
+  - EXTRA_5BP_SLIPPAGE_OVERLAY_REMOVED
+  - SPREAD_SLIPPAGE_DOUBLE_COUNT_CORRECTION_ACCEPTED
+  - PREMIUM_MAGNITUDE_THRESHOLD_REMOVED
+  - CLOSE_TO_OFFICIAL_NAV_GAP_NOT_USED_AS_LIVE_THRESHOLD
+  - S2_BPS_OF_TRADED_NOTIONAL_CONCEPT_FROZEN
   - MAXDIV_120_0P5_CORE_FROZEN
   - NO_MOMENTUM_BLEND_OR_RESULT_INFORMED_RETUNING
-  - L1_1011_DAY_WINDOW_REUSED
-  - NO_PRELAUNCH_BACKFILL_INTENT
-  - T_CLOSE_TO_NEXT_SESSION_OPEN_EXECUTION_INTENT
+  - L1_NOMINAL_1011_DAY_WINDOW_PRESERVED
+  - NO_PRELAUNCH_BACKFILL
+  - T_CLOSE_TO_NEXT_SESSION_OPEN_INTENT_PRESERVED
   - RESEARCH_RETURN_AND_EXECUTABLE_NET_PATHS_SEPARATED
-  - LOT_ROUNDING_AND_CASH_RESIDUAL_REQUIRED
   - MISSING_QUOTES_FAIL_CLOSED
-  - NAN_NONFINITE_FAIL_CLOSED
-  - ANNUAL_AND_PREFROZEN_SUBPERIOD_REPORTING_RETAINED
   - PPO_SAC_TD3_REMAIN_EXCLUDED
   - QMT_LIVE_REMAINS_FORBIDDEN
 
 revision_required:
-  - HK_DIVIDEND_MAPPING_DRIFT_03110_VS_513690_MUST_BE_EXPLICITLY_RESOLVED_AND_PROVENANCE_BOUND
-  - MAINLAND_FEE_CONTRACT_CONTRADICTS_ACTUAL_COST_MODEL
-  - ETF_STAMP_DUTY_AND_EXCHANGE_FEE_ASSUMPTIONS_MUST_MATCH_FROZEN_IMPLEMENTATION_OR_BE_REVIEWED
-  - SPREAD_SLIPPAGE_DOUBLE_COUNT_MUST_BE_PREVENTED
-  - PREMIUM_GUARD_THRESHOLD_BEHAVIOR_NOT_IMPLEMENTED_AND_HISTORICAL_SIGNAL_SOURCE_UNFROZEN
-  - S2_FEE_AND_SLIPPAGE_BPS_DENOMINATOR_MUST_BE_MACHINE_EVALUABLE
+  - 03110_LISTING_DATA_START_AND_SOUTHBOUND_ELIGIBILITY_DATES_MUST_BE_SEPARATED
+  - 03110_PRE_2024_05_06_SOUTHBOUND_INELIGIBILITY_MUST_BE_MODELED
+  - S3_STRUCTURAL_INELIGIBILITY_COUNTING_MUST_BE_FROZEN
+  - 03110_BOARD_LOT_MUST_BE_DATE_EFFECTIVE_100_TO_50_ON_2026_07_24
+  - 03110_SAME_DAY_REVERSAL_MUST_REMAIN_UNKNOWN_AND_NOT_BE_RELIED_UPON
+  - 03110_BASE_COST_PATH_MUST_USE_SOUTHBOUNDETF_COST_MODEL
+  - HK_ETF_STAMP_DUTY_0P1_CLAIM_MUST_BE_REMOVED_ETF_STAMP_DUTY_IS_ZERO
+  - SOUTHBOUND_DATE_EFFECTIVE_FEE_SCHEDULES_MUST_BE_USED
+  - HK_SETTLEMENT_T1_SIMPLIFICATION_CANNOT_BE_CALLED_CONSERVATIVE
+  - UNSETTLED_CASH_REUSE_MUST_BE_PREVENTED
+  - HISTORICAL_PREMIUM_GUARD_DATA_MODE_MUST_BE_EXPLICIT
+  - S2_MULTI_CURRENCY_NOTIONAL_AND_COST_MUST_AGGREGATE_IN_BASE_CNY
 
 authorized_next:
-  - POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP_CORRECTION
+  - POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP_FINAL_CORRECTION
 
 forbidden_next:
   - POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN
@@ -58,13 +69,15 @@ forbidden_next:
   - QMT_LIVE
 
 notes:
-  - Gate-1 audited preferred HK_DIVIDEND instrument is 03110.HK; 513690 appears only as an alternative. Any switch must be explicit and bind listing date, data provenance, raw/adj history, lot, liquidity and fee semantics before RUN.
-  - Current MainlandETFCostModel uses broker_commission_rate=0.00005, stamp_duty_rate=0, exchange_fee_rate=0 and UNKNOWN_PENDING_BROKER_FEE_AUDIT for exchange-fee inclusion. The PREP text saying commission 万1~万3 plus ETF stamp duty is inconsistent.
-  - Current cost model already contains half_spread_bps=1 and slippage_bps=2. Any additional 5bp overlay must explicitly replace or add to these components without double counting.
-  - Current PremiumGuard fail-closes only missing/stale IOPV; fresh IOPV always allows buys and threshold_pct is not applied. Historical close_to_official_nav_gap cannot be used as a live-style threshold under D-011.
-  - Freeze a valid historical premium-protection rule or availability-only rule before RUN.
-  - Define S2 fee/slippage bps denominator and aggregation identically in spec, runner, artifact and STOP logic.
-  - No execution-realism result may be generated before corrected PREP review.
+  - Gate-1 freezes 03110 listing_date=2013-06-17, southbound_eligible_from=2024-05-06, current board_lot=50 effective 2026-07-24 with original lot 100 before that date; the packet must not collapse these into a single raw-data start date.
+  - The nominal L1 window starts 2022-06-09, so 03110 is not Southbound-executable for a material portion of the window. Freeze a pre-eligibility cash-parking rule or separately reviewed substitute mapping and define S3 counting semantics.
+  - D-015 keeps 03110 same_day_reversal UNKNOWN_PENDING_RULE_VERIFICATION. The execution-realism runner should not rely on same-session reversal.
+  - Repository SouthboundETFCostModel already exists with historical HKEX/SFC/AFRC/settlement schedules, conservative NOT ACCOUNT-VERIFIED broker commission, ETF stamp duty=0, spread/slippage, and base-currency conversion. Route 03110 through this model rather than MainlandETFCostModel.
+  - The packet's HK ETF 0.1% stamp-duty statement conflicts with D-017 and SouthboundETFCostModel and must be removed.
+  - T+1 settlement is earlier than the packet's stated HK T+2 rule and therefore cannot be labeled conservative. Freeze real/explicit settlement accounting and prevent unsettled-cash reuse.
+  - Historical realtime IOPV is unavailable. Freeze whether INSTRUMENT_BACKTEST reports PremiumGuard as N/A, deliberately fail-closes all missing-Iopv buys as a diagnostic, or uses a separately reviewed FairNAV/IOPV-equivalent proxy.
+  - For S2, convert both costs and traded notional to the same CNY base before aggregation; do not sum HKD and CNY notionals directly.
+  - No execution-realism run is authorized until this final PREP correction is reviewed.
   - PPO/SAC/TD3 remain closed unless the user explicitly reopens them.
 
-updated_at: 2026-08-10T09:35:04+08:00
+updated_at: 2026-08-10T10:02:37+08:00
