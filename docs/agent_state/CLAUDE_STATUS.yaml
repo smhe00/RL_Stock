@@ -1,21 +1,20 @@
-protocol_version: 2
+protocol_version: 3
 actor: claude
-handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_DOC_CLEANUP_001
-state: REVIEW_COMPLETE
-status: RESEARCH_PHASE_COMPLETE
+handoff_id: LOCAL_REVIEWER_COMMS_SMOKE_20260811_001
+state: READY_FOR_REVIEW
 
-gate: POST_L2
-phase: POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_DOC_CLEANUP
-code_commit: 487fd00
-packet: docs/review_packets/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN.md
+gate: LOCAL_PROTOCOL
+phase: LOCAL_REVIEWER_COMMS_SMOKE
+code_commit: null
+packet: docs/review_packets/LOCAL_REVIEWER_COMMS_SMOKE_20260811_001.md
 
 progress:
-  current_task: RESEARCH PHASE COMPLETE. Reviewer: MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_DOC_CLEANUP_ACCEPTED_RESEARCH_PHASE_COMPLETE (REVIEW_COMPLETE, authorized_next=[]). MaxDiv capital-efficiency research phase formally complete. M2 = accepted principal challenger for any future execution-oriented PREP (historical concept validation only, NOT executable/live-ready). Canonical economics: M0 CAGR 9.4154%/Sharpe 1.6545/MaxDD -4.02%/def 50%; M1 11.2629%/1.2825/-6.81%/30% viable; M2 principal 11.6441%/1.2193/-7.67%/25% viable (8/8); M3 12.1481%/1.1789/-8.46%/20% NOT viable (Sharpe<1.2). Tradeoff: +0.9ppt CAGR per 10ppt def reduction, -1.4~1.5ppt MaxDD. Forward 8% target risk-sleeve 14.44%/10.74%/10.14%/9.59%. Defensive caps bind throughout 1011-day path. 03110 execution-realism STOP remains separate/closed. Any execution move needs explicit user selection + fresh PREP centered on M2. PPO/SAC/TD3 closed.
+  current_task: LOCAL_REVIEWER_COMMS_SMOKE_HANDOFF (protocol communication only; no research/backtest/execution/trading). Reviewer-initiated smoke test of the GitHub file handoff path. Consumed REVIEWER_INITIATED_LOCAL_COMMS_SMOKE_20260811_001 (LOCAL_REVIEWER_COMMS_SMOKE_AUTHORIZED). Produced LOCAL_REVIEWER_COMMS_SMOKE_20260811_001 READY_FOR_REVIEW. Ownership compliant: only Claude-owned files changed. MaxDiv 120/0.5 + M2 canonical state preserved; 03110 execution-realism STOP remains unresolved/in force; PPO/SAC/TD3 closed; capital-efficiency research complete (no new branch).
 
 last_consumed_review:
-  handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_DOC_CLEANUP_001
-  decision: MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_DOC_CLEANUP_ACCEPTED_RESEARCH_PHASE_COMPLETE
+  handoff_id: REVIEWER_INITIATED_LOCAL_COMMS_SMOKE_20260811_001
+  decision: LOCAL_REVIEWER_COMMS_SMOKE_AUTHORIZED
   state: REVIEW_COMPLETE
-  response: docs/reviewer_responses/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_DOC_CLEANUP_REVIEWER_RESPONSE.md
+  response: docs/reviewer_responses/LOCAL_REVIEWER_COMMS_SMOKE_AUTHORIZATION.md
 
-updated_at: 2026-08-11T01:35:00+08:00
+updated_at: 2026-08-11T04:30:00+08:00
