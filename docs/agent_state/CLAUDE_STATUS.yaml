@@ -1,19 +1,19 @@
 protocol_version: 2
 actor: claude
-handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN_CORRECTION_001
+handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN_CORRECTION_002
 state: READY_FOR_REVIEW
 
 gate: 4
-phase: POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN_CORRECTION
-code_commit: be022a6
+phase: POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN_CORRECTION_002
+code_commit: 16b8dd7
 packet: docs/review_packets/POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN.md
 
 progress:
-  current_task: Instrument execution-realism RUN corrected (8 mechanical fixes: MaxDiv weight path via env._i, T+1-open fills, sell-before-buy + tracking error, dated T+2 ledger, Southbound HKD+transaction_date+T-1 fx_to_base, S1 subperiods, executable regression tests, provenance hashes). Corrected net: cum +48.3% / CAGR 9.9% / Sharpe 1.750 / MaxDD -3.9% (close to L1 research 1.655/-4.0% -> MaxDiv path faithful). S1 PASS, S2 PASS, S3 FAIL (45.6% 03110 pre-eligible), S4 N/A -> STOP true per frozen contract.
+  current_task: Instrument execution-realism RUN CORRECTION_002 (8 fidelity fixes: T+1-open fills, post-fill net NAV, T+2 session calendar + receivables in NAV, 03110 HKD local + T-1 FX, corporate actions pop-once, S1 per-subperiod vs L1 research artifact, behavioral regression tests 12, provenance 19 files). net cum +48.1% / CAGR 9.9% / Sharpe 1.801 / MaxDD -3.9%. S1 FAIL (year_2022 net 4.3% vs research 9.4%, -5.08%>5pct), S2 PASS, S3 FAIL (45.6%), S4 N/A -> STOP true per frozen contract.
 
 last_consumed_review:
-  handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN_001
-  decision: EXECUTION_REALISM_RUN_INVALID_IMPLEMENTATION_CORRECTION_REQUIRED
-  response: docs/reviewer_responses/POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN_REVIEWER_RESPONSE.md
+  handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN_CORRECTION_001
+  decision: EXECUTION_REALISM_RUN_CORRECTION_STILL_INVALID_SECOND_MECHANICAL_CORRECTION_REQUIRED
+  response: docs/reviewer_responses/POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN_CORRECTION_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-10T05:30:00+08:00
+updated_at: 2026-08-10T06:00:00+08:00
