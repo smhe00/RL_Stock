@@ -122,7 +122,8 @@ HK/QDII（513180/513690/513500）：QDII 净值/价格反映前夜海外，T-1 �
 
 ```text
 成本路由（冻结）:
-  Mainland-listed（513300/512100/512890/159915/588000/513180/513500/518880/511260/511360）
+  Mainland-listed（510300/512100/512890/159915/588000/513180/513500/518880/511260/511360）
+    （CN_LARGE = 510300.SH；runner 映射断言防错码）
     → MainlandETFCostModel 现状（不虚构）:
       broker_commission_rate = 0.00005   # 单边万0.5
       stamp_duty_rate = 0.0              # ETF 免印花税
@@ -175,7 +176,8 @@ STOP 判据（满足任一 → 停止并返回 blocker，不推进 forward/paper
       （不混 HKD/CNY notional；runner/artifact/STOP 同一 FX 约定）；S2 通过 iff
       fee_bps <= 5bp 且 slippage_bps <= 10bp；
   S3: fail-closed 事件 > 1% 决策日（上市前/结构不可交易停泊/无报价）；
-  S4: IOPV fail-closed 禁买触发率 > 5% 决策日（US_BROAD 可执行性证据；backtest mode 下预期 N/A）。
+  S4: INSTRUMENT_BACKTEST mode = NOT_APPLICABLE / NOT_EVALUATED（历史无实时 IOPV，D-011）——
+      排除于 STOP 评估；>5% IOPV fail-closed 触发率仅保留于未来 PAPER/LIVE 门（有实时 IOPV）。
 ```
 
 # 7. 评估指标 / 子期（冻结）
@@ -192,8 +194,9 @@ STOP 判据（满足任一 → 停止并返回 blocker，不推进 forward/paper
 # 8. 测试 / Invariants（冻结）
 
 ```text
-tests/test_instrument_execution_realism.py（新，CORRECTION_002 后）：
-  - slot->instrument 映射精确（HK_DIVIDEND = 03110.HK）+ 三日期分离断言（listing 2013-06-17 /
+tests/test_instrument_execution_realism.py（新，CONSISTENCY_CLEANUP 后）：
+  - slot->instrument 映射精确（HK_DIVIDEND = 03110.HK；CN_LARGE = 510300.SH 断言防错码）
+    + 三日期分离断言（listing 2013-06-17 /
     data-start 2021-01-11 / southbound_eligible_from 2024-05-06）
   - 结构不可交易期权重现金停泊 + 计 S3（2022-06-09..2024-05-03）
   - next-session 执行（决策 T → T+1 开盘；无同日/跨段）；same_day_reversal 不依赖 invariant
@@ -223,9 +226,14 @@ L1/L2 结果 frozen；本研究不升级为 strict PIT OOS 或 live 证据。
 
 ```yaml
 gate: 4
-handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP_CORRECTION_002
+handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP_CONSISTENCY_CLEANUP_001
 packet: POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP
 status: READY_FOR_REVIEW
+
+consistency_cleanup_applied:
+  stale_freeze_block: removed (single canonical frozen summary only, matching Sections 2b/4/6/8)
+  typo_fix: CN_LARGE 513300 -> 510300.SH + mapping assertion test planned
+  s4_normalized: backtest mode = NOT_APPLICABLE/NOT_EVALUATED, excluded from STOP; >5% IOPV criterion preserved only for PAPER/LIVE gate
 
 correction_002_applied:
   southbound_dates: 03110 listing 2013-06-17 / data-start 2021-01-11 / southbound_eligible_from 2024-05-06; pre-eligibility weight parked in cash, counts toward S3
@@ -236,23 +244,25 @@ correction_002_applied:
   premium_guard: INSTRUMENT_BACKTEST mode = NOT_EVALUABLE_HISTORICALLY (excluded from historical PnL, reported N/A; PAPER/LIVE fail-closed); no fabricated IOPV
   s2_currency: total_traded_notional_base_cny = sum|qty*exec_price_local|*fx_to_base; fee/slippage bps in CNY base (no HKD/CNY mixing)
 
-frozen:
-  hk_dividend_mapping: frozen 03110.HK (audited Gate-1 universe, raw data 2021-01-11 + official events); HKEX/Southbound constraints modeled; 513690 not used as exec path
-  fee_contract: = repository MainlandETFCostModel (commission 0.00005, ETF stamp 0, exchange_fee 0 UNKNOWN_PENDING, half_spread 1bp + slippage 2bp); no new slippage overlay (no double-count); HK full fees only as labeled sensitivity
-  premium_guard: availability-only historical semantics (IOPV missing/stale -> fail-closed buy block; no premium-magnitude threshold; no close_to_official_nav_gap as disguised live threshold)
-  s2_denominator: fee_bps_of_traded_notional = total_fee/total_traded_notional*1e4; slippage same (runner/artifact/STOP consistent)
-
-frozen:
+frozen:   # 单一 canonical 冻结记录（CORRECTION_002 最终契约；无残留旧语义）
   strategy_core: MaximumDiversification (120/0.5, project-constrained RiskOverlayV0); no Momentum blend (architecture gate closed)
-  slot_to_instrument: 11 real ETFs mapped (listed dates hard boundaries)
+  slot_to_instrument: 11 real ETFs mapped (listed dates hard boundaries); CN_LARGE=510300.SH; HK_DIVIDEND=03110.HK
+  hk_dividend_dates: {listing: 2013-06-17, data_start: 2021-01-11, southbound_eligible_from: 2024-05-06}
+  pre_eligibility: 2022-06-09..2024-05-03 HK_DIVIDEND parked to cash, counts S3
   window: L1 real-instrument window reused (decision 2022-06-09..2026-08-06, exec 2022-06-10..2026-08-07, 1011 days)
-  execution: T close decision -> T+1 next-session open execution; T+1 settlement; T-1 info for HK/QDII
-  costs: MainlandETFCostModel 1x + 5bp slippage + lot rounding + T+1 settlement; PremiumGuard US_BROAD
+  execution: T close decision -> T+1 next-session open execution; same_day_reversal UNKNOWN/NOT_RELIED_UPON; T-1 info for HK/QDII
+  board_lot: 03110 100 (t<2026-07-24) -> 50 (t>=2026-07-24); Mainland 100
+  costs: Mainland -> MainlandETFCostModel (commission 0.00005, stamp 0, exchange_fee 0 UNKNOWN, half_spread 1bp + slippage 2bp, no extra overlay);
+        03110.HK -> SouthboundETFCostModel (commission 0.0003 + min HKD5 NOT ACCOUNT-VERIFIED, ETF stamp 0, date-effective HK fees)
+  settlement: A股 T+1; 03110.HK T+2, no unsettled-cash reuse (ledger invariant)
+  premium_guard: INSTRUMENT_BACKTEST = NOT_EVALUABLE_HISTORICALLY (excluded PnL, N/A; PAPER/LIVE fail-closed); no fabricated IOPV; no close_to_official_nav_gap threshold
   data: existing data/qmt/raw open/close + research adj + CA + hkd_cny T-1
-  fail_closed: pre-listing cash parking, no-quote hold weights (>=5 sessions STOP), premium->cash, NaN raise
-  stop_criteria: S1 net CAGR degradation >5pct vs research, S2 fees>5bp or slippage>10bp, S3 fail-closed>1% days, S4 premium>5% days
+  fail_closed: pre-listing/structural-ineligible cash parking, no-quote hold weights (>=5 sessions STOP), NaN raise
+  stop_criteria: S1 net CAGR degradation >5pct vs research (per subperiod); S2 fee/slippage bps of traded notional (CNY base, fee<=5bp & slippage<=10bp);
+                S3 fail-closed >1% days; S4 NOT_APPLICABLE in backtest mode (PAPER/LIVE only: IOPV fail-closed >5%)
+  s2_currency: total_traded_notional_base_cny = sum|qty*exec_price_local|*fx_to_base; fee/slippage bps in CNY base
   metrics: full net table + annual/stress subperiods + net-vs-research loss attribution
-  tests: mapping/listing, next-session exec, cost/lot/settlement, T+1 timing, fail-closed, no-RL
+  tests: mapping/listing (incl. 510300 assertion), next-session exec, date-effective lot, cost routing, settlement T+2 no-unsettled-reuse, PremiumGuard backtest N/A, S2 CNY base, no-RL
 
 not_done:
   execution_realism_run: false   # PREP only; wait for review
