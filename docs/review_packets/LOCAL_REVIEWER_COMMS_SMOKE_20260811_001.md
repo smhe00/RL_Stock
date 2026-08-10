@@ -16,7 +16,7 @@ ownership compliance      : 仅 Claude-owned 文件（docs/review_packets/ + doc
                             未编辑任何 reviewer-owned 文件
 changed paths             : docs/review_packets/LOCAL_REVIEWER_COMMS_SMOKE_20260811_001.md（新增）
                             docs/agent_state/CLAUDE_STATUS.yaml（更新）
-commit SHA                : <SMOKE_COMMIT>
+commit SHA                : 1ec959d
 worktree/push status      : clean；push 后停止
 ```
 
