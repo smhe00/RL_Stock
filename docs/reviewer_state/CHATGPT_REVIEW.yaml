@@ -1,49 +1,64 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: USER_SELECTED_G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_001
-state: REVIEW_COMPLETE
+handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_001
+state: REVISIONS_REQUIRED
 
 reviewed_packet:
-  path: docs/reviewer_responses/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_AUTHORIZATION.md
-  commit: dc64d48adeeed53557952dea3c9396c9d617b80b
+  path: docs/review_packets/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP.md
+  commit: a50f7b70c9d764884da6425e68697cd4dcce3898
 
 code_commit: null
 
-decision: USER_SELECTED_FRESH_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_AUTHORIZED
+decision: MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CONTRACT_CLEANUP_REQUIRED
 
 response:
-  path: docs/reviewer_responses/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_AUTHORIZATION.md
+  path: docs/reviewer_responses/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_REVIEWER_RESPONSE.md
 
 passed:
-  - PRIOR_EXECUTION_REALISM_STOP_EXPERIMENT_FORMALLY_CLOSED
-  - USER_EXPLICITLY_SELECTED_NEW_MAXDIV_CAPITAL_EFFICIENCY_RESEARCH_DIRECTION
-  - DETERMINISTIC_LONG_HORIZON_DIRECTION_PRESERVED
-  - MAXDIV_120_0P5_CORE_FROZEN
-  - M0_M1_M2_M3_TO_BE_PREREGISTERED_BEFORE_RUN
+  - UNIQUE_READY_FOR_REVIEW_HANDOFF
+  - PREP_ONLY_NO_RUN_OR_BACKTEST
+  - FRESH_RESEARCH_SEPARATED_FROM_CLOSED_EXECUTION_REALISM_STOP
+  - M0_M1_M2_M3_NUMERICAL_CAPS_PREREGISTERED
   - M2_PRINCIPAL_CHALLENGER_PRE_DESIGNATED
-  - OPERATIONAL_CASH_SEPARATED_FROM_OPTIMIZER_FOR_M1_M2_M3
-  - NO_EXPECTED_RETURN_MODEL_INSIDE_OPTIMIZER
-  - FORWARD_RETURN_SANITY_AUDIT_ONLY
-  - STOPPED_03110_EXECUTION_MAPPING_NOT_SILENTLY_REPAIRED
-  - PPO_SAC_TD3_REMAIN_CLOSED
+  - MAXDIV_120_0P5_CORE_FROZEN
+  - OPERATIONAL_CASH_5PCT_OUTSIDE_OPTIMIZER_INTENT_PRESERVED
+  - CURRENT_1P4PCT_CASH_YIELD_LABELED_AS_PLANNING_ASSUMPTION
+  - FORWARD_RETURN_SANITY_REMAINS_AUDIT_ONLY
+  - NO_EXPECTED_RETURN_OPTIMIZER
+  - NO_MOMENTUM_BLEND_DENSE_DYNAMIC_ALPHA
+  - STOPPED_03110_MAPPING_NOT_REPAIRED_OR_LIVE_READY
+  - PPO_SAC_TD3_REMAIN_EXCLUDED
 
-revision_required: []
+revision_required:
+  - FIX_M1_M2_11_SLOT_VS_10_SLOT_INVESTABLE_SLEEVE_CONTRADICTION
+  - KEEP_CANONICAL_11_ECONOMIC_SLOT_VECTOR_FOR_M1_M2_M3_WITH_M3_CASH_LIKE_CAP_ZERO
+  - DEFINE_JOINT_FEASIBLE_PROJECTION_FOR_PER_SLOT_GROWTH_AND_DEFENSIVE_CAPS
+  - ADD_BEHAVIOR_TEST_WITH_BOTH_GROUP_CAPS_BINDING_AND_TRUE_INFEASIBLE_CASE
+  - FORWARD_SANITY_MUST_USE_ACTUAL_LATEST_POST_RISK_TOTAL_NAV_WEIGHTS_NOT_CAP_VALUES
+  - BIND_EXACT_L1_RESULTS_AND_RAW_SHA256_AND_IMPLEMENTATION_COMMIT_F039D369D94295433132E17CF981B2EB6243C17A
+  - REMOVE_L1_REFERENCE_PLACEHOLDER
+  - FREEZE_SAME_L1_T_TO_T1_CAUSAL_COST_AND_CORPORATE_ACTION_ACCOUNTING_FOR_M0_M3
+  - DEFINE_OPERATIONAL_CASH_T_TO_T1_ACCOUNTING_AND_TURNOVER_PROXY
+  - FREEZE_EXACT_CE_PER_10PPT_FORMULAS_AND_ZERO_DENOMINATOR_HANDLING
+  - DEFINE_CRITERION_6_AS_MIN_MATCHED_CAGR_DEGRADATION_ACROSS_5_YEARS_PLUS_2_STRESS_SEGMENTS
 
 authorized_next:
-  - POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP
+  - POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION
 
 forbidden_next:
   - CAPITAL_EFFICIENCY_RUN
   - NEW_BACKTEST
+  - RESULT_INFORMED_CAP_SEARCH
+  - INTERMEDIATE_CAP_VALUES
+  - EXPECTED_RETURN_OPTIMIZATION
   - EXECUTION_UNIVERSE_REDESIGN
   - INSTRUMENT_SUBSTITUTION
+  - NO_TRADE_BAND_SEARCH
+  - EXECUTION_TIME_OPTIMIZATION
   - FORWARD_PAPER_VALIDATION
   - PAPER
   - LIVE
   - QMT_LIVE
-  - RESULT_INFORMED_CAP_SEARCH
-  - RESULT_INFORMED_WINDOW_CHANGE
-  - EXPECTED_RETURN_OPTIMIZATION
   - DENSE_ALPHA_SEARCH
   - DYNAMIC_ALPHA
   - PPO
@@ -54,15 +69,13 @@ forbidden_next:
   - RL_COMPARISON
 
 notes:
-  - This authorization is triggered by the user's explicit selection of a fresh research direction after the prior STOP experiment was closed; it is not an automatic continuation of that experiment.
-  - PREP ONLY. Claude must freeze the experiment contract and return READY_FOR_REVIEW before any capital-efficiency backtest/run.
-  - Freeze M0 legacy control, M1 <=30% total defensive capital, M2 principal challenger <=25%, and M3 <=20%, with fixed 5% operational cash outside the optimizer for M1-M3 and the exact total-NAV/investable-sleeve constraint transformation documented.
-  - Preserve MaxDiv lookback 120, shrinkage 0.5, RiskOverlayV0/project-constrained semantics and accepted L1 causal/reference bindings. No cap tuning after results.
-  - Historical operational-cash accounting should use the accepted CASH_LIKE research return proxy unless PREP identifies a contract inconsistency; current 1.4% cash yield is a user planning assumption for forward sanity only, not a historical rewrite.
-  - Forward sanity must report the residual risk-asset annual return required to reach 7%, 8% and 9% total portfolio return under a dated defensive-yield snapshot; do not optimize on these estimates.
-  - Historical viability criteria and full metric/subperiod/allocation/cap-hit/turnover plan are specified in the authorization response and must be frozen before RUN.
-  - Do not combine no-trade bands, execution-time optimization, universe replacement or alternative HK_DIVIDEND mapping into this first experiment.
-  - The prior 03110 structural S3 STOP remains a closed historical fact; this PREP must not claim the old execution mapping is live-ready.
+  - The PREP is substantively aligned with the user-selected research direction but contains contract ambiguities that must be removed before any RUN.
+  - The 95% investable sleeve must retain the original 11 economic slots for M1/M2; external operational cash is a separate accounting sleeve, not a replacement for strategic CASH_LIKE. M3 should retain the same vector dimension with CASH_LIKE cap zero.
+  - Sequential group scaling is not a sufficient mathematical contract when both growth and defensive group caps exist; the implementation must enforce their joint intersection deterministically and fail closed only on true infeasibility.
+  - Forward sanity must be based primarily on each candidate's actual latest post-risk total-NAV allocation generated by the future RUN, with any at-cap diagnostic clearly separate.
+  - The accepted L1 implementation commit is f039d369d94295433132e17cf981b2eb6243c17a; exact results/raw artifact SHA256 bindings must be written into the corrected PREP rather than deferred/placeheld.
+  - M0-M3 historical comparisons must preserve the accepted L1 T->T+1 causal engine, corporate-action semantics and labeled 1x MainlandETFCostModel research simplification so M0 parity is meaningful.
+  - No M0-M3 implementation/backtest is authorized until this PREP correction is reviewed.
   - PPO/SAC/TD3 remain closed unless the user explicitly reopens them.
 
-updated_at: 2026-08-10T15:24:26+08:00
+updated_at: 2026-08-10T15:35:35+08:00
