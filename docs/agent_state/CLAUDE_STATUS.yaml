@@ -1,19 +1,19 @@
 protocol_version: 2
 actor: claude
-handoff_id: G4_POST_L2_DETERMINISTIC_ARCH_RUN_001
+handoff_id: G4_POST_L2_DETERMINISTIC_ARCH_RUN_CORRECTION_001
 state: READY_FOR_REVIEW
 
 gate: 4
-phase: POST_L2_DETERMINISTIC_ARCHITECTURE_RUN
-code_commit: d31e384
+phase: POST_L2_DETERMINISTIC_ARCHITECTURE_RUN_CORRECTION
+code_commit: 1ca71bb
 packet: docs/review_packets/POST_L2_DETERMINISTIC_ARCHITECTURE_RUN.md
 
 progress:
-  current_task: Post-L2 architecture RUN complete (C0-C4 static blends; C0/C1 parity to gen3 all 0 diff; C0 MaxDiv Sharpe 1.024/MaxDD -10.4% unique Sharpe>1; C1 Momentum CAGR 8.4% MaxDD -44.3%; C2-C4 all fail frozen R1-R4 (MaxDD -18.5..-37.5%, cost -4.8..-12.7pct), none Pareto-dominated -> static blends do NOT improve on pure MaxDiv core; no result-informed tuning)
+  current_task: Post-L2 architecture RUN mechanical correction (reviewer ARCH_RUN_RESULTS_SUBSTANTIVELY_ACCEPTED_R5_TEST_FIX_REQUIRED: fixed dominates() MaxDD direction to higher-better, added R5 regression tests, reported test execution evidence. Rerun confirms C0/C1 parity 0-diff, R1-R4 verdicts, post-overlay 0, R5 no-dominance unchanged -> primary conclusion unchanged: static blends do not improve on pure MaxDiv core.)
 
 last_consumed_review:
-  handoff_id: G4_POST_L2_DETERMINISTIC_ARCH_PREP_CORRECTION_001
-  decision: ARCH_PREP_CORRECTION_ACCEPTED_FROZEN_RUN_AUTHORIZED
-  response: docs/reviewer_responses/POST_L2_DETERMINISTIC_ARCHITECTURE_PREP_CORRECTION_REVIEWER_RESPONSE.md
+  handoff_id: G4_POST_L2_DETERMINISTIC_ARCH_RUN_001
+  decision: ARCH_RUN_RESULTS_SUBSTANTIVELY_ACCEPTED_R5_TEST_FIX_REQUIRED
+  response: docs/reviewer_responses/POST_L2_DETERMINISTIC_ARCHITECTURE_RUN_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-10T02:00:00+08:00
+updated_at: 2026-08-10T02:30:00+08:00

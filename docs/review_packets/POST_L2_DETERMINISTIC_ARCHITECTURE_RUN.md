@@ -1,17 +1,32 @@
-# POST_L2 DETERMINISTIC ARCHITECTURE RUN — MaxDiv × Momentum 静态混合架构结果
+# POST_L2 DETERMINISTIC ARCHITECTURE RUN — MaxDiv × Momentum 静态混合架构结果（修正版）
 
-> 评审（`POST_L2_DETERMINISTIC_ARCHITECTURE_PREP_CORRECTION_REVIEWER_RESPONSE.md`）
-> **ARCH_PREP_CORRECTION_ACCEPTED_FROZEN_RUN_AUTHORIZED** → 本 packet 报告单次冻结架构 RUN。
-> handoff_id = **G4_POST_L2_DETERMINISTIC_ARCH_RUN_001**。
+> 评审（`POST_L2_DETERMINISTIC_ARCHITECTURE_RUN_REVIEWER_RESPONSE.md`）
+> **ARCH_RUN_RESULTS_SUBSTANTIVELY_ACCEPTED_R5_TEST_FIX_REQUIRED** → 主结论被实质接受，
+> 需机械性 R5 修正 + 测试证据。本 packet 为 **RUN_CORRECTION**。
+> handoff_id = **G4_POST_L2_DETERMINISTIC_ARCH_RUN_CORRECTION_001**。
 
 ```yaml
-implementation_commit: d31e384   # scripts/gate4_arch_blend.py + tests/test_arch_blend.py
-result_artifact: artifacts/gate4_arch_blend_results.json + _raw.json（commit=d31e384）
+implementation_commit: 1ca71bb   # scripts/gate4_arch_blend.py + tests/test_arch_blend.py（R5 修正）
+result_artifact: artifacts/gate4_arch_blend_results.json + _raw.json（commit=1ca71bb）
 parent_code_commit: 7781800   # L2 gen3 父实现（冻结）
-handoff: G4_POST_L2_DETERMINISTIC_ARCH_RUN_001
+handoff: G4_POST_L2_DETERMINISTIC_ARCH_RUN_CORRECTION_001
 label: POST_L2_DETERMINISTIC_ARCHITECTURE
 scenario_not_strict_pit_oos: true
 ```
+
+> ## Revision Record（ARCH_RUN_CORRECTION，评审 3 项机械修正）
+>
+> 1. **R5 Pareto MaxDD 方向修正**：`dominates()` 原把 MaxDD 当 higher_better=False（`av<=bv` 视为更好），
+>    错误。修正为全部 4 维（cum/cagr/Sharpe/MaxDD）higher-better：-0.10 优于 -0.20。
+> 2. **R5 回归测试新增**：合成用例证明 A（更高 return + 更好 MaxDD -10%）支配 B（-20%）、B 不支配 A；
+>    + C0-vs-blend 非支配 trade-off 几何（高收益 vs 好 Sharpe/MaxDD 互不支配）。
+> 3. **测试执行证据**（本 packet 报告）：
+>    `pytest tests/test_arch_blend.py -q` → 8 passed（含 2 新 R5 测试）；
+>    `python scripts/gate4_arch_blend.py --check` → PASSED。
+>
+> **重跑验证**（R5 修正后同一冻结 RUN 重跑）：C0/C1 parity 到 gen3 全部 0 diff 不变；
+> C2-C4 R1-R4 判定不变；post-overlay 违规全 0；R5 仍报告无支配（与评审人工核实一致）。
+> 主经济结论不变：静态混合未产生优于纯 MaxDiv 的"有用架构"。
 
 ---
 
@@ -131,9 +146,14 @@ C1_vs_gen3: {calendar_cagr 0.0, max_drawdown 0.0, sharpe 0.0, cum_return 0.0}  p
 
 ```yaml
 gate: 4
-handoff_id: G4_POST_L2_DETERMINISTIC_ARCH_RUN_001
+handoff_id: G4_POST_L2_DETERMINISTIC_ARCH_RUN_CORRECTION_001
 packet: POST_L2_DETERMINISTIC_ARCHITECTURE_RUN
 status: READY_FOR_REVIEW
+
+corrections_applied:
+  r5_maxdd_direction: dominates() now all 4 dims higher-better (MaxDD -0.10 > -0.20); rerun confirms C2-C4 still non-dominated (conclusion unchanged)
+  r5_tests: added dominates-both-directions + non-dominated trade-off regression tests (8 arch tests pass)
+  test_evidence: pytest tests/test_arch_blend.py -q = 8 passed; python scripts/gate4_arch_blend.py --check = PASSED; full suite run reported
 
 executed:
   candidates: [C0 MaxDiv 100%, C1 Momentum 100%, C2 75/25, C3 50/50, C4 25/75]
