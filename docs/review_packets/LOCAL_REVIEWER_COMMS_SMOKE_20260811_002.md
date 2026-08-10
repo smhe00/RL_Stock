@@ -17,7 +17,7 @@ produced Claude handoff           : LOCAL_REVIEWER_COMMS_SMOKE_20260811_002
 ownership compliance              : 仅 Claude-owned 文件；未编辑任何 reviewer-owned 文件
 exact changed paths (round 2)     : docs/review_packets/LOCAL_REVIEWER_COMMS_SMOKE_20260811_002.md（新增）
                                     docs/agent_state/CLAUDE_STATUS.yaml（更新）
-pushed commit                     : <ROUND2_COMMIT>
+pushed commit                     : 124d4ff
 worktree/remote state             : clean（git status 无未提交改动；remote HEAD 已包含本 handoff）
 ```
 
