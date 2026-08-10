@@ -1,42 +1,45 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_POST_L2_DETERMINISTIC_ARCH_RUN_CORRECTION_001
-state: REVIEW_COMPLETE
+handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP_001
+state: REVISIONS_REQUIRED
 
 reviewed_packet:
-  path: docs/review_packets/POST_L2_DETERMINISTIC_ARCHITECTURE_RUN.md
-  commit: 08c4775a8e6e3ca31e60fd111aebf6aea99d28f9
+  path: docs/review_packets/POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP.md
+  commit: aefd001e0478f59ab43a82ace3779b79fdc2cd53
 
 code_commit: 1ca71bb006cd4f82de1e10c3042bbd73395833e1
 
-decision: ARCH_RUN_CORRECTION_ACCEPTED_ARCHITECTURE_GATE_CLOSED_EXECUTION_REALISM_PREP_AUTHORIZED
+decision: EXECUTION_REALISM_PREP_SUBSTANTIALLY_CORRECT_CONTRACT_FIX_REQUIRED
 
 response:
-  path: docs/reviewer_responses/POST_L2_DETERMINISTIC_ARCHITECTURE_RUN_CORRECTION_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP_REVIEWER_RESPONSE.md
 
 passed:
   - UNIQUE_READY_FOR_REVIEW_HANDOFF
-  - CORRECTION_DIFF_LIMITED_TO_ARCH_RUNNER_AND_ARCH_TESTS
-  - R5_MAXDD_DIRECTION_FIXED_HIGHER_IS_BETTER
-  - R5_SYNTHETIC_DOMINANCE_REGRESSION_PRESENT
-  - R5_SYNTHETIC_NON_DOMINATED_TRADEOFF_REGRESSION_PRESENT
-  - ARCH_TEST_COMMAND_REPORTED_8_PASSED
-  - ARCH_CHECK_COMMAND_REPORTED_PASSED
-  - RESULT_ARTIFACT_MANIFEST_BINDS_TO_1CA71BB
-  - C0_C1_PARITY_TO_GEN3_ZERO_DIFF_PRESERVED
-  - POST_OVERLAY_VIOLATIONS_ZERO_ALL_CANDIDATES_PRESERVED
-  - C2_C4_R1_R4_VERDICTS_UNCHANGED
-  - C2_C4_R5_NON_DOMINATED_AFTER_FIX
-  - DATA_PROVENANCE_AND_CAUSALITY_CODE_UNCHANGED_IN_CORRECTION
-  - FROZEN_CANDIDATE_SET_C0_C4_PRESERVED
-  - NO_RESULT_INFORMED_BLEND_RETUNING
+  - PREP_ONLY_NO_EXECUTION_REALISM_RUN
+  - MAXDIV_120_0P5_CORE_FROZEN
+  - NO_MOMENTUM_BLEND_OR_RESULT_INFORMED_RETUNING
+  - L1_1011_DAY_WINDOW_REUSED
+  - NO_PRELAUNCH_BACKFILL_INTENT
+  - T_CLOSE_TO_NEXT_SESSION_OPEN_EXECUTION_INTENT
+  - RESEARCH_RETURN_AND_EXECUTABLE_NET_PATHS_SEPARATED
+  - LOT_ROUNDING_AND_CASH_RESIDUAL_REQUIRED
+  - MISSING_QUOTES_FAIL_CLOSED
+  - NAN_NONFINITE_FAIL_CLOSED
+  - ANNUAL_AND_PREFROZEN_SUBPERIOD_REPORTING_RETAINED
   - PPO_SAC_TD3_REMAIN_EXCLUDED
   - QMT_LIVE_REMAINS_FORBIDDEN
 
-revision_required: []
+revision_required:
+  - HK_DIVIDEND_MAPPING_DRIFT_03110_VS_513690_MUST_BE_EXPLICITLY_RESOLVED_AND_PROVENANCE_BOUND
+  - MAINLAND_FEE_CONTRACT_CONTRADICTS_ACTUAL_COST_MODEL
+  - ETF_STAMP_DUTY_AND_EXCHANGE_FEE_ASSUMPTIONS_MUST_MATCH_FROZEN_IMPLEMENTATION_OR_BE_REVIEWED
+  - SPREAD_SLIPPAGE_DOUBLE_COUNT_MUST_BE_PREVENTED
+  - PREMIUM_GUARD_THRESHOLD_BEHAVIOR_NOT_IMPLEMENTED_AND_HISTORICAL_SIGNAL_SOURCE_UNFROZEN
+  - S2_FEE_AND_SLIPPAGE_BPS_DENOMINATOR_MUST_BE_MACHINE_EVALUABLE
 
 authorized_next:
-  - POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP
+  - POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP_CORRECTION
 
 forbidden_next:
   - POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN
@@ -55,13 +58,13 @@ forbidden_next:
   - QMT_LIVE
 
 notes:
-  - Architecture correction accepted; POST_L2_DETERMINISTIC_ARCHITECTURE experiment is closed.
-  - Corrected dominates() treats cum_return, calendar_cagr, sharpe and max_drawdown as higher-is-better; -0.10 MaxDD is better than -0.20.
-  - Packet reports pytest tests/test_arch_blend.py -q = 8 passed and python scripts/gate4_arch_blend.py --check = PASSED; reviewer inspected the relevant test and source logic.
-  - artifacts/gate4_arch_blend_results.json records commit 1ca71bb and post-fix rerun evidence; corrected R5 still leaves C2-C4 non-dominated.
-  - Primary economic conclusion remains unchanged: C2-C4 fail one or more frozen R2-R4 criteria despite CAGR improvement; MaxDiv remains the risk-adjusted core under this frozen experiment.
-  - Track-C data/provenance/timing/FX semantics are unchanged by the correction and remain SCENARIO_NOT_STRICT_PIT_OOS; this is not executable/live evidence.
-  - Only execution-realism PREP is authorized next. It must freeze real instrument mapping/listing dates, tradability/calendar alignment, decision/execution timing, fees/slippage/lot/settlement, fail-closed quote/premium handling, metrics/subperiods and STOP criteria before any run authorization.
+  - Gate-1 audited preferred HK_DIVIDEND instrument is 03110.HK; 513690 appears only as an alternative. Any switch must be explicit and bind listing date, data provenance, raw/adj history, lot, liquidity and fee semantics before RUN.
+  - Current MainlandETFCostModel uses broker_commission_rate=0.00005, stamp_duty_rate=0, exchange_fee_rate=0 and UNKNOWN_PENDING_BROKER_FEE_AUDIT for exchange-fee inclusion. The PREP text saying commission 万1~万3 plus ETF stamp duty is inconsistent.
+  - Current cost model already contains half_spread_bps=1 and slippage_bps=2. Any additional 5bp overlay must explicitly replace or add to these components without double counting.
+  - Current PremiumGuard fail-closes only missing/stale IOPV; fresh IOPV always allows buys and threshold_pct is not applied. Historical close_to_official_nav_gap cannot be used as a live-style threshold under D-011.
+  - Freeze a valid historical premium-protection rule or availability-only rule before RUN.
+  - Define S2 fee/slippage bps denominator and aggregation identically in spec, runner, artifact and STOP logic.
+  - No execution-realism result may be generated before corrected PREP review.
   - PPO/SAC/TD3 remain closed unless the user explicitly reopens them.
 
-updated_at: 2026-08-10T09:16:22+08:00
+updated_at: 2026-08-10T09:35:04+08:00
