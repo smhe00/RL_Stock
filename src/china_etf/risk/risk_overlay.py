@@ -142,6 +142,8 @@ class RiskOverlayCE(RiskOverlayV0):
         # 可行性预检: per-slot caps 之和必须 >= 1
         if caps.sum() < 1.0 - 1e-9:
             raise InfeasibleConstraints(f"sum(caps)={caps.sum():.3f} < 1")
+        # 冻结初始化: bounded-simplex waterfill（C1-C3 投影）作为 SLSQP 初值（非 raw）
+        x0 = self._waterfill(v, caps, total=1.0)
 
         def obj(w):
             return 0.5 * np.dot(w - v, w - v)
@@ -165,7 +167,7 @@ class RiskOverlayCE(RiskOverlayV0):
                 so.LinearConstraint(A_def, lb=-np.inf, ub=self.def_max))
 
         res = so.minimize(
-            obj, x0=v.copy(), jac=jac, method="SLSQP",
+            obj, x0=x0.copy(), jac=jac, method="SLSQP",
             bounds=[(0.0, float(c)) for c in caps],
             constraints=constraints,
             options={"maxiter": self.max_iter, "ftol": self.ftol},

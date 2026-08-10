@@ -63,7 +63,7 @@ def test_m0_parity_exact_l1(m0_sim):
 
 
 def test_m0_metrics_close_to_l1(m0_sim):
-    """M0 net metrics 贴近已接受 L1 研究 MaxDiv（同引擎，确定性容差）。"""
+    """M0 net metrics 贴近已接受 L1 研究 MaxDiv（同引擎，确定性容差），含 worst-calendar-year。"""
     adj, c = m0_sim
     cal = adj.index.normalize()
     ds_i = cal.get_loc(pd.Timestamp("2022-06-09"))
@@ -76,6 +76,11 @@ def test_m0_metrics_close_to_l1(m0_sim):
     assert abs(mets["calendar_cagr"] - ref["calendar_cagr"]) < 0.002
     assert abs(mets["sharpe"] - ref["sharpe"]) < 0.05
     assert abs(mets["max_drawdown"] - ref["max_drawdown"]) < 0.005
+    # worst-calendar-year return 必须与已接受 L1 一致（prod(1+r)-1 全年复合）
+    assert mets["worst_calendar_year"] == ref["worst_calendar_year"], \
+        f"M0 worst year {mets['worst_calendar_year']} != L1 {ref['worst_calendar_year']}"
+    assert abs(mets["worst_calendar_year_return"] - ref["worst_calendar_year_return"]) < 0.002, \
+        f"M0 worst-year return {mets['worst_calendar_year_return']:.6f} != L1 {ref['worst_calendar_year_return']:.6f}"
 
 
 # --- sleeve cap transforms ---
@@ -128,6 +133,22 @@ def test_ce_projection_interior_dual_binding_analytic():
     assert abs(w[["A", "B"]].sum() - growth_max) < 1e-6  # growth binding
     assert abs(w[["C", "D"]].sum() - def_max) < 1e-6  # def binding
     assert (w.values > 0).all() and (w.values < caps).all()  # interior
+
+
+def test_ce_projection_uses_waterfill_initialization():
+    """SLSQP x0 = bounded-simplex waterfill（冻结初始化，非 raw）。"""
+    slots = ["A", "B", "C"]
+    raw = np.array([0.60, 0.30, 0.10])
+    caps = np.array([0.50, 0.50, 0.50])
+    ov = RiskOverlayCE(slots, caps=caps, growth_max=0.99, growth_slots=(),
+                       def_max=0.99, def_slots=())
+    waterfill = ov._waterfill(raw.copy(), caps, total=1.0)
+    # 验证 waterfill ≠ raw（raw 超 cap 时被压到 cap）
+    assert not np.allclose(waterfill, raw, atol=1e-12)
+    # apply 用 waterfill 初值求解凸 QP（结果仍满足 C1-C3）
+    w = ov.apply(pd.Series(raw, index=slots))
+    assert abs(w.sum() - 1.0) < 1e-6
+    assert (w.values <= caps + 1e-6).all() and (w.values >= -1e-9).all()
 
 
 def test_ce_projection_equals_waterfill_when_no_group_binding():
@@ -191,22 +212,56 @@ def test_m2_sleeve_projection_respects_all_caps():
 
 # --- forward sanity uses actual weights ---
 
-def test_forward_sanity_uses_actual_latest_weights():
-    """forward sanity 用实际 latest post-risk total-NAV 权重（非 cap 值）。"""
+def test_forward_sanity_uses_actual_latest_total_nav_weights():
+    """forward sanity 用实际 latest total-NAV 权重（M1-M3 为 0.95*sleeve，非 cap、非 sleeve）。"""
     cfg = ce.CANDIDATES["M2"]
-    latest = np.array([0.08] * 11)
-    latest[SLOTS.index("CASH_LIKE")] = 0.05 * 0.95
-    latest[SLOTS.index("CN_DURATION")] = 0.10 * 0.95
-    fs = ce._forward_sanity(cfg, latest)
-    # defensive_w = op_cash + strategic + CN_DURATION（实际权重，非 cap）
-    expected_def = cfg["op_cash"] + latest[SLOTS.index("CASH_LIKE")] + latest[SLOTS.index("CN_DURATION")]
+    latest_tnav = np.array([0.08] * 11)
+    latest_tnav[SLOTS.index("CASH_LIKE")] = 0.05 * 0.95
+    latest_tnav[SLOTS.index("CN_DURATION")] = 0.10 * 0.95
+    fs = ce._forward_sanity(cfg, latest_tnav, ce._duration_yield_snapshot())
+    expected_def = cfg["op_cash"] + latest_tnav[SLOTS.index("CASH_LIKE")] + latest_tnav[SLOTS.index("CN_DURATION")]
     assert abs(fs["defensive_w"] - expected_def) < 1e-9
+    # total-NAV 权重下 defensive_w 必须 ≤ frozen cap（不会像 sleeve 权重那样超限）
+    assert fs["defensive_w"] <= cfg["def_cap"] + 1e-9
     assert abs(fs["risk_asset_w"] - (1 - expected_def)) < 1e-9
     assert fs["cash_yield_label"] == "user planning assumption, not historical"
     # 实际权重 ≠ cap 值（验证未用 cap）
     assert abs(fs["strategic_cash_like"] - cfg["cash_like_cap"]) > 1e-3
+    # yield snapshot metadata 嵌入
+    assert "observation_date" in fs["cn_duration_yield_snapshot"]
+    assert "value_pct" in fs["cn_duration_yield_snapshot"]
+    assert "sha256" in fs["cn_duration_yield_snapshot"]
     for T in ("7", "8", "9"):
         assert np.isfinite(fs["required_risk_return"][T])
+
+
+def test_forward_sanity_end_to_end_actual_candidate_weights():
+    """端到端：M0-M3 各候选实际 RUN latest total-NAV 权重 → defensive_w ≤ frozen cap。"""
+    adj = ce.load_research_adj()
+    opens, closes = ce.load_execution_prices()
+    cal = adj.index.normalize()
+    ds_i = cal.get_loc(pd.Timestamp("2022-06-09"))
+    last_dec_i = len(cal) - 2
+    decision_start = pd.Timestamp("2022-06-09")
+    eval_start = cal[ds_i + 1]
+    exec_dates = cal[ds_i + 1:last_dec_i + 2]
+    snap = ce._duration_yield_snapshot()
+    for name, cfg in ce.CANDIDATES.items():
+        overlay = None
+        if cfg["op_cash"] > 0:
+            from china_etf.risk.risk_overlay import RiskOverlayCE
+            overlay = RiskOverlayCE(ce.SLOTS, caps=ce._sleeve_caps(cfg),
+                                    growth_max=ce._growth_max_sleeve(cfg),
+                                    def_max=ce._def_max_sleeve(cfg))
+        c = ce._run_candidate(name, adj, opens, closes, decision_start, eval_start,
+                              exec_dates, overlay)
+        total_w = c["total_w"][-1]  # total-NAV slot weights
+        fs = ce._forward_sanity(cfg, total_w, snap)
+        # total-NAV defensive_w = op_cash + latest_tnav[CASH_LIKE] + latest_tnav[CN_DURATION]
+        expected = cfg["op_cash"] + total_w[SLOTS.index("CASH_LIKE")] + total_w[SLOTS.index("CN_DURATION")]
+        assert abs(fs["defensive_w"] - expected) < 1e-9
+        assert fs["defensive_w"] <= cfg["def_cap"] + 1e-9, \
+            f"{name}: forward defensive_w {fs['defensive_w']:.6f} > cap {cfg['def_cap']}"
 
 
 # --- CE per-10ppt formulas + zero denominator ---

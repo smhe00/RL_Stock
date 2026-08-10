@@ -172,13 +172,14 @@ def _compute_metrics(nr, exec_dates):
     eq = np.exp(np.log1p(nr).cumsum())
     mdd = float((eq / np.maximum.accumulate(eq) - 1.0).min())
     calmar = float(active_ann / abs(mdd)) if np.isfinite(active_ann) and abs(mdd) > 1e-12 else float("nan")
-    eq_ser = pd.Series(eq, index=dates)
-    # worst calendar year
+    s = pd.Series(np.asarray(nr, dtype=float), index=dates)
+    # worst calendar year: compound ALL returns in that calendar year (prod(1+r)-1)
     yrs = {}
-    for y, grp in eq_ser.groupby(eq_ser.index.year):
-        yrs[int(y)] = float(grp.iloc[-1] / grp.iloc[0] - 1.0) if len(grp) > 1 else float("nan")
+    for y, grp in s.groupby(s.index.year):
+        yrs[int(y)] = float(np.exp(np.log1p(grp.to_numpy()).sum()) - 1.0) if len(grp) else float("nan")
     worst_cy = min(yrs, key=lambda k: yrs[k]) if yrs else None
     # worst rolling 12m return
+    eq_ser = pd.Series(eq, index=dates)
     roll = (eq_ser / eq_ser.shift(252) - 1.0)
     worst_r12 = float(roll.min()) if roll.notna().any() else float("nan")
     return {"cum_return": cum, "calendar_cagr": cal_cagr, "active_day_annualized_return": active_ann,
@@ -232,7 +233,19 @@ def _run_candidate(name: str, adj, opens, closes, decision_start, eval_start,
             "roll": out}
 
 
-def _forward_sanity(cfg, total_w_latest: np.ndarray) -> dict:
+def _duration_yield_snapshot() -> dict:
+    """CN_DURATION yield/YTM 快照 metadata（观测日期/值/来源/路径/SHA256；audit only）。"""
+    df = pd.read_csv(CN10Y_YIELD_FILE)
+    dc = next(c for c in ("date", "index", "time") if c in df.columns)
+    last = df.iloc[-1]
+    return {"observation_date": str(pd.Timestamp(last[dc]).date()),
+            "value_pct": float(last[df.columns[1]]),
+            "source_label": "China 10Y government bond yield (CN10Y), proxy for CN_DURATION yield/YTM",
+            "local_path": str(CN10Y_YIELD_FILE.relative_to(ROOT)),
+            "sha256": sha256_of(CN10Y_YIELD_FILE)}
+
+
+def _forward_sanity(cfg, total_w_latest: np.ndarray, yield_snapshot: dict) -> dict:
     """用实际 latest post-risk total-NAV 权重（RUN 生成）+ dated snapshot。"""
     idx_cash = SLOTS.index("CASH_LIKE")
     idx_dur = SLOTS.index("CN_DURATION")
@@ -241,24 +254,19 @@ def _forward_sanity(cfg, total_w_latest: np.ndarray) -> dict:
     s_dur = float(total_w_latest[idx_dur])
     defensive_w = op_cash + s_cash + s_dur
     risk_w = 1.0 - defensive_w
-    yield_dur_pct = _current_duration_yield_pct()
+    yield_dur_pct = yield_snapshot["value_pct"]
     carry = op_cash * (CASH_YIELD_PCT / 100.0) + s_cash * (CASH_YIELD_PCT / 100.0) \
         + s_dur * (yield_dur_pct / 100.0)
     out = {"op_cash": op_cash, "strategic_cash_like": s_cash, "cn_duration": s_dur,
            "defensive_w": defensive_w, "risk_asset_w": risk_w,
            "cash_yield_pct": CASH_YIELD_PCT, "cash_yield_label": "user planning assumption, not historical",
            "cn_duration_yield_pct": yield_dur_pct,
-           "cn_duration_yield_source": str(CN10Y_YIELD_FILE.relative_to(ROOT)),
+           "cn_duration_yield_snapshot": yield_snapshot,
            "defensive_carry": carry,
            "required_risk_return": {str(T): (round((T / 100.0 - carry) / risk_w, 6)
                                               if risk_w > 1e-9 else float("nan"))
                                     for T in (7, 8, 9)}}
     return out
-
-
-def _current_duration_yield_pct() -> float:
-    df = pd.read_csv(CN10Y_YIELD_FILE)
-    return float(df.iloc[-1, 1])
 
 
 def _cagr_of(nr):
@@ -268,7 +276,8 @@ def _cagr_of(nr):
 
 
 def _viability(cands: dict, m0_name: str) -> dict:
-    """8 项 pre-registered viability 判据（criterion 6 = 5 年度 + 2 stress 段 min matched deg）。"""
+    """8 项 pre-registered viability 判据（criterion 6 = 5 年度 + 2 stress 段 min matched
+    calendar-CAGR degradation；criterion 8 = 实际运行有效性证据，非无条件 True）。"""
     m0 = cands[m0_name]
     out = {}
     for name, c in cands.items():
@@ -281,21 +290,24 @@ def _viability(cands: dict, m0_name: str) -> dict:
         crit3 = m["max_drawdown"] >= -0.12
         crit4 = m["calmar"] >= 0.70
         crit5 = m["calendar_cagr"] - m0["metrics"]["calendar_cagr"] >= -0.005
-        # criterion 6: min matched CAGR degradation across 5 years + 2 stress
+        # criterion 6: min matched calendar-CAGR degradation across 5 years + 2 stress
         seg_degs = []
         for seg in c["subperiods"]["calendar_years"]:
             if seg in m0["subperiods"]["calendar_years"]:
-                cand_cagr = _cagr_of(c["sub_ret"][seg])
-                m0_cagr = _cagr_of(m0["sub_ret"][seg])
+                cand_cagr = c["subperiods"]["calendar_years"][seg]["calendar_cagr"]
+                m0_cagr = m0["subperiods"]["calendar_years"][seg]["calendar_cagr"]
                 seg_degs.append(cand_cagr - m0_cagr)
         for seg in c["subperiods"]["stress_regimes"]:
             if seg in m0["subperiods"]["stress_regimes"]:
-                cand_cagr = _cagr_of(c["sub_ret"][seg])
-                m0_cagr = _cagr_of(m0["sub_ret"][seg])
+                cand_cagr = c["subperiods"]["stress_regimes"][seg]["calendar_cagr"]
+                m0_cagr = m0["subperiods"]["stress_regimes"][seg]["calendar_cagr"]
                 seg_degs.append(cand_cagr - m0_cagr)
         crit6 = (min(seg_degs) >= -0.05) if seg_degs else False
-        crit7 = c["mean_turnover"] <= 1.5 * m0["mean_turnover"] + 1e-12
-        crit8 = bool(c["parity_ok"])
+        # criterion 7: total-NAV turnover proxy（op_cash 贡献 0 → sleeve turnover * sleeve_frac）
+        cand_turn_tnav = c["mean_turnover"] * c["cfg"]["sleeve_frac"]
+        m0_turn_tnav = m0["mean_turnover"] * m0["cfg"]["sleeve_frac"]
+        crit7 = cand_turn_tnav <= 1.5 * m0_turn_tnav + 1e-12
+        crit8 = bool(c["run_valid"])
         out[name] = {"is_m0": False, "viable": bool(all([crit1, crit2, crit3, crit4,
                                                          crit5, crit6, crit7, crit8])),
                      "c1_cagr_ge_7pct": bool(crit1), "c2_sharpe_ge_1_2": bool(crit2),
@@ -304,7 +316,8 @@ def _viability(cands: dict, m0_name: str) -> dict:
                      "c6_min_matched_cagr_degradation_ge_m5ppt": bool(crit6),
                      "c6_worst_segment_degradation": round(min(seg_degs), 6) if seg_degs else None,
                      "c7_turnover_le_1_5x_m0": bool(crit7),
-                     "c8_tests_provenance_parity": bool(crit8)}
+                     "c7_candidate_total_nav_turnover": round(cand_turn_tnav, 6),
+                     "c8_tests_provenance_parity_solver_validity": bool(crit8)}
     return out
 
 
@@ -411,8 +424,16 @@ def main() -> None:
         c["metrics"] = mets
         c["subperiods"] = sub
         c["sub_ret"] = sub_ret
-        c["parity_ok"] = (name == "M0") or True  # M1-M3 parity 经测试校验；M0 已硬校验
+        # total-NAV-normalized turnover/notional/cost（op_cash 贡献 0；sleeve 值 × sleeve_frac）
         c["mean_turnover"] = c["roll"]["mean_turnover"]
+        c["total_nav_turnover"] = c["mean_turnover"] * c["cfg"]["sleeve_frac"]
+        c["total_nav_traded_notional"] = c["roll"]["actual_traded_notional"] * c["cfg"]["sleeve_frac"]
+        c["total_nav_total_cost"] = c["roll"]["total_cost"] * c["cfg"]["sleeve_frac"]
+        # 运行有效性（criterion 8 证据；非无条件 True）
+        c["run_valid"] = bool(
+            (m0_diff <= 1e-9)               # M0 参考 parity PASS（全候选共享）
+            and (c["roll"]["nan_obs_or_reward"] == 0)
+            and (c["roll"]["negative_cash_count"] == 0))
         # latest total-NAV target allocation
         latest_w = c["sleeve_w"][-1] * CANDIDATES[name]["sleeve_frac"]
         c["latest_total_nav_weights"] = {s: round(float(latest_w[i]), 6)
@@ -421,7 +442,9 @@ def main() -> None:
 
     viability = _viability(cands, "M0")
     ce = _ce_diagnostics(cands, "M0")
-    forward = {name: _forward_sanity(CANDIDATES[name], c["sleeve_w"][-1]) for name, c in cands.items()}
+    yield_snapshot = _duration_yield_snapshot()
+    forward = {name: _forward_sanity(CANDIDATES[name], c["total_w"][-1], yield_snapshot)
+               for name, c in cands.items()}
 
     # Pareto: defensive reduction vs CAGR（描述性，不选择胜者）
     pareto = []
@@ -451,12 +474,18 @@ def main() -> None:
                              "impl_commit": "f039d369d94295433132e17cf981b2eb6243c17a"},
             "projection": {"objective": "min 0.5*||w-raw||^2 s.t. C1-C5",
                            "method": "scipy.optimize.minimize(method='SLSQP')",
+                           "initialization": "bounded-simplex waterfill (C1-C3)",
                            "max_iter": 200, "ftol": 1e-12, "atol": 1e-6,
+                           "optimality_guard": ("solver result.success==True + final simultaneous "
+                                                "feasibility checks + frozen independent analytic "
+                                                "minimum-distance projection tests (NOT a production "
+                                                "KKT residual)"),
                            "m0_path": "legacy RiskOverlayV0 (unchanged)"},
             "m0_parity": {"max_abs_diff": round(m0_diff, 12), "tolerance": 1e-9,
                           "pass": bool(m0_diff <= 1e-9)},
             "forward_sanity": {"cash_yield_pct": CASH_YIELD_PCT,
-                               "cash_yield_label": "user planning assumption, not historical"},
+                               "cash_yield_label": "user planning assumption, not historical",
+                               "cn_duration_yield_snapshot": yield_snapshot},
             "data_provenance": _provenance(),
             "no_rl": True,
             "started_at": time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -472,15 +501,19 @@ def main() -> None:
         results["candidates"][name] = {
             "metrics": mets,
             "subperiods": c["subperiods"],
-            "mean_turnover": round(float(c["mean_turnover"]), 6),
-            "traded_notional": round(float(c["roll"]["actual_traded_notional"]), 2),
-            "total_cost": round(float(c["roll"]["total_cost"]), 2),
+            "sleeve_mean_turnover": round(float(c["mean_turnover"]), 6),
+            "total_nav_mean_turnover": round(float(c["total_nav_turnover"]), 6),
+            "sleeve_traded_notional": round(float(c["roll"]["actual_traded_notional"]), 2),
+            "total_nav_traded_notional": round(float(c["total_nav_traded_notional"]), 2),
+            "sleeve_total_cost": round(float(c["roll"]["total_cost"]), 2),
+            "total_nav_total_cost": round(float(c["total_nav_total_cost"]), 2),
             "mean_defensive_allocation": round(float(np.mean(c["def_w"])), 6),
             "median_defensive_allocation": round(float(np.median(c["def_w"])), 6),
             "p95_defensive_allocation": round(float(np.percentile(c["def_w"], 95)), 6),
             "op_cash_allocation": c["op_cash_alloc"],
             "latest_total_nav_weights": c["latest_total_nav_weights"],
             "cap_hit_rates": _cap_hit_rates(name, c),
+            "run_valid": bool(c["run_valid"]),
         }
     try:
         results["manifest"]["commit"] = subprocess.check_output(
@@ -494,7 +527,10 @@ def main() -> None:
     raw = art / "gate4_maxdiv_capital_efficiency_raw.json"
     raw.write_text(json.dumps({
         "execution_dates": exec_str,
-        "total_weights": {name: c["sleeve_w"].tolist() for name, c in cands.items()},
+        "slot_order": SLOTS,
+        "op_cash_by_candidate": {name: c["cfg"]["op_cash"] for name, c in cands.items()},
+        "sleeve_weights": {name: c["sleeve_w"].tolist() for name, c in cands.items()},
+        "total_nav_slot_weights": {name: c["total_w"].tolist() for name, c in cands.items()},
         "defensive_allocation": {name: c["def_w"].tolist() for name, c in cands.items()},
         "net_returns": {name: c["total_ret"].tolist() for name, c in cands.items()},
     }, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
