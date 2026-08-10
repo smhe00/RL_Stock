@@ -1,16 +1,18 @@
-# POST_L2 MAXDIV LIVE CAPITAL EFFICIENCY PREP — 资本效率概念研究契约冻结（PREP CORRECTION）
+# POST_L2 MAXDIV LIVE CAPITAL EFFICIENCY PREP — 资本效率概念研究契约冻结（PREP CORRECTION_002）
 
-> 评审（`POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_REVIEWER_RESPONSE.md`）
-> **MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CONTRACT_CLEANUP_REQUIRED** →
-> 本版为 **PREP_CORRECTION**（文档/契约修正 only，不实现、不运行 M0-M3）。
-> 先期授权（`POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_AUTHORIZATION.md`）
+> 评审（`POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_001_REVIEWER_RESPONSE.md`）
+> **MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_001_NEARLY_ACCEPTED_FINAL_PROJECTION_SPEC_CLEANUP_REQUIRED** →
+> 本版为 **PREP_CORRECTION_002**（窄契约清理 only，不实现、不运行 M0-M3）。
+> 先期评审（`POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_REVIEWER_RESPONSE.md`）
+> **MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CONTRACT_CLEANUP_REQUIRED**；先期授权
+> （`POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_AUTHORIZATION.md`）
 > **USER_SELECTED_FRESH_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_AUTHORIZED**。
-> handoff_id = **G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_001**。
+> handoff_id = **G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_002_001**。
 
 ```yaml
-decision: MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CONTRACT_CLEANUP_REQUIRED
-authorized_next: POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION
-scope: PREP CORRECTION ONLY (docs/contract; no CAPITAL_EFFICIENCY_RUN / no NEW_BACKTEST)
+decision: MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_001_NEARLY_ACCEPTED_FINAL_PROJECTION_SPEC_CLEANUP_REQUIRED
+authorized_next: POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_002
+scope: PREP CORRECTION_002 ONLY (docs/contract; no CAPITAL_EFFICIENCY_RUN / no NEW_BACKTEST)
 ```
 
 ---
@@ -151,28 +153,44 @@ sleeve 内约束（由 total-NAV cap 变换）:
   C4 growth-group cap: sum(w[CHINEXT+STAR]) <= growth_max
   C5 defensive-group cap: sum(w[CASH_LIKE+CN_DURATION]) <= def_max
 
-确定性算法（冻结）:
-  1. 求满足 C1-C3 的投影 p = bounded-simplex waterfill(raw, caps, total=1)
-     （= 现有 RiskOverlayV0 第一步）。
-  2. 若 C4/C5 成立（growth/defensive 组和 ≤ cap），接受 p（终检）。
-  3. 否则，求解 joint feasible projection:
-       min ||w - raw||_2  s.t. C1-C5
-     用活动集/乘子迭代（或等价 Dykstra/交替投影至收敛 + 终检）对 growth 与 defensive
-     两组同时施加 cap；每次迭代后终检 C1-C5 全部。
-     若该 joint 集合真不可行（如 per-asset caps 之和 < 1 或组下限冲突）→ 抛
-     InfeasibleConstraints（fail-closed，不静默放松）。
-  4. 最终同时断言（final simultaneous assertions）:
-       - sum(w) ≈ 1（atol 1e-6）
-       - w >= -1e-9 且 w <= caps + 1e-6（逐槽）
-       - growth 组和 <= growth_max + 1e-6
-       - defensive 组和 <= def_max + 1e-6
-  5. 投影作用于 rebalance target weights（同现有 V1 语义）；M0 时与现有 RiskOverlayV0
-     完全一致（无 growth/defensive 额外 cap 时退化为水填）。
+唯一确定性投影算法（冻结，评审 CORRECTION_001 #1）:
+  - 求解凸二次投影:
+      min_w  0.5 * ||w - raw||_2^2
+      s.t.   C1 long-only: w >= 0
+             C2 simplex: sum(w) = 1
+             C3 per-slot caps: w <= caps
+             C4 growth 组 cap: sum(w[CHINEXT+STAR]) <= growth_max
+             C5 defensive 组 cap: sum(w[CASH_LIKE+CN_DURATION]) <= def_max
+  - 唯一命名方法（不得选用其他）: scipy.optimize.minimize(method='SLSQP')，
+    初值 = bounded-simplex waterfill（= 现有 RiskOverlayV0 第一步），
+    constraints: C1-C5（等式 + 不等式）；目标 = 0.5*||w-raw||^2。
+  - 固定容差与迭代:
+      max_iter = 200（SLSQP 迭代上限）；ftol = 1e-12；xtol 默认；容差 atol=1e-6（终检）。
+  - 收敛/KKT/可行性 fail-closed:
+      - 若求解器返回非收敛状态（slsqp 迭代达上限未收敛）→ InfeasibleConstraints
+        （fail-closed，不静默接受近似可行点）
+      - 终检（final simultaneous assertions）全部必须通过:
+          sum(w) ≈ 1（atol 1e-6）
+          w >= -1e-9 且 w <= caps + 1e-6（逐槽）
+          growth 组和 <= growth_max + 1e-6
+          defensive 组和 <= def_max + 1e-6
+      - 任一终检失败 → InfeasibleConstraints（fail-closed，不静默放松）
+      - KKT 检查: 计算拉格朗日残差 max|w - P_C(w - grad)| 在投影算子 P_C 下
+        <= 1e-6（该式在收敛点成立）；不满足 → fail-closed
+  - 无 fallback：不得在观测失败/结果后切换到另一投影方法。
+  - M0 路径: M0 严格走现有 legacy RiskOverlayV0 精确路径（waterfill 仅 C1-C3），
+    不路由经上述 QP 求解器（避免数值差异）。M0 parity = 已接受 L1 post_risk_weights
+    全 1011 x 11 逐元素一致（max |diff| <= 1e-9，预冻结容差）。
+  - M1-M3 走上述 QP 投影；M0 与 M1-M3 的投影器分离但共享契约。
 
 行为测试（RUN 授权后实现，PREP 阶段仅契约）:
-  - M0 parity == 已接受 L1 post_risk_weights（全 1011 x 11，确定性容差）
-  - 合成：growth 与 defensive 两组 cap 同时 binding 的可行情形 → 投影满足 C1-C5 全部
+  - M0 parity == 已接受 L1 post_risk_weights（全 1011 x 11，max|diff| <= 1e-9）
+  - 合成：growth 与 defensive 两组 cap 同时 binding 的可行情形 → 投影满足 C1-C5 全部，
+    且为最小距离投影（独立参考/解析断言: 与已知封闭解/二分法解比较，非仅可行性）
+  - 独立最小距离断言（非仅可行性）: 构造已知最优的合成用例（如只 2 个 active cap、
+    可解析解），断言投影点 == 解析最小距离投影点（容差内）
   - 合成：真不可行情形（caps 之和 < 1）→ InfeasibleConstraints
+  - 确定性重复性: 同输入两次运行输出逐元素一致
   - 数值 cap 断言：M1-M3 sleeve 内 CASH_LIKE / CN_DURATION / 防御合计上限精确
 ```
 
@@ -244,13 +262,18 @@ CAGR gained/lost per 10ppt reduction in average defensive allocation vs M0:
   其中 def_X = mean over time of (op_cash + CASH_LIKE + CN_DURATION) for X
   单位: percentage points of CAGR per 10 percentage-point defensive reduction。
 
-MaxDD increase per 10ppt reduction in average defensive allocation vs M0:
-  delta_MaxDD_per_10ppt = (MaxDD_candidate - MaxDD_M0) / (def_M0 - def_candidate) × 0.10
-  （MaxDD 用其绝对值变化，见零分母处理）
+MaxDD magnitude increase per 10ppt reduction in average defensive allocation vs M0
+（评审 CORRECTION_001 #2 符号约定）:
+  delta_MaxDD_magnitude_per_10ppt =
+      (abs(MaxDD_candidate) - abs(MaxDD_M0)) / (def_M0 - def_candidate) × 0.10
+  - 标注为 drawdown-magnitude increase（绝对值增量）；
+  - signed difference（MaxDD_candidate - MaxDD_M0，带符号）如需要可单独报告，
+    但不得标注为 magnitude increase。
 
 零分母处理（冻结）:
   - 若 |def_M0 - def_candidate| < 1e-9（无防御性配置变化）:
-      delta_CAGR_per_10ppt = NaN（标注 N/A：无防御性下降）；delta_MaxDD_per_10ppt = NaN。
+      delta_CAGR_per_10ppt = NaN（标注 N/A：无防御性下降）；
+      delta_MaxDD_magnitude_per_10ppt = NaN。
   - 不除以零；NaN 明确标注，不参与候选比较。
 ```
 
@@ -327,17 +350,28 @@ tests/test_maxdiv_capital_efficiency.py          # 行为回归：
 
 ```yaml
 gate: POST_L2
-handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_001
+handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_002_001
 packet: POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP
 status: READY_FOR_REVIEW
-scope: PREP CORRECTION ONLY
+scope: PREP CORRECTION_002 ONLY
+
+prep_correction_002_applied (2, reviewer FINAL_PROJECTION_SPEC_CLEANUP):
+  unique_joint_projection_frozen: true  # convex QP min 0.5||w-raw||^2 s.t. C1-C5, SLSQP named;
+                                        # max_iter 200 / ftol 1e-12 / atol 1e-6; KKT + feasibility
+                                        # fail-closed; no fallback after results
+  m0_legacy_path_preserved: true        # M0 严格走现有 RiskOverlayV0（waterfill C1-C3），
+                                        # 不路由经 QP 求解器；M0 parity all-1011-day <= 1e-9
+  min_distance_projection_test: true    # 独立参考/解析最小距离断言（非仅可行性）
+  maxdd_sign_convention_fixed: true     # delta_MaxDD_magnitude = (abs(MaxDD_cand)-abs(MaxDD_M0))/
+                                        # (def_M0-def_cand)*0.10；signed diff 单独报告
 
 prep_corrections_applied (5 reviewer groups / 11 items):
   canonical_11_slot_vector: true    # M1/M2/M3 保留 11 经济槽优化向量；op-cash 独立记账 sleeve；
                                     # M3 CASH_LIKE cap=0 维度不变
-  joint_feasible_projection: true   # long-only ∩ per-slot ∩ growth 组 ∩ defensive 组；
-                                    # 仅真不可行 fail-closed；final simultaneous assertions；
-                                    # 行为测试含双组 cap binding + 真不可行 + M0 parity
+  joint_feasible_projection: true   # 唯一确定性凸 QP 投影 (SLSQP, min 0.5||w-raw||^2, C1-C5)；
+                                    # 固定容差/迭代/KKT fail-closed；无 fallback；
+                                    # 行为测试含双组 cap binding + 真不可行 + M0 parity +
+                                    # 独立最小距离断言
   forward_sanity_actual_weights: true  # 用 RUN 实际 latest post-risk total-NAV 权重；at-cap
                                     # 仅 labeled stress diagnostic
   l1_reference_bound_exact: true    # results/raw SHA256 (917fe96/e1b9b32) + impl commit
@@ -346,7 +380,8 @@ prep_corrections_applied (5 reviewer groups / 11 items):
   op_cash_accounting: true          # 5% target at each decision; earns CASH_LIKE T->T+1 proxy;
                                     # in NAV/alloc stats, excluded from cov/optimization;
                                     # turnover contribution = 0 (labeled)
-  ce_formulas_exact: true           # CE_current_hurdle + CAGR/MaxDD per-10ppt 公式 + 零分母 NaN
+  ce_formulas_exact: true           # CE_current_hurdle + CAGR per-10ppt + MaxDD magnitude
+                                    # per-10ppt (abs convention) + 零分母 NaN
   criterion6_min_matched_degradation: true  # 5 年度 + 2 stress 段 min(CAGR_cand_seg - M0_seg) >= -0.05
 
 frozen_candidates:
@@ -377,7 +412,8 @@ frozen_accounting:
 
 frozen_eval:
   metrics: full list per candidate (§9)
-  ce_diagnostics: CE_current_hurdle + CAGR/MaxDD per-10ppt (exact formulas, zero-denominator NaN)
+  ce_diagnostics: CE_current_hurdle + CAGR per-10ppt + MaxDD magnitude per-10ppt
+                  (abs convention, exact formulas, zero-denominator NaN)
   viability: 8 pre-registered criteria (§11); criterion 6 = min matched CAGR degradation
              across 5 calendar years + 2 stress segments
   stop_semantics: fail-closed per candidate; no GO/NO-GO threshold invention

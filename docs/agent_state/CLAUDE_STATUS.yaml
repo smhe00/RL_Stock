@@ -1,20 +1,20 @@
 protocol_version: 2
 actor: claude
-handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_001
+handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_002_001
 state: READY_FOR_REVIEW
 
 gate: POST_L2
-phase: POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION
+phase: POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_002
 code_commit: null
 packet: docs/review_packets/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP.md
 
 progress:
-  current_task: PREP CORRECTION (docs/contract only; no run/backtest). Reviewer: MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CONTRACT_CLEANUP_REQUIRED. Applied 11 corrections: (1) canonical 11-slot optimizer vector for M1/M2/M3 (op-cash separate accounting sleeve, M3 CASH_LIKE cap=0 same dim); (2) joint-feasible projection (long-only simper/per-slot/growth/defensive intersection), fail-closed only true infeasible, final simultaneous assertions + tests; (3) forward sanity uses actual latest post-risk total-NAV weights (at-cap only labeled stress); (4) bound exact L1 SHA256 (results 917fe96... / raw e1b9b32...) + impl commit f039d369d94295433132e17cf981b2eb6243c17a; (5) freeze L1 T->T+1 causal/cost/CA engine; op-cash 5% target + CASH_LIKE proxy + turnover 0; exact CE per-10ppt formulas + zero-denominator NaN; criterion 6 = min matched CAGR degradation across 5 calendar years + 2 stress segments.
+  current_task: PREP CORRECTION_002 (docs/contract only; no run/backtest). Reviewer: MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_001_NEARLY_ACCEPTED_FINAL_PROJECTION_SPEC_CLEANUP_REQUIRED (close to RUN-ready). Applied 2 narrow corrections: (1) freeze exactly ONE deterministic joint Euclidean projection = convex QP min 0.5||w-raw||^2 s.t. C1-C5 via scipy SLSQP (named), initial waterfill, max_iter 200 / ftol 1e-12 / atol 1e-6, KKT + feasibility fail-closed (InfeasibleConstraints), no fallback after results; M0 preserves exact legacy RiskOverlayV0 path (not routed through QP solver), M0 parity all-1011-day <= 1e-9; tests include independent minimum-distance analytic assertion + dual-group binding + truly infeasible + determinism. (2) MaxDD-per-10ppt = (abs(MaxDD_cand)-abs(MaxDD_M0))/(def_M0-def_cand)*0.10 magnitude convention; signed diff reported separately.
 
 last_consumed_review:
-  handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_001
-  decision: MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CONTRACT_CLEANUP_REQUIRED
+  handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_001
+  decision: MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_001_NEARLY_ACCEPTED_FINAL_PROJECTION_SPEC_CLEANUP_REQUIRED
   state: REVISIONS_REQUIRED
-  response: docs/reviewer_responses/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_REVIEWER_RESPONSE.md
+  response: docs/reviewer_responses/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_001_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-10T15:50:00+08:00
+updated_at: 2026-08-10T16:05:00+08:00
