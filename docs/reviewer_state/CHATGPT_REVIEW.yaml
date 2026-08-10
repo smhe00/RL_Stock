@@ -1,55 +1,60 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_001
+handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_CORRECTION_001
 state: REVISIONS_REQUIRED
 
 reviewed_packet:
   path: docs/review_packets/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN.md
-  commit: 8bda08aba97ba0b43821fa672599dd331585709a
+  commit: 7a4474b04b2a719215a91dc6a90531f8e8f0b463
 
-code_commit: 675f1eea5ea63397ae2d6e312eab282c17c7968e
+code_commit: 487fd0042f424a2061070c3da357f136420fcc2f
 
-decision: MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_PROVISIONAL_ECONOMICS_PROMISING_MECHANICAL_CORRECTION_REQUIRED
+decision: MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_CORRECTION_ACCEPTED_DOC_CONSISTENCY_CLEANUP_REQUIRED
 
 response:
-  path: docs/reviewer_responses/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_CORRECTION_REVIEWER_RESPONSE.md
 
 passed:
   - UNIQUE_READY_FOR_REVIEW_HANDOFF
-  - FROZEN_M0_M1_M2_M3_CAPS_PRESERVED
+  - MECHANICAL_CORRECTION_ONLY_FROZEN_CANDIDATES_PRESERVED
   - MAXDIV_120_0P5_CORE_PRESERVED
   - M2_PRINCIPAL_CHALLENGER_PRESERVED
+  - SLSQP_WATERFILL_INITIALIZATION_RESTORED
   - M0_ALL_1011_X_11_TARGET_PARITY_EXACT_ZERO
-  - PRIMARY_FULL_PERIOD_ECONOMICS_PROMISING_PROVISIONALLY
-  - M3_CORRECTLY_FAILS_FROZEN_SHARPE_1P20_SCREEN_PROVISIONALLY
-  - SLSQP_RESULT_SUCCESS_FAIL_CLOSED_PRESENT
-  - FINAL_SIMULTANEOUS_FEASIBILITY_CHECKS_PRESENT
-  - ANALYTIC_AND_DETERMINISM_PROJECTION_TESTS_PRESENT
-  - PYTHON_NUMPY_SCIPY_VERSIONS_RECORDED
+  - M0_WORST_CALENDAR_YEAR_RETURN_MATCHES_ACCEPTED_L1
+  - FORWARD_SANITY_TOTAL_NAV_WEIGHTING_FIXED
+  - END_TO_END_FORWARD_SANITY_ACTUAL_CANDIDATE_TEST_PRESENT
+  - RAW_ARTIFACT_SLEEVE_AND_TOTAL_NAV_WEIGHTS_SEPARATED
+  - TOTAL_NAV_TURNOVER_NOTIONAL_COST_REPORTED
+  - TAUTOLOGICAL_PARITY_OK_REMOVED
+  - CRITERION_8_RUNTIME_VALIDITY_BOUND
+  - CRITERION_6_USES_MATCHED_CALENDAR_CAGR
+  - DURATION_YIELD_SNAPSHOT_DATE_VALUE_SOURCE_SHA256_BOUND
+  - PROJECTION_MANIFEST_DOES_NOT_CLAIM_PRODUCTION_KKT
+  - CORRECTED_RERUN_PRIMARY_ECONOMICS_UNCHANGED
+  - M1_HISTORICALLY_VIABLE
+  - M2_HISTORICALLY_VIABLE_ALL_8_CRITERIA
+  - M3_FAILS_FROZEN_SHARPE_1P20_SCREEN
+  - FIFTEEN_BEHAVIORAL_TESTS_REPORTED_PASS
+  - NO_RESULT_INFORMED_CAP_OR_PARAMETER_CHANGE
   - NO_EXPECTED_RETURN_OPTIMIZER
   - STOPPED_03110_MAPPING_NOT_REPAIRED_OR_LIVE_READY
   - PPO_SAC_TD3_REMAIN_EXCLUDED
 
 revision_required:
-  - RESTORE_FROZEN_WATERFILL_SLSQP_INITIALIZATION_NOT_RAW_X0
-  - FORWARD_SANITY_USE_ACTUAL_TOTAL_NAV_WEIGHTS_NOT_SLEEVE_WEIGHTS
-  - ADD_END_TO_END_FORWARD_SANITY_ACTUAL_CANDIDATE_WEIGHT_TEST
-  - RAW_ARTIFACT_SEPARATE_SLEEVE_WEIGHTS_AND_TOTAL_NAV_SLOT_WEIGHTS
-  - SCALE_OR_EXPLICITLY_SEPARATE_TOTAL_NAV_TURNOVER_TRADED_NOTIONAL_AND_COST_FOR_95PCT_SLEEVE
-  - REMOVE_TAUTOLOGICAL_PARITY_OK_OR_TRUE_FROM_VIABILITY_CRITERION_8
-  - BIND_CRITERION_8_TO_ACTUAL_TEST_PROVENANCE_PARITY_SOLVER_VALIDITY
-  - CRITERION_6_USE_MATCHED_SUBPERIOD_CALENDAR_CAGR_NOT_252_OVER_N_ACTIVE_ANNUALIZATION
-  - FIX_WORST_CALENDAR_YEAR_RETURN_TO_COMPOUND_ALL_RETURNS_IN_YEAR
-  - ASSERT_FULL_M0_REQUIRED_METRIC_PARITY_INCLUDING_WORST_YEAR
-  - REGENERATE_PACKET_ANNUAL_STRESS_TABLE_FROM_CANONICAL_ARTIFACT
-  - EMBED_FORWARD_DURATION_YIELD_SNAPSHOT_DATE_VALUE_SOURCE_AND_SHA256
-  - DO_NOT_CLAIM_PRODUCTION_KKT_CHECK_UNLESS_ACTUALLY_EXECUTED
-  - RERUN_EXACT_SAME_M0_M3_AFTER_MECHANICAL_FIXES
+  - PACKET_FULL_PERIOD_SORTINO_VALUES_MATCH_CANONICAL_ARTIFACT
+  - PACKET_CRITERION6_WORST_DEGRADATION_VALUES_MATCH_CANONICAL_ARTIFACT_EVERYWHERE
+  - RENAME_2026_H1_TO_2026_YTD_THROUGH_2026_08_07_OR_2026_SEGMENT
+  - CLARIFY_FULL_PERIOD_TURNOVER_AS_TOTAL_NAV_OR_EXPLICIT_SLEEVE_VS_TOTAL_NAV
+  - REMOVE_STALE_PRODUCTION_KKT_CLAIM_FROM_RISKOVERLAYCE_DOCSTRING
+  - PRESERVE_CANONICAL_RESULT_ARTIFACTS_UNCHANGED_NO_RERUN
 
 authorized_next:
-  - POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_CORRECTION
+  - POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_DOC_CLEANUP
 
 forbidden_next:
+  - CAPITAL_EFFICIENCY_RERUN
+  - NEW_BACKTEST
   - RESULT_INFORMED_CAP_SEARCH
   - INTERMEDIATE_CAP_VALUES
   - CAP_RETUNING
@@ -73,13 +78,13 @@ forbidden_next:
   - RL_COMPARISON
 
 notes:
-  - Current primary economics are provisional rather than scientifically rejected: M1/M2 improve CAGR materially and M2 provisionally passes the 8-item screen, but required mechanical/artifact outputs are not contract-clean yet.
-  - Forward sanity currently passes sleeve-normalized weights into a total-NAV function, visibly producing defensive_w above the frozen caps for M1/M2/M3; corrected 8% risk-return sanity should be about 10.74%/10.14%/9.59% for M1/M2/M3 under the same 1.4% cash and 1.7114% duration assumptions.
-  - The raw artifact field named total_weights currently stores sleeve weights; correct before any execution-study reuse.
-  - M0 worst-calendar-year return currently does not match accepted L1 because the metric calculation drops the first return of the year.
-  - Packet annual/stress table materially disagrees with the result artifact and must be regenerated from one canonical formula path.
-  - Mechanical correction only: no candidate/cap/window/strategy/solver substitution or result-informed tuning is authorized.
-  - The old 03110 execution-realism STOP remains closed and separate.
+  - The corrected RUN economics are substantively accepted; no further experiment rerun is required.
+  - Canonical corrected economics: M0 CAGR 0.094154 / Sharpe 1.654531 / MaxDD -0.040172; M1 0.112629 / 1.282467 / -0.068107; M2 principal 0.116441 / 1.219346 / -0.076651; M3 0.121481 / 1.178854 / -0.084609.
+  - M2 passes all 8 pre-registered historical viability criteria; M3 fails only the frozen Sharpe >=1.20 screen and is excluded from next execution study.
+  - Corrected forward sanity with actual total-NAV weights: for an 8% portfolio target M0/M1/M2/M3 require risk-sleeve returns about 14.44%/10.74%/10.14%/9.59% under the labeled 1.4% cash and 1.7114% CN10Y assumptions.
+  - Remaining issues are documentation/source-comment consistency only: stale packet Sortino values; stale criterion-6 summary values; 2026 H1 label despite data through 2026-08-07; ambiguous turnover column; and a stale RiskOverlayCE docstring reference to production KKT checking.
+  - DOC_CLEANUP may modify only documentation/source comments/status. It must not regenerate or alter result artifacts or change executable logic.
+  - The old 03110 execution-realism structural STOP remains closed and separate. M2 is not yet executable/live-ready.
   - PPO/SAC/TD3 remain closed unless the user explicitly reopens them.
 
-updated_at: 2026-08-10T19:22:00+08:00
+updated_at: 2026-08-11T01:20:00+08:00
