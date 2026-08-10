@@ -24,7 +24,7 @@ commit 绑定（分别、精确）：
   implementation_commit: aabe0ca（CORRECTION_003 7 项忠实性修正，被评审接受）
   result_packet_commit : 7dfabcd（CORRECTION_003 RUN packet + artifact + CLAUDE_STATUS）
   closeout_packet_commit: 8166ffd（本 closeout 评审审阅版本）
-  doc_cleanup_commit   : <DOC_CLEANUP_COMMIT>（本 DOC_CLEANUP 文档一致性版本）
+  doc_cleanup_commit   : be8bf94（本 DOC_CLEANUP 文档一致性版本）
 ```
 
 ```text
@@ -125,7 +125,7 @@ provenance（canonical，引用已接受 CORRECTION_003 记录）：
 implementation_commit : aabe0ca（CORRECTION_003 实现，被评审接受）
 result_packet_commit  : 7dfabcd（CORRECTION_003 RUN packet + artifact + CLAUDE_STATUS）
 closeout_packet_commit: 8166ffd（closeout 评审审阅版本）
-doc_cleanup_commit    : <DOC_CLEANUP_COMMIT>（本 DOC_CLEANUP 版本）
+doc_cleanup_commit    : be8bf94（本 DOC_CLEANUP 版本）
 
 本 DOC_CLEANUP 改动文件：
 docs/review_packets/POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT.md  ← 本 packet（一致性清理）
@@ -157,7 +157,7 @@ doc_cleanup_applied (5, reviewer STOP_CLOSEOUT_DOC_CLEANUP):
   s1_worst_corrected: true           # -0.70% (-0.006967, year_2026)；net 4.86% vs research 5.56%
   provenance_canonical: true         # 21 tests + 20 inputs + L1 artifacts SHA256；无 stale counts
   commits_bound_distinctly: true     # impl aabe0ca / result+packet 7dfabcd / closeout 8166ffd /
-                                     # cleanup <DOC_CLEANUP_COMMIT>
+                                     # cleanup be8bf94
   branch_a_softened: true            # 513690.SH 仅作需 fresh PREP 验证的例子；不断言全窗口可交易
   branches_all_unselected: true      # A-E 全部保持 UNSELECTED
 
