@@ -1,48 +1,48 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN_001
+handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN_CORRECTION_001
 state: REVISIONS_REQUIRED
 
 reviewed_packet:
   path: docs/review_packets/POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN.md
-  commit: 729e6dc76e01f1fbdda186411b85e1bf2d3d5fbe
+  commit: 3a469c68adb2495e1467805deafd612f649fd546
 
-code_commit: 13e29ac6f82cc87983641a2f432af4208b33e183
+code_commit: be022a6ee8e34bed14b10a0936dcc7545108e9fe
 
-decision: EXECUTION_REALISM_RUN_INVALID_IMPLEMENTATION_CORRECTION_REQUIRED
+decision: EXECUTION_REALISM_RUN_CORRECTION_STILL_INVALID_SECOND_MECHANICAL_CORRECTION_REQUIRED
 
 response:
-  path: docs/reviewer_responses/POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN_CORRECTION_REVIEWER_RESPONSE.md
 
 passed:
   - UNIQUE_READY_FOR_REVIEW_HANDOFF
-  - AUTHORIZED_FROZEN_RUN_WAS_ATTEMPTED
-  - FROZEN_11_SLOT_MAPPING_DECLARED
-  - FROZEN_03110_ELIGIBILITY_DATE_DECLARED
-  - PRE_ELIGIBILITY_CASH_PARKING_DECLARED
-  - DATE_EFFECTIVE_03110_BOARD_LOT_DECLARED
-  - SAME_DAY_REVERSAL_NOT_RELIED_UPON_DECLARED
-  - PREMIUM_GUARD_BACKTEST_NA_DECLARED
-  - S3_STRUCTURAL_ELIGIBILITY_FACT_PRESERVED
-  - NO_RESULT_INFORMED_MAPPING_WINDOW_THRESHOLD_CHANGE_REPORTED
+  - AUTHORIZED_SAME_EXPERIMENT_CORRECTION_ATTEMPTED
+  - MAXDIV_ENV_DATE_ADVANCEMENT_CORRECTED
+  - ACTION_INVERSION_PRECLIP_BUG_REMOVED
+  - FROZEN_11_SLOT_MAPPING_PRESERVED
+  - FROZEN_03110_ELIGIBILITY_AND_S3_COUNTING_PRESERVED
+  - DATE_EFFECTIVE_03110_BOARD_LOT_PRESERVED
+  - PREMIUM_GUARD_BACKTEST_NA_PRESERVED
+  - NO_RESULT_INFORMED_MAPPING_WINDOW_THRESHOLD_CHANGE
   - PPO_SAC_TD3_REMAIN_EXCLUDED
   - QMT_LIVE_REMAINS_FORBIDDEN
 
 revision_required:
-  - MAXDIV_POLICY_DATE_AND_ACTION_INVERSION_BUG_INVALIDATES_TARGET_WEIGHT_PATH
-  - T1_OPEN_EXECUTION_CONTRACT_VIOLATED_BY_CLOSE_PRICE_TRADING
-  - SLOT_ORDER_DEPENDENT_REBALANCE_DOES_NOT_ENFORCE_TARGET_WEIGHTS
-  - HK_T2_SETTLEMENT_LEDGER_NOT_IMPLEMENTED_AND_PENDING_CASH_DOUBLE_SUBTRACTED
-  - SOUTHBOUND_LOCAL_HKD_COST_TRANSACTION_DATE_AND_FX_BASE_CONVERSION_NOT_IMPLEMENTED
-  - FROZEN_T_MINUS_1_HKD_CNY_TIMING_NOT_IMPLEMENTED
-  - S1_NOT_EVALUATED_ON_REQUIRED_ANNUAL_AND_FROZEN_STRESS_SUBPERIODS
-  - TESTS_DO_NOT_VALIDATE_CLAIMED_EXECUTION_MECHANICS
-  - PREMIUM_GUARD_TEST_HAS_UNCONDITIONAL_OR_TRUE
-  - DATA_SNAPSHOT_PROVENANCE_HASHES_MISSING
-  - REPORTED_EXECUTABLE_ECONOMICS_AND_S1_S2_NOT_ACCEPTED
+  - T1_OPEN_FILL_CONTRACT_STILL_USES_T1_CLOSE_MARKS_IN_REBALANCE
+  - POST_FILL_NET_NAV_RETURN_PATH_NOT_IMPLEMENTED
+  - HK_T2_MUST_USE_SETTLEMENT_SESSION_NOT_CALENDAR_PLUS_2_DAYS
+  - UNSETTLED_RECEIVABLES_MUST_BE_INCLUDED_IN_NAV_AND_TRACKING_BUT_EXCLUDED_FROM_BUYING_CASH
+  - HK_LOCAL_PRICE_AND_T_MINUS_1_FX_TIMING_STILL_INTERNALLY_INCONSISTENT
+  - EXECUTABLE_CORPORATE_ACTION_ACCOUNTING_MISSING
+  - S1_RESEARCH_COMPARISON_NOT_COMPUTED_PER_ANNUAL_AND_STRESS_SUBPERIOD
+  - REGRESSION_TESTS_REMAIN_MOSTLY_STATIC_SOURCE_CHECKS
+  - MAXDIV_PARITY_TEST_NOT_BOUND_TO_ACCEPTED_L1_TARGET_PATH
+  - PROVENANCE_HASH_SET_INCOMPLETE_AND_FILE_COUNT_OVERCLAIMED
+  - RESEARCH_REFERENCE_ARTIFACT_COMMIT_NOT_BOUND
+  - REPORTED_48P3_CUM_9P9_CAGR_SHARPE_1P75_AND_S1_S2_NOT_ACCEPTED
 
 authorized_next:
-  - POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN_CORRECTION
+  - POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN_CORRECTION_002
 
 forbidden_next:
   - FORWARD_PAPER_VALIDATION
@@ -63,16 +63,17 @@ forbidden_next:
   - QMT_LIVE
 
 notes:
-  - The structural 03110 pre-Southbound eligibility fact and the frozen S3 counting rule remain unchanged. A corrected run may therefore still STOP on S3; that is not permission to alter mapping, window or thresholds.
-  - The current +64.9% cumulative / 12.8% CAGR / Sharpe 0.911 / MaxDD -13.2% results are invalid for decision-making because the runner does not reproduce the frozen MaxDiv target path and trades at T+1 close rather than T+1 open.
-  - BaselinePolicy.__call__ uses env._i rather than the argument passed by the runner; env._i is not advanced. The runner also clips the raw action before applying w=(a+1)/2, corrupting weights.
-  - Rebalance must be plan-first, eligible-sells-first, then buys from settled cash; report target-vs-actual tracking and per-instrument fills/notional. Current artifact shows 03110 cost 0, so the claimed post-eligibility Southbound path was not exercised.
-  - Implement a dated HK T+2 settlement receivable ledger. Current single pending pool never ages/releases and is also subtracted from cash although it was not included in cash.
-  - For 03110, keep local HKD execution price for SouthboundETFCostModel, pass transaction_date and frozen T-1 fx_to_base, and aggregate notional/cost in CNY only after conversion.
-  - S1 must be evaluated on full period, calendar years and frozen stress regimes; current full-period hard-coded research CAGR is insufficient.
-  - Replace constant/tautological tests with behavioral regression tests, including policy parity, T+1-open fills, settlement release, target tracking, Southbound date-effective fee/FX conversion and PremiumGuard N/A without an unconditional pass.
-  - Bind the run to deterministic hashes/source identifiers for every local input file plus the exact research-reference artifact/commit.
-  - No later gate is authorized until the corrected frozen run is reviewed.
+  - The structural 03110 pre-Southbound eligibility fact remains valid: 461/1011 frozen structural fail-closed days. A corrected run may still STOP on S3; do not change mapping, window, denominator or threshold.
+  - Current code constructs rebalance marks from closes and uses them for target quantity and notional, so the packet claim of T+1-open fills is false. Opens must drive execution; closes must only drive post-fill valuation.
+  - Current portfolio_values append the pre-rebalance T+1-close total_val. Recompute post-fill close NAV after fees/positions and use that net NAV for returns.
+  - HK receivable release currently uses calendar +2 days and its test expects a Saturday release. Use the frozen settlement/trading-session calendar. Outstanding receivables stay in NAV but are not buying cash.
+  - 03110 is converted to CNY with same-date FX in load_prices, then divided by lagged FX to recover HKD. Preserve raw HKD series and apply frozen T-1 FX only for base conversion/cost accounting.
+  - The executable ledger does not apply frozen corporate actions to held positions. Reuse or replicate the existing dividend/unit-conversion accounting with behavioral tests.
+  - S1 still uses only hard-coded full-period research CAGR 0.094154. Load the accepted L1 MaximumDiversification reference and compare net-vs-research CAGR on every calendar year and both frozen stress periods.
+  - Current tests for open execution, settlement, sell-before-buy and Southbound are largely source-string checks; replace with behavioral regressions. MaxDiv parity must compare exact sampled target weights to the accepted L1 path, not only caps and average CASH_LIKE weight.
+  - Provenance artifact currently contains 12 actual SHA256 file entries plus a note, not 13, and omits corporate-action event inputs and the exact research-reference artifact/commit.
+  - Report post-eligibility 03110 target-weight / feasible-lot / attempted-order / fill diagnostics. Keep it descriptive; do not retune.
+  - No later gate is authorized until CORRECTION_002 is reviewed.
   - PPO/SAC/TD3 remain closed unless the user explicitly reopens them.
 
-updated_at: 2026-08-10T10:49:20+08:00
+updated_at: 2026-08-10T11:06:17+08:00
