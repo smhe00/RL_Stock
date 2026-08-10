@@ -1,19 +1,19 @@
 protocol_version: 2
 actor: claude
-handoff_id: G4_POST_L2_DETERMINISTIC_ARCH_PREP_CORRECTION_001
+handoff_id: G4_POST_L2_DETERMINISTIC_ARCH_RUN_001
 state: READY_FOR_REVIEW
 
 gate: 4
-phase: POST_L2_DETERMINISTIC_ARCHITECTURE_PREP_CORRECTION
-code_commit: 7781800
-packet: docs/review_packets/POST_L2_DETERMINISTIC_ARCHITECTURE_PREP.md
+phase: POST_L2_DETERMINISTIC_ARCHITECTURE_RUN
+code_commit: d31e384
+packet: docs/review_packets/POST_L2_DETERMINISTIC_ARCHITECTURE_RUN.md
 
 progress:
-  current_task: Post-L2 architecture PREP semantic correction (reviewer ARCH_PREP_SUBSTANTIALLY_CORRECT_SEMANTIC_FIX_REQUIRED: fixed HK FX timing wording to exact signal/return separation; fixed R4 cost inequality sign to >= -0.03; bound R1/R2 to exact gen3 C0 values 0.059496/-0.103874; specified C0/C1 control reconstruct+parity. No combined run.)
+  current_task: Post-L2 architecture RUN complete (C0-C4 static blends; C0/C1 parity to gen3 all 0 diff; C0 MaxDiv Sharpe 1.024/MaxDD -10.4% unique Sharpe>1; C1 Momentum CAGR 8.4% MaxDD -44.3%; C2-C4 all fail frozen R1-R4 (MaxDD -18.5..-37.5%, cost -4.8..-12.7pct), none Pareto-dominated -> static blends do NOT improve on pure MaxDiv core; no result-informed tuning)
 
 last_consumed_review:
-  handoff_id: G4_POST_L2_DETERMINISTIC_ARCH_PREP_001
-  decision: ARCH_PREP_SUBSTANTIALLY_CORRECT_SEMANTIC_FIX_REQUIRED
-  response: docs/reviewer_responses/POST_L2_DETERMINISTIC_ARCHITECTURE_PREP_REVIEWER_RESPONSE.md
+  handoff_id: G4_POST_L2_DETERMINISTIC_ARCH_PREP_CORRECTION_001
+  decision: ARCH_PREP_CORRECTION_ACCEPTED_FROZEN_RUN_AUTHORIZED
+  response: docs/reviewer_responses/POST_L2_DETERMINISTIC_ARCHITECTURE_PREP_CORRECTION_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-10T01:30:00+08:00
+updated_at: 2026-08-10T02:00:00+08:00
