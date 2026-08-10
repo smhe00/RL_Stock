@@ -1,62 +1,55 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_DOC_CLEANUP_001
+handoff_id: REVIEWER_INITIATED_LOCAL_COMMS_SMOKE_20260811_001
 state: REVIEW_COMPLETE
 
 reviewed_packet:
-  path: docs/review_packets/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN.md
-  commit: 9841a2627a301673a7536a41fd23428490d286a5
+  path: docs/reviewer_responses/LOCAL_REVIEWER_COMMS_SMOKE_AUTHORIZATION.md
+  commit: 5acbaafa6d1a51f0af3c45f2b022257bd4e249a3
 
-code_commit: 487fd0042f424a2061070c3da357f136420fcc2f
+code_commit: null
 
-decision: MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_DOC_CLEANUP_ACCEPTED_RESEARCH_PHASE_COMPLETE
+decision: LOCAL_REVIEWER_COMMS_SMOKE_AUTHORIZED
 
 response:
-  path: docs/reviewer_responses/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_DOC_CLEANUP_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/LOCAL_REVIEWER_COMMS_SMOKE_AUTHORIZATION.md
 
 passed:
-  - UNIQUE_READY_FOR_REVIEW_HANDOFF
-  - DOC_COMMENT_CLEANUP_ONLY_NO_RERUN
-  - CANONICAL_RESULT_ARTIFACTS_UNCHANGED
-  - NO_EXECUTABLE_LOGIC_CHANGE
-  - PACKET_SORTINO_VALUES_MATCH_CANONICAL_ARTIFACT
-  - PACKET_CRITERION6_VALUES_MATCH_CANONICAL_ARTIFACT
-  - 2026_SEGMENT_LABELED_YTD_THROUGH_2026_08_07
-  - TURNOVER_COLUMN_EXPLICIT_TOTAL_NAV_CANONICAL
-  - RISKOVERLAYCE_DOCSTRING_NO_FALSE_PRODUCTION_KKT_CLAIM
-  - MAXDIV_120_0P5_CORE_PRESERVED
-  - M2_PRINCIPAL_CHALLENGER_PRESERVED
-  - M0_ALL_1011_X_11_TARGET_PARITY_EXACT_ZERO
-  - M1_HISTORICALLY_VIABLE
-  - M2_HISTORICALLY_VIABLE_ALL_8_CRITERIA
-  - M3_FAILS_FROZEN_SHARPE_1P20_SCREEN
-  - NO_RESULT_INFORMED_CAP_OR_PARAMETER_CHANGE
-  - NO_EXPECTED_RETURN_OPTIMIZER
-  - STOPPED_03110_MAPPING_NOT_REPAIRED_OR_LIVE_READY
-  - PPO_SAC_TD3_REMAIN_EXCLUDED
+  - USER_EXPLICITLY_REQUESTED_COMMUNICATION_TEST
+  - REVIEWER_INITIATED_HANDOFF_PATTERN_MATCHES_REPOSITORY_HISTORY
+  - PROTOCOL_COMMUNICATION_ONLY
+  - REVIEWER_OWNERSHIP_BOUNDARY_PRESERVED
+  - NO_RESEARCH_OR_BACKTEST_AUTHORIZED
+  - NO_STRATEGY_OR_CANONICAL_ARTIFACT_CHANGE_AUTHORIZED
+  - MAXDIV_120_0P5_AND_M2_STATE_PRESERVED
+  - STOPPED_03110_MAPPING_REMAINS_UNRESOLVED
+  - PPO_SAC_TD3_REMAIN_CLOSED
 
 revision_required: []
 
-authorized_next: []
+authorized_next:
+  - LOCAL_REVIEWER_COMMS_SMOKE_HANDOFF
 
 forbidden_next:
-  - CAPITAL_EFFICIENCY_RERUN
-  - NEW_BACKTEST_WITHOUT_FRESH_PREP
-  - RESULT_INFORMED_CAP_SEARCH
-  - INTERMEDIATE_CAP_VALUES
-  - CAP_RETUNING
-  - EXPECTED_RETURN_OPTIMIZATION
-  - EXECUTION_UNIVERSE_REDESIGN_WITHOUT_EXPLICIT_USER_SELECTION_AND_FRESH_PREP
-  - INSTRUMENT_SUBSTITUTION_WITHOUT_FRESH_PREP
-  - NO_TRADE_BAND_SEARCH
-  - MINIMUM_TRADE_THRESHOLD_OPTIMIZATION
-  - EXECUTION_TIME_OPTIMIZATION
+  - NEW_RESEARCH_BRANCH
+  - FINANCIAL_BACKTEST
+  - EXPERIMENT
+  - DATA_REFRESH
+  - STRATEGY_CHANGE
+  - CANONICAL_ARTIFACT_CHANGE
+  - EXECUTION_LOGIC_CHANGE
+  - TRADING_PROTOTYPE
   - FORWARD_PAPER_VALIDATION
   - PAPER
   - LIVE
+  - QMT
   - QMT_LIVE
-  - DENSE_ALPHA_SEARCH
-  - DYNAMIC_ALPHA
+  - ACCOUNT_ACCESS
+  - ORDER_ACTION
+  - MARKET_DATA_ACTION
+  - EXECUTION_UNIVERSE_REDESIGN
+  - INSTRUMENT_SUBSTITUTION
+  - REPAIR_03110_MAPPING
   - PPO
   - SAC
   - TD3
@@ -65,14 +58,12 @@ forbidden_next:
   - RL_COMPARISON
 
 notes:
-  - The MaxDiv capital-efficiency research phase is complete. M2 is the accepted principal challenger for any future execution-oriented PREP.
-  - Canonical economics: M0 CAGR 0.094154 / Sharpe 1.654531 / MaxDD -0.040172 / defensive 0.50; M1 0.112629 / 1.282467 / -0.068107 / 0.30; M2 0.116441 / 1.219346 / -0.076651 / 0.25; M3 0.121481 / 1.178854 / -0.084609 / 0.20.
-  - M2 passes all 8 pre-registered historical viability criteria. M3 fails only the frozen Sharpe >= 1.20 screen and is excluded from the next execution study.
-  - Capital-efficiency tradeoff vs M0 is approximately +0.9 ppt CAGR per 10 ppt defensive reduction at a cost of approximately +1.4 to +1.5 ppt deeper MaxDD magnitude per 10 ppt reduction.
-  - Forward sanity under labeled cash 1.4% and CN10Y 1.7114% assumptions: an 8% portfolio target requires about 14.44% / 10.74% / 10.14% / 9.59% risk-sleeve return for M0/M1/M2/M3.
-  - Defensive caps bind throughout the 1011-day path, confirming the unconstrained MaxDiv preference for low-volatility CASH_LIKE/CN_DURATION and the motivation for the M2 capital-efficiency constraint.
-  - M2 is historical concept validation only, not executable/live-ready. The prior 03110.HK execution-realism structural STOP remains separate and unresolved.
-  - No future branch is automatically authorized. Any move toward execution must be explicitly selected by the user and start with a fresh PREP for executable universe/instrument mapping centered on M2.
-  - PPO/SAC/TD3 remain closed unless the user explicitly reopens them.
+  - This reviewer-initiated authorization exists only to test the established GitHub file communication path.
+  - Claude should consume this review, publish the specified Claude-owned READY_FOR_REVIEW smoke handoff, push it, and stop.
+  - The expected Claude handoff_id is LOCAL_REVIEWER_COMMS_SMOKE_20260811_001.
+  - No research, execution, or trading step is authorized.
+  - Capital-efficiency research remains complete and no next research branch is opened.
+  - The unresolved 03110 execution-realism STOP remains in force.
+  - PPO/SAC/TD3 remain closed.
 
-updated_at: 2026-08-11T01:33:00+08:00
+updated_at: 2026-08-11T04:27:00+08:00
