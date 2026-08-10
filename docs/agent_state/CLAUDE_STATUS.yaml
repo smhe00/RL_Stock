@@ -1,20 +1,20 @@
 protocol_version: 2
 actor: claude
-handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_001
+handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_CORRECTION_001
 state: READY_FOR_REVIEW
 
 gate: POST_L2
-phase: POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN
-code_commit: 675f1ee
+phase: POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_CORRECTION
+code_commit: 487fd00
 packet: docs/review_packets/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN.md
 
 progress:
-  current_task: M0-M3 capital-efficiency RUN (reviewer-authorized MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_ACCEPTED_RUN_AUTHORIZED). M0 parity max|diff|=0.00 (<=1e-9) PASS; M0 metrics == accepted L1 MaxDiv (cum 45.42% / CAGR 9.42% / Sharpe 1.655 / MaxDD -4.02%). Results: M0 cum 45.42%/CAGR 9.42%/Sharpe 1.655/MDD -4.02%/def 50%; M1 55.92%/11.26%/1.282/-6.81%/30%; M2 principal 58.15%/11.64%/1.219/-7.67%/25% viable; M3 61.14%/12.15%/1.179/-8.46%/20% NOT viable (Sharpe<1.2). CE: +0.9ppt CAGR per 10ppt defensive reduction; +1.4ppt MaxDD magnitude. Forward sanity 8% target: M0 needs risk 14.4% vs M2 10.3%. M0/M1/M2 HISTORICALLY_VIABLE; M3 fail-closed. Tests 13 passed; --check PASSED. Provenance 24 entries + python/numpy/scipy versions.
+  current_task: RUN_CORRECTION (10 mechanical fixes + one M0-M3 rerun). Reviewer: MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_PROVISIONAL_ECONOMICS_PROMISING_MECHANICAL_CORRECTION_REQUIRED. Fixed: SLSQP x0=waterfill; forward sanity total-NAV weights (8% req = 10.74/10.14/9.59 M1/M2/M3, defensive_w<=cap); raw artifact sleeve vs total-NAV split; turnover total-NAV scale; criterion8=run_valid; criterion6=calendar CAGR; worst-year=prod(1+r)-1 (M0==-0.003933); packet table regenerated; yield snapshot embedded; no false KKT claim. Corrected rerun economics unchanged: M0 parity 0.0, M0 cum 45.42%/CAGR 9.42%/Sharpe 1.655/MDD -4.02%; M1 55.92%/11.26%/1.282/-6.81%; M2 principal 58.15%/11.64%/1.219/-7.67% viable; M3 61.14%/12.15%/1.179/-8.46% NOT viable (Sharpe<1.2). M0/M1/M2 HISTORICALLY_VIABLE. Tests 15 passed; --check PASSED.
 
 last_consumed_review:
-  handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_002_001
-  decision: MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_ACCEPTED_RUN_AUTHORIZED
-  state: REVIEW_COMPLETE
-  response: docs/reviewer_responses/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_002_REVIEWER_RESPONSE.md
+  handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_001
+  decision: MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_PROVISIONAL_ECONOMICS_PROMISING_MECHANICAL_CORRECTION_REQUIRED
+  state: REVISIONS_REQUIRED
+  response: docs/reviewer_responses/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_RUN_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-10T16:40:00+08:00
+updated_at: 2026-08-10T19:50:00+08:00

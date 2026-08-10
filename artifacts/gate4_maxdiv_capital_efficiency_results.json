@@ -61,9 +61,11 @@
     "projection": {
       "objective": "min 0.5*||w-raw||^2 s.t. C1-C5",
       "method": "scipy.optimize.minimize(method='SLSQP')",
+      "initialization": "bounded-simplex waterfill (C1-C3)",
       "max_iter": 200,
       "ftol": 1e-12,
       "atol": 1e-06,
+      "optimality_guard": "solver result.success==True + final simultaneous feasibility checks + frozen independent analytic minimum-distance projection tests (NOT a production KKT residual)",
       "m0_path": "legacy RiskOverlayV0 (unchanged)"
     },
     "m0_parity": {
@@ -73,7 +75,14 @@
     },
     "forward_sanity": {
       "cash_yield_pct": 1.4,
-      "cash_yield_label": "user planning assumption, not historical"
+      "cash_yield_label": "user planning assumption, not historical",
+      "cn_duration_yield_snapshot": {
+        "observation_date": "2026-08-07",
+        "value_pct": 1.7114,
+        "source_label": "China 10Y government bond yield (CN10Y), proxy for CN_DURATION yield/YTM",
+        "local_path": "data\\qmt\\proxy\\CN_DURATION_CN10Y_yield.csv",
+        "sha256": "9c4c87e6fd4f60442f014f2fcef747e450b694d95b72466d47140995aa8f9094"
+      }
     },
     "data_provenance": {
       "data\\qmt\\raw\\CN_LARGE_510300_SH_raw.csv": "e9bff9adb17dc68163e19a1e009aefb931032ba0bd9a6b7da7d936cf2b22ca75",
@@ -102,8 +111,8 @@
       "scipy": "1.18.0"
     },
     "no_rl": true,
-    "started_at": "2026-08-10 16:50:12",
-    "commit": "675f1ee"
+    "started_at": "2026-08-10 19:37:47",
+    "commit": "487fd00"
   },
   "candidates": {
     "M0": {
@@ -117,7 +126,7 @@
         "max_drawdown": -0.040172,
         "calmar": 2.435343,
         "worst_calendar_year": 2022,
-        "worst_calendar_year_return": -0.006839,
+        "worst_calendar_year_return": -0.003933,
         "worst_rolling_12m_return": 0.023062
       },
       "subperiods": {
@@ -132,7 +141,7 @@
             "max_drawdown": -0.03370589292784487,
             "calmar": -0.20969164829302467,
             "worst_calendar_year": 2022,
-            "worst_calendar_year_return": -0.006838583468779413,
+            "worst_calendar_year_return": -0.003932768427204247,
             "worst_rolling_12m_return": NaN
           },
           "2023": {
@@ -145,7 +154,7 @@
             "max_drawdown": -0.026195360912839694,
             "calmar": 2.3358945010506864,
             "worst_calendar_year": 2023,
-            "worst_calendar_year_return": 0.0563447185344883,
+            "worst_calendar_year_return": 0.0586915670819641,
             "worst_rolling_12m_return": NaN
           },
           "2024": {
@@ -158,7 +167,7 @@
             "max_drawdown": -0.03418675875880883,
             "calmar": 5.756226214425705,
             "worst_calendar_year": 2024,
-            "worst_calendar_year_return": 0.18761382560245732,
+            "worst_calendar_year_return": 0.1882856626883207,
             "worst_rolling_12m_return": NaN
           },
           "2025": {
@@ -171,7 +180,7 @@
             "max_drawdown": -0.04017169950760069,
             "calmar": 3.238730007450171,
             "worst_calendar_year": 2025,
-            "worst_calendar_year_return": 0.12661041253016414,
+            "worst_calendar_year_return": 0.12517948051815742,
             "worst_rolling_12m_return": NaN
           },
           "2026": {
@@ -184,7 +193,7 @@
             "max_drawdown": -0.039467895691569166,
             "calmar": 1.4084083676199752,
             "worst_calendar_year": 2026,
-            "worst_calendar_year_return": 0.02535901047785627,
+            "worst_calendar_year_return": 0.03139528488253629,
             "worst_rolling_12m_return": NaN
           }
         },
@@ -199,7 +208,7 @@
             "max_drawdown": -0.03370589292784487,
             "calmar": 1.0575439552335393,
             "worst_calendar_year": 2022,
-            "worst_calendar_year_return": -0.006838583468779413,
+            "worst_calendar_year_return": -0.003932768427204247,
             "worst_rolling_12m_return": 0.04147411686702385
           },
           "2024-2026_strong_equity": {
@@ -212,14 +221,17 @@
             "max_drawdown": -0.0401716995076008,
             "calmar": 3.4204912451413416,
             "worst_calendar_year": 2026,
-            "worst_calendar_year_return": 0.025359010477855604,
+            "worst_calendar_year_return": 0.03139528488253629,
             "worst_rolling_12m_return": 0.0851462326359389
           }
         }
       },
-      "mean_turnover": 0.011407,
-      "traded_notional": 10747178.03,
-      "total_cost": 3761.51,
+      "sleeve_mean_turnover": 0.011407,
+      "total_nav_mean_turnover": 0.011407,
+      "sleeve_traded_notional": 10747178.03,
+      "total_nav_traded_notional": 10747178.03,
+      "sleeve_total_cost": 3761.51,
+      "total_nav_total_cost": 3761.51,
       "mean_defensive_allocation": 0.5,
       "median_defensive_allocation": 0.5,
       "p95_defensive_allocation": 0.5,
@@ -242,7 +254,8 @@
         "cn_duration_cap_hit_rate": 1.0,
         "defensive_cap_hit_rate": 1.0,
         "n_days": 1011
-      }
+      },
+      "run_valid": true
     },
     "M1": {
       "metrics": {
@@ -255,7 +268,7 @@
         "max_drawdown": -0.068107,
         "calmar": 1.718849,
         "worst_calendar_year": 2022,
-        "worst_calendar_year_return": -0.021832,
+        "worst_calendar_year_return": -0.015443,
         "worst_rolling_12m_return": -0.019991
       },
       "subperiods": {
@@ -270,7 +283,7 @@
             "max_drawdown": -0.06810734734289614,
             "calmar": -0.4056246332166683,
             "worst_calendar_year": 2022,
-            "worst_calendar_year_return": -0.021831896264578154,
+            "worst_calendar_year_return": -0.015443284346473907,
             "worst_rolling_12m_return": NaN
           },
           "2023": {
@@ -283,7 +296,7 @@
             "max_drawdown": -0.0492789363749041,
             "calmar": 1.0638405645179578,
             "worst_calendar_year": 2023,
-            "worst_calendar_year_return": 0.04641594117294767,
+            "worst_calendar_year_return": 0.050293136565895624,
             "worst_rolling_12m_return": NaN
           },
           "2024": {
@@ -296,7 +309,7 @@
             "max_drawdown": -0.05570240893369993,
             "calmar": 4.282587883739101,
             "worst_calendar_year": 2024,
-            "worst_calendar_year_return": 0.22872905921782505,
+            "worst_calendar_year_return": 0.22807998591472423,
             "worst_rolling_12m_return": NaN
           },
           "2025": {
@@ -309,7 +322,7 @@
             "max_drawdown": -0.06273382143259976,
             "calmar": 2.9964195465993892,
             "worst_calendar_year": 2025,
-            "worst_calendar_year_return": 0.18736227677116468,
+            "worst_calendar_year_return": 0.1806910298328579,
             "worst_rolling_12m_return": NaN
           },
           "2026": {
@@ -322,7 +335,7 @@
             "max_drawdown": -0.0618522167032135,
             "calmar": 1.1445048493958119,
             "worst_calendar_year": 2026,
-            "worst_calendar_year_return": 0.029308183234534546,
+            "worst_calendar_year_return": 0.03985773597534803,
             "worst_rolling_12m_return": NaN
           }
         },
@@ -337,7 +350,7 @@
             "max_drawdown": -0.06810734734289614,
             "calmar": 0.3281467921848258,
             "worst_calendar_year": 2022,
-            "worst_calendar_year_return": -0.021831896264578154,
+            "worst_calendar_year_return": -0.015443284346473907,
             "worst_rolling_12m_return": 0.024215129566972138
           },
           "2024-2026_strong_equity": {
@@ -350,14 +363,17 @@
             "max_drawdown": -0.06273382143259965,
             "calmar": 2.850484248658173,
             "worst_calendar_year": 2026,
-            "worst_calendar_year_return": 0.029308183234534546,
+            "worst_calendar_year_return": 0.03985773597534803,
             "worst_rolling_12m_return": 0.12177594088544441
           }
         }
       },
-      "mean_turnover": 0.01311,
-      "traded_notional": 12153364.66,
-      "total_cost": 4253.68,
+      "sleeve_mean_turnover": 0.01311,
+      "total_nav_mean_turnover": 0.012455,
+      "sleeve_traded_notional": 12153364.66,
+      "total_nav_traded_notional": 11545696.43,
+      "sleeve_total_cost": 4253.68,
+      "total_nav_total_cost": 4040.99,
       "mean_defensive_allocation": 0.3,
       "median_defensive_allocation": 0.3,
       "p95_defensive_allocation": 0.3,
@@ -380,7 +396,8 @@
         "cn_duration_cap_hit_rate": 1.0,
         "defensive_cap_hit_rate": 1.0,
         "n_days": 1011
-      }
+      },
+      "run_valid": true
     },
     "M2": {
       "metrics": {
@@ -393,7 +410,7 @@
         "max_drawdown": -0.076651,
         "calmar": 1.579067,
         "worst_calendar_year": 2022,
-        "worst_calendar_year_return": -0.025297,
+        "worst_calendar_year_return": -0.018108,
         "worst_rolling_12m_return": -0.030701
       },
       "subperiods": {
@@ -408,7 +425,7 @@
             "max_drawdown": -0.07665094503670011,
             "calmar": -0.4221506761622125,
             "worst_calendar_year": 2022,
-            "worst_calendar_year_return": -0.025297393165434556,
+            "worst_calendar_year_return": -0.01810812548766183,
             "worst_rolling_12m_return": NaN
           },
           "2023": {
@@ -421,7 +438,7 @@
             "max_drawdown": -0.05475260911143254,
             "calmar": 0.9123256959059681,
             "worst_calendar_year": 2023,
-            "worst_calendar_year_return": 0.043698252105576874,
+            "worst_calendar_year_return": 0.04792324048802743,
             "worst_rolling_12m_return": NaN
           },
           "2024": {
@@ -434,7 +451,7 @@
             "max_drawdown": -0.062493684991705156,
             "calmar": 3.9379815890524785,
             "worst_calendar_year": 2024,
-            "worst_calendar_year_return": 0.23633232217332534,
+            "worst_calendar_year_return": 0.23526681199871025,
             "worst_rolling_12m_return": NaN
           },
           "2025": {
@@ -447,7 +464,7 @@
             "max_drawdown": -0.06854941913993606,
             "calmar": 2.9622097913157046,
             "worst_calendar_year": 2025,
-            "worst_calendar_year_return": 0.20334885870534647,
+            "worst_calendar_year_return": 0.19514088808074614,
             "worst_rolling_12m_return": NaN
           },
           "2026": {
@@ -460,7 +477,7 @@
             "max_drawdown": -0.06716278137528275,
             "calmar": 1.0876753678231357,
             "worst_calendar_year": 2026,
-            "worst_calendar_year_return": 0.02947761761919221,
+            "worst_calendar_year_return": 0.04111192438063038,
             "worst_rolling_12m_return": NaN
           }
         },
@@ -475,7 +492,7 @@
             "max_drawdown": -0.07665094503670011,
             "calmar": 0.2479195914940161,
             "worst_calendar_year": 2022,
-            "worst_calendar_year_return": -0.025297393165434556,
+            "worst_calendar_year_return": -0.01810812548766183,
             "worst_rolling_12m_return": 0.019791684961640632
           },
           "2024-2026_strong_equity": {
@@ -488,14 +505,17 @@
             "max_drawdown": -0.06854941913993617,
             "calmar": 2.7414772240548078,
             "worst_calendar_year": 2026,
-            "worst_calendar_year_return": 0.029477617619191987,
+            "worst_calendar_year_return": 0.04111192438063038,
             "worst_rolling_12m_return": 0.12973673547878106
           }
         }
       },
-      "mean_turnover": 0.01361,
-      "traded_notional": 12622220.81,
-      "total_cost": 4417.78,
+      "sleeve_mean_turnover": 0.01361,
+      "total_nav_mean_turnover": 0.012929,
+      "sleeve_traded_notional": 12622220.81,
+      "total_nav_traded_notional": 11991109.77,
+      "sleeve_total_cost": 4417.78,
+      "total_nav_total_cost": 4196.89,
       "mean_defensive_allocation": 0.25,
       "median_defensive_allocation": 0.25,
       "p95_defensive_allocation": 0.25,
@@ -518,7 +538,8 @@
         "cn_duration_cap_hit_rate": 1.0,
         "defensive_cap_hit_rate": 1.0,
         "n_days": 1011
-      }
+      },
+      "run_valid": true
     },
     "M3": {
       "metrics": {
@@ -531,7 +552,7 @@
         "max_drawdown": -0.084609,
         "calmar": 1.492604,
         "worst_calendar_year": 2022,
-        "worst_calendar_year_return": -0.028779,
+        "worst_calendar_year_return": -0.020815,
         "worst_rolling_12m_return": -0.039738
       },
       "subperiods": {
@@ -546,7 +567,7 @@
             "max_drawdown": -0.0846086799586977,
             "calmar": -0.4391377289365499,
             "worst_calendar_year": 2022,
-            "worst_calendar_year_return": -0.028779405214793607,
+            "worst_calendar_year_return": -0.02081514091732617,
             "worst_rolling_12m_return": NaN
           },
           "2023": {
@@ -559,7 +580,7 @@
             "max_drawdown": -0.06023534604797587,
             "calmar": 0.8070394012165018,
             "worst_calendar_year": 2023,
-            "worst_calendar_year_return": 0.04202099661887604,
+            "worst_calendar_year_return": 0.04663895112298633,
             "worst_rolling_12m_return": NaN
           },
           "2024": {
@@ -572,7 +593,7 @@
             "max_drawdown": -0.0682860839572107,
             "calmar": 3.7766104739590323,
             "worst_calendar_year": 2024,
-            "worst_calendar_year_return": 0.24783937787178578,
+            "worst_calendar_year_return": 0.24648934543736378,
             "worst_rolling_12m_return": NaN
           },
           "2025": {
@@ -585,7 +606,7 @@
             "max_drawdown": -0.07421606499062827,
             "calmar": 2.932234890231629,
             "worst_calendar_year": 2025,
-            "worst_calendar_year_return": 0.21848935883902332,
+            "worst_calendar_year_return": 0.2090866190447156,
             "worst_rolling_12m_return": NaN
           },
           "2026": {
@@ -598,7 +619,7 @@
             "max_drawdown": -0.07249246776948648,
             "calmar": 1.061879068056666,
             "worst_calendar_year": 2026,
-            "worst_calendar_year_return": 0.03053858826559619,
+            "worst_calendar_year_return": 0.04328738918754693,
             "worst_rolling_12m_return": NaN
           }
         },
@@ -613,7 +634,7 @@
             "max_drawdown": -0.0846086799586977,
             "calmar": 0.19296609907764947,
             "worst_calendar_year": 2022,
-            "worst_calendar_year_return": -0.028779405214793607,
+            "worst_calendar_year_return": -0.02081514091732617,
             "worst_rolling_12m_return": 0.01639672412570703
           },
           "2024-2026_strong_equity": {
@@ -626,14 +647,17 @@
             "max_drawdown": -0.07421606499062816,
             "calmar": 2.678599684259999,
             "worst_calendar_year": 2026,
-            "worst_calendar_year_return": 0.03053858826559619,
+            "worst_calendar_year_return": 0.04328738918754693,
             "worst_rolling_12m_return": 0.13772210434094556
           }
         }
       },
-      "mean_turnover": 0.01369,
-      "traded_notional": 12858416.56,
-      "total_cost": 4500.45,
+      "sleeve_mean_turnover": 0.01369,
+      "total_nav_mean_turnover": 0.013006,
+      "sleeve_traded_notional": 12858416.56,
+      "total_nav_traded_notional": 12215495.73,
+      "sleeve_total_cost": 4500.45,
+      "total_nav_total_cost": 4275.42,
       "mean_defensive_allocation": 0.2,
       "median_defensive_allocation": 0.2,
       "p95_defensive_allocation": 0.2,
@@ -656,7 +680,8 @@
         "cn_duration_cap_hit_rate": 1.0,
         "defensive_cap_hit_rate": 1.0,
         "n_days": 1011
-      }
+      },
+      "run_valid": true
     }
   },
   "viability": {
@@ -673,9 +698,10 @@
       "c4_calmar_ge_0_7": true,
       "c5_cagr_not_worse_than_m0_0_5ppt": true,
       "c6_min_matched_cagr_degradation_ge_m5ppt": true,
-      "c6_worst_segment_degradation": -0.020558,
+      "c6_worst_segment_degradation": -0.020451,
       "c7_turnover_le_1_5x_m0": true,
-      "c8_tests_provenance_parity": true
+      "c7_candidate_total_nav_turnover": 0.012455,
+      "c8_tests_provenance_parity_solver_validity": true
     },
     "M2": {
       "is_m0": false,
@@ -686,9 +712,10 @@
       "c4_calmar_ge_0_7": true,
       "c5_cagr_not_worse_than_m0_0_5ppt": true,
       "c6_min_matched_cagr_degradation_ge_m5ppt": true,
-      "c6_worst_segment_degradation": -0.02529,
+      "c6_worst_segment_degradation": -0.025159,
       "c7_turnover_le_1_5x_m0": true,
-      "c8_tests_provenance_parity": true
+      "c7_candidate_total_nav_turnover": 0.012929,
+      "c8_tests_provenance_parity_solver_validity": true
     },
     "M3": {
       "is_m0": false,
@@ -699,9 +726,10 @@
       "c4_calmar_ge_0_7": true,
       "c5_cagr_not_worse_than_m0_0_5ppt": true,
       "c6_min_matched_cagr_degradation_ge_m5ppt": true,
-      "c6_worst_segment_degradation": -0.030087,
+      "c6_worst_segment_degradation": -0.029931,
       "c7_turnover_le_1_5x_m0": true,
-      "c8_tests_provenance_parity": true
+      "c7_candidate_total_nav_turnover": 0.013006,
+      "c8_tests_provenance_parity_solver_validity": true
     }
   },
   "ce_diagnostics": {
@@ -744,7 +772,13 @@
       "cash_yield_pct": 1.4,
       "cash_yield_label": "user planning assumption, not historical",
       "cn_duration_yield_pct": 1.7114,
-      "cn_duration_yield_source": "data\\qmt\\proxy\\CN_DURATION_CN10Y_yield.csv",
+      "cn_duration_yield_snapshot": {
+        "observation_date": "2026-08-07",
+        "value_pct": 1.7114,
+        "source_label": "China 10Y government bond yield (CN10Y), proxy for CN_DURATION yield/YTM",
+        "local_path": "data\\qmt\\proxy\\CN_DURATION_CN10Y_yield.csv",
+        "sha256": "9c4c87e6fd4f60442f014f2fcef747e450b694d95b72466d47140995aa8f9094"
+      },
       "defensive_carry": 0.007778499999999998,
       "required_risk_return": {
         "7": 0.124443,
@@ -754,53 +788,71 @@
     },
     "M1": {
       "op_cash": 0.05,
-      "strategic_cash_like": 0.052631578947368425,
-      "cn_duration": 0.2105263157894737,
-      "defensive_w": 0.31315789473684214,
-      "risk_asset_w": 0.6868421052631579,
+      "strategic_cash_like": 0.05,
+      "cn_duration": 0.2,
+      "defensive_w": 0.30000000000000004,
+      "risk_asset_w": 0.7,
       "cash_yield_pct": 1.4,
       "cash_yield_label": "user planning assumption, not historical",
       "cn_duration_yield_pct": 1.7114,
-      "cn_duration_yield_source": "data\\qmt\\proxy\\CN_DURATION_CN10Y_yield.csv",
-      "defensive_carry": 0.005039789473684211,
+      "cn_duration_yield_snapshot": {
+        "observation_date": "2026-08-07",
+        "value_pct": 1.7114,
+        "source_label": "China 10Y government bond yield (CN10Y), proxy for CN_DURATION yield/YTM",
+        "local_path": "data\\qmt\\proxy\\CN_DURATION_CN10Y_yield.csv",
+        "sha256": "9c4c87e6fd4f60442f014f2fcef747e450b694d95b72466d47140995aa8f9094"
+      },
+      "defensive_carry": 0.0048228,
       "required_risk_return": {
-        "7": 0.094578,
-        "8": 0.109137,
-        "9": 0.123697
+        "7": 0.09311,
+        "8": 0.107396,
+        "9": 0.121682
       }
     },
     "M2": {
       "op_cash": 0.05,
-      "strategic_cash_like": 0.0526315789473684,
-      "cn_duration": 0.15789473684210525,
-      "defensive_w": 0.26052631578947366,
-      "risk_asset_w": 0.7394736842105263,
+      "strategic_cash_like": 0.05,
+      "cn_duration": 0.15,
+      "defensive_w": 0.25,
+      "risk_asset_w": 0.75,
       "cash_yield_pct": 1.4,
       "cash_yield_label": "user planning assumption, not historical",
       "cn_duration_yield_pct": 1.7114,
-      "cn_duration_yield_source": "data\\qmt\\proxy\\CN_DURATION_CN10Y_yield.csv",
-      "defensive_carry": 0.004139052631578947,
+      "cn_duration_yield_snapshot": {
+        "observation_date": "2026-08-07",
+        "value_pct": 1.7114,
+        "source_label": "China 10Y government bond yield (CN10Y), proxy for CN_DURATION yield/YTM",
+        "local_path": "data\\qmt\\proxy\\CN_DURATION_CN10Y_yield.csv",
+        "sha256": "9c4c87e6fd4f60442f014f2fcef747e450b694d95b72466d47140995aa8f9094"
+      },
+      "defensive_carry": 0.0039671,
       "required_risk_return": {
-        "7": 0.089065,
-        "8": 0.102588,
-        "9": 0.116111
+        "7": 0.088044,
+        "8": 0.101377,
+        "9": 0.114711
       }
     },
     "M3": {
       "op_cash": 0.05,
       "strategic_cash_like": 0.0,
-      "cn_duration": 0.15789473684210525,
-      "defensive_w": 0.20789473684210524,
-      "risk_asset_w": 0.7921052631578948,
+      "cn_duration": 0.15,
+      "defensive_w": 0.2,
+      "risk_asset_w": 0.8,
       "cash_yield_pct": 1.4,
       "cash_yield_label": "user planning assumption, not historical",
       "cn_duration_yield_pct": 1.7114,
-      "cn_duration_yield_source": "data\\qmt\\proxy\\CN_DURATION_CN10Y_yield.csv",
-      "defensive_carry": 0.0034022105263157897,
+      "cn_duration_yield_snapshot": {
+        "observation_date": "2026-08-07",
+        "value_pct": 1.7114,
+        "source_label": "China 10Y government bond yield (CN10Y), proxy for CN_DURATION yield/YTM",
+        "local_path": "data\\qmt\\proxy\\CN_DURATION_CN10Y_yield.csv",
+        "sha256": "9c4c87e6fd4f60442f014f2fcef747e450b694d95b72466d47140995aa8f9094"
+      },
+      "defensive_carry": 0.0032671,
       "required_risk_return": {
-        "7": 0.084077,
-        "8": 0.096702,
-        "9": 0.109326
+        "7": 0.083416,
+        "8": 0.095916,
+        "9": 0.108416
       }
     }
   },
