@@ -1,19 +1,19 @@
 protocol_version: 2
 actor: claude
-handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP_CONSISTENCY_CLEANUP_001
+handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN_001
 state: READY_FOR_REVIEW
 
 gate: 4
-phase: POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP_CONSISTENCY_CLEANUP
-code_commit: 1ca71bb
-packet: docs/review_packets/POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP.md
+phase: POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN
+code_commit: 13e29ac
+packet: docs/review_packets/POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN.md
 
 progress:
-  current_task: Instrument execution-realism PREP consistency cleanup (reviewer EXECUTION_REALISM_PREP_FINAL_CONTRACT_SUBSTANTIALLY_ACCEPTED_STALE_FREEZE_BLOCK_MUST_BE_REMOVED: removed stale legacy frozen block (single canonical record), fixed CN_LARGE 513300->510300 typo + mapping assertion test, normalized S4 to NOT_APPLICABLE/NOT_EVALUATED in backtest mode excluded from STOP. Doc-only, no runner implementation/run.)
+  current_task: Instrument execution-realism RUN complete (MaxDiv 120/0.5 executable path, 1011 decision days, 11 real ETFs incl 510300/03110.HK; net cum +64.9% / CAGR 12.8% / Sharpe 0.911 / MaxDD -13.2%; S1 PASS (net>research 9.4%), S2 PASS (fee 3.5bp/slippage 3.0bp), S3 FAIL (45.6%: 03110 structurally non-Southbound 461 pre-eligible days cash-parked), S4 N/A -> STOP true per frozen contract; no mapping/threshold/window change)
 
 last_consumed_review:
-  handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP_CORRECTION_002
-  decision: EXECUTION_REALISM_PREP_FINAL_CONTRACT_SUBSTANTIALLY_ACCEPTED_STALE_FREEZE_BLOCK_MUST_BE_REMOVED
-  response: docs/reviewer_responses/POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP_CORRECTION_002_REVIEWER_RESPONSE.md
+  handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP_CONSISTENCY_CLEANUP_001
+  decision: EXECUTION_REALISM_PREP_CONSISTENCY_CLEANUP_ACCEPTED_FROZEN_RUN_AUTHORIZED
+  response: docs/reviewer_responses/POST_L2_INSTRUMENT_EXECUTION_REALISM_PREP_CONSISTENCY_CLEANUP_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-10T04:30:00+08:00
+updated_at: 2026-08-10T05:00:00+08:00

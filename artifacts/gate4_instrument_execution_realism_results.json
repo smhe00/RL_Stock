@@ -1,0 +1,93 @@
+{
+  "manifest": {
+    "gate": "POST_L2_INSTRUMENT_EXECUTION_REALISM",
+    "label": "POST_L2_INSTRUMENT_EXECUTION_REALISM",
+    "window": {
+      "decision_start": "2022-06-09",
+      "last_decision": "2026-08-06",
+      "last_execution": "2026-08-07",
+      "n_decision_days": 1011
+    },
+    "slot_instrument": {
+      "CN_LARGE": "510300.SH",
+      "CN_SMALL": "512100.SH",
+      "CN_DIVIDEND": "512890.SH",
+      "CHINEXT": "159915.SZ",
+      "STAR": "588000.SH",
+      "HK_TECH": "513180.SH",
+      "HK_DIVIDEND": "03110.HK",
+      "US_BROAD": "513500.SH",
+      "GOLD": "518880.SH",
+      "CN_DURATION": "511260.SH",
+      "CASH_LIKE": "511360.SH"
+    },
+    "hk_dividend_dates": {
+      "listing": "2013-06-17",
+      "data_start": "2021-01-11",
+      "southbound_eligible_from": "2024-05-06"
+    },
+    "board_lot": {
+      "t_lt_2026_07_24": 100,
+      "t_gte_2026_07_24": 50
+    },
+    "cost_routing": {
+      "mainland": "MainlandETFCostModel",
+      "03110.HK": "SouthboundETFCostModel"
+    },
+    "settlement": {
+      "A_SHARE_T": 1,
+      "HK_T": 2
+    },
+    "premium_guard": "INSTRUMENT_BACKTEST = NOT_EVALUABLE_HISTORICALLY (N/A)",
+    "no_rl": true,
+    "started_at": "2026-08-10 10:44:02",
+    "commit": "13e29ac"
+  },
+  "metrics": {
+    "cum_return": 0.649293,
+    "calendar_cagr": 0.127758,
+    "active_day_annualized_return": 0.132826,
+    "annualized_vol": 0.148699,
+    "sharpe": 0.911129,
+    "sortino": 1.583729,
+    "max_drawdown": -0.132096,
+    "calmar": 1.00553
+  },
+  "cost_aggregation": {
+    "total_fee_cny": 3697.17,
+    "total_slippage_cny": 3169.0,
+    "total_traded_notional_cny": 10563338.9,
+    "fee_bps_of_traded_notional": 3.5,
+    "slippage_bps_of_traded_notional": 3.0,
+    "cost_by_instrument": {
+      "510300.SH": 183.67,
+      "512100.SH": 357.72,
+      "512890.SH": 339.05,
+      "159915.SZ": 415.09,
+      "588000.SH": 473.36,
+      "513180.SH": 500.82,
+      "03110.HK": 0.0,
+      "513500.SH": 362.82,
+      "518880.SH": 381.75,
+      "511260.SH": 304.86,
+      "511360.SH": 378.03
+    }
+  },
+  "fail_closed": {
+    "structural_ineligible_cash_parking": 461,
+    "no_quote_hold": 0
+  },
+  "stop_criteria": {
+    "S1_net_cagr": 0.127758,
+    "S1_research_cagr": 0.094154,
+    "S1_cagr_degradation": 0.033604,
+    "S1_pass": true,
+    "S2_fee_bps": 3.5,
+    "S2_slippage_bps": 3.0,
+    "S2_pass": true,
+    "S3_fail_closed_pct": 45.598,
+    "S3_pass": false,
+    "S4": "NOT_APPLICABLE (backtest mode)",
+    "STOP": true
+  }
+}
