@@ -1,62 +1,47 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN_CORRECTION_003
-state: BLOCKED
+handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT_001
+state: REVISIONS_REQUIRED
 
 reviewed_packet:
-  path: docs/review_packets/POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN.md
-  commit: 7dfabcd8b1e87a462cfa6482b43d7101e00a82f5
+  path: docs/review_packets/POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT.md
+  commit: 8166ffd927d5d1afc4ebcd86e67372c613c52975
 
 code_commit: aabe0ca30aa9522ad34c682e49155d6cd6c18c4b
 
-decision: EXECUTION_REALISM_RUN_CORRECTION_003_ACCEPTED_STOP_CONFIRMED
+decision: STOP_CLOSEOUT_SUBSTANTIVELY_ACCEPTED_DOC_CONSISTENCY_CLEANUP_REQUIRED
 
 response:
-  path: docs/reviewer_responses/POST_L2_INSTRUMENT_EXECUTION_REALISM_RUN_CORRECTION_003_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT_REVIEWER_RESPONSE.md
 
 passed:
   - UNIQUE_READY_FOR_REVIEW_HANDOFF
-  - SAME_FROZEN_EXPERIMENT_PRESERVED
-  - EXECUTABLE_03110_MARKS_PRESENT_AFTER_ELIGIBILITY
-  - SOUTHBOUND_PATH_EXERCISED_WITH_REAL_FILLS
-  - MAXDIV_EXACT_PARITY_TO_ACCEPTED_L1_POST_RISK_PATH
-  - T1_OPEN_EXECUTION_AND_POST_FILL_NAV_ACCEPTED
-  - S1_MATCHED_ANNUAL_AND_STRESS_RESEARCH_SEGMENTS
-  - S1_PASS_WORST_DEGRADATION_WITHIN_5PCT
-  - S2_PASS_FEE_AND_SLIPPAGE_THRESHOLDS
-  - S3_DISTINCT_FAIL_CLOSED_DAY_UNION_CORRECTED
-  - CORPORATE_ACTIONS_APPLIED_BEFORE_OPEN_SIZING
-  - HK_T2_03110_SESSION_LEDGER_PRESENT
-  - PROVENANCE_BINDS_INPUT_HASHES_AND_L1_ARTIFACT_HASHES
-  - BEHAVIORAL_REGRESSION_COVERAGE_MATERIALLY_IMPROVED
+  - DOC_ONLY_CLOSEOUT_NO_NEW_BACKTEST
+  - ACCEPTED_CORRECTION_003_STOP_PRESERVED
+  - ECONOMIC_FINDINGS_SEPARATED_FROM_STRUCTURAL_ELIGIBILITY_FAILURE
+  - S2_PASS_VALUES_PRESERVED
+  - S3_FAIL_478_OF_1011_PRESERVED
+  - STRUCTURAL_PRE_ELIGIBILITY_461_DAYS_PRESERVED
+  - SOUTHBOUND_PATH_REAL_FILLS_PRESERVED
+  - FUTURE_BRANCHES_ENUMERATED_ONLY_NOT_EXECUTED_OR_SELECTED
   - NO_RESULT_INFORMED_MAPPING_WINDOW_THRESHOLD_CHANGE
   - PPO_SAC_TD3_REMAIN_EXCLUDED
-  - QMT_LIVE_REMAINS_FORBIDDEN
+  - QMT_LIVE_FORWARD_PAPER_LIVE_REMAIN_FORBIDDEN
 
-stop_reason:
-  criterion: S3
-  distinct_fail_closed_days: 478
-  decision_days: 1011
-  fail_closed_pct: 47.28
-  structural_pre_eligibility_days: 461
-  no_quote_days: 18
-  overlap_days: 1
-  southbound_eligible_from: 2024-05-06
-
-accepted_results:
-  cumulative_return: 0.472131
-  calendar_cagr: 0.09738
-  sharpe: 1.737684
-  max_drawdown: -0.042365
-  S1_worst_subperiod_degradation: -0.006967
-  S2_fee_bps: 4.457
-  S2_slippage_bps: 3.0
-  STOP: true
+revision_required:
+  - CORRECT_S1_WORST_DEGRADATION_TO_ACCEPTED_MINUS_0P006967_APPROX_MINUS_0P70PCT
+  - REMOVE_STALE_10_TESTS_13_FILES_AND_CONFLICTING_19_FILES_COUNTS
+  - BIND_IMPLEMENTATION_RESULT_PACKET_AND_CLOSEOUT_COMMITS_DISTINCTLY
+  - NORMALIZE_PROVENANCE_DESCRIPTION_TO_ACCEPTED_CORRECTION_003_RECORD
+  - REMOVE_UNVERIFIED_CLAIM_THAT_513690_MAKES_ENTIRE_FROZEN_WINDOW_TRADABLE
+  - KEEP_ALL_FUTURE_BRANCHES_UNSELECTED
 
 authorized_next:
-  - POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT
+  - POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT_DOC_CLEANUP
 
 forbidden_next:
+  - NEW_BACKTEST
+  - EXECUTION_REALISM_RERUN
   - FORWARD_PAPER_VALIDATION
   - PAPER
   - LIVE
@@ -76,12 +61,12 @@ forbidden_next:
   - RL_COMPARISON
 
 notes:
-  - CORRECTION_003 is accepted as a faithful enough execution-realism run for the frozen experiment; no fourth mechanical rerun is required.
-  - S1 and S2 pass. The blocking failure is S3: the frozen 2022-06 to 2026-08 window contains 461 decision days before 03110.HK became Southbound-eligible on 2024-05-06, plus ordinary no-quote days. This structural eligibility mismatch is far above the frozen 1% fail-closed threshold.
-  - 03110 is now genuinely exercised after eligibility: 217 attempted orders, 217 fills, about CNY 735.8k traded notional.
-  - The accepted executable economics remain close to the accepted L1 MaxDiv research path, so the STOP is not caused by weak return or excessive modeled transaction costs.
-  - STOP closeout is documentation/decision synthesis only; it may enumerate future research branches but may not execute or select a post-result mapping/window/threshold change.
-  - No forward/paper/live or later execution gate is authorized from this stopped experiment.
+  - The closeout is substantively correct and remains a documentation-only STOP synthesis.
+  - The accepted CORRECTION_003 economics are unchanged: cumulative return 0.472131, calendar CAGR 0.09738, Sharpe 1.737684, MaxDD -0.042365; S2 fee 4.457bp and slippage 3.0bp pass; S3 478/1011 = 47.28% fails and STOP remains true.
+  - The accepted S1 worst matched-subperiod degradation is -0.006967 (about -0.70pct), not -0.84pct. Cleanup must copy the accepted value rather than recompute or invent a different pair.
+  - Accepted CORRECTION_003 review records 21 tests passed and provenance binding actually consumed inputs plus accepted L1 results/raw artifacts by SHA256. Closeout should use one canonical provenance statement and remove stale counts.
+  - Branches A-E are ideas only. Any universe/window/eligibility redesign requires a fresh PREP and may not be selected under this stopped experiment.
+  - No code change, rerun, forward/paper/live step, or RL work is authorized in the cleanup.
   - PPO/SAC/TD3 remain closed unless the user explicitly reopens them.
 
-updated_at: 2026-08-10T12:31:00+08:00
+updated_at: 2026-08-10T13:25:35+08:00
