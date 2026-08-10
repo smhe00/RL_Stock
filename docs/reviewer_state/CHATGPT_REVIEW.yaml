@@ -1,43 +1,41 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT_001
-state: REVISIONS_REQUIRED
+handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT_DOC_CLEANUP_001
+state: REVIEW_COMPLETE
 
 reviewed_packet:
   path: docs/review_packets/POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT.md
-  commit: 8166ffd927d5d1afc4ebcd86e67372c613c52975
+  commit: cc17960fcbf0341d38881f2b8acfd1f78a5129c0
 
 code_commit: aabe0ca30aa9522ad34c682e49155d6cd6c18c4b
 
-decision: STOP_CLOSEOUT_SUBSTANTIVELY_ACCEPTED_DOC_CONSISTENCY_CLEANUP_REQUIRED
+decision: STOP_CLOSEOUT_DOC_CLEANUP_ACCEPTED_CLOSEOUT_COMPLETE_NO_BRANCH_AUTHORIZED
 
 response:
-  path: docs/reviewer_responses/POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT_DOC_CLEANUP_REVIEWER_RESPONSE.md
 
 passed:
   - UNIQUE_READY_FOR_REVIEW_HANDOFF
-  - DOC_ONLY_CLOSEOUT_NO_NEW_BACKTEST
-  - ACCEPTED_CORRECTION_003_STOP_PRESERVED
-  - ECONOMIC_FINDINGS_SEPARATED_FROM_STRUCTURAL_ELIGIBILITY_FAILURE
+  - DOC_ONLY_CLEANUP_NO_CODE_OR_EXPERIMENT_CHANGE
+  - S1_WORST_CORRECTED_TO_ACCEPTED_MINUS_0P006967
+  - ACCEPTED_CORRECTION_003_ECONOMICS_PRESERVED
   - S2_PASS_VALUES_PRESERVED
   - S3_FAIL_478_OF_1011_PRESERVED
   - STRUCTURAL_PRE_ELIGIBILITY_461_DAYS_PRESERVED
-  - SOUTHBOUND_PATH_REAL_FILLS_PRESERVED
-  - FUTURE_BRANCHES_ENUMERATED_ONLY_NOT_EXECUTED_OR_SELECTED
+  - SOUTHBOUND_REAL_EXECUTION_EVIDENCE_PRESERVED
+  - CANONICAL_21_TEST_RECORD_PRESERVED
+  - PROVENANCE_NORMALIZED_TO_ACTUALLY_CONSUMED_INPUTS_AND_L1_ARTIFACTS
+  - IMPLEMENTATION_RESULT_PACKET_CLOSEOUT_AND_CLEANUP_COMMITS_DISTINGUISHED
+  - BRANCH_A_UNVERIFIED_TRADABILITY_CLAIM_REMOVED
+  - FUTURE_BRANCHES_A_TO_E_ALL_UNSELECTED
   - NO_RESULT_INFORMED_MAPPING_WINDOW_THRESHOLD_CHANGE
+  - NO_NEW_BACKTEST_OR_RERUN
   - PPO_SAC_TD3_REMAIN_EXCLUDED
   - QMT_LIVE_FORWARD_PAPER_LIVE_REMAIN_FORBIDDEN
 
-revision_required:
-  - CORRECT_S1_WORST_DEGRADATION_TO_ACCEPTED_MINUS_0P006967_APPROX_MINUS_0P70PCT
-  - REMOVE_STALE_10_TESTS_13_FILES_AND_CONFLICTING_19_FILES_COUNTS
-  - BIND_IMPLEMENTATION_RESULT_PACKET_AND_CLOSEOUT_COMMITS_DISTINCTLY
-  - NORMALIZE_PROVENANCE_DESCRIPTION_TO_ACCEPTED_CORRECTION_003_RECORD
-  - REMOVE_UNVERIFIED_CLAIM_THAT_513690_MAKES_ENTIRE_FROZEN_WINDOW_TRADABLE
-  - KEEP_ALL_FUTURE_BRANCHES_UNSELECTED
+revision_required: []
 
-authorized_next:
-  - POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT_DOC_CLEANUP
+authorized_next: []
 
 forbidden_next:
   - NEW_BACKTEST
@@ -61,12 +59,12 @@ forbidden_next:
   - RL_COMPARISON
 
 notes:
-  - The closeout is substantively correct and remains a documentation-only STOP synthesis.
-  - The accepted CORRECTION_003 economics are unchanged: cumulative return 0.472131, calendar CAGR 0.09738, Sharpe 1.737684, MaxDD -0.042365; S2 fee 4.457bp and slippage 3.0bp pass; S3 478/1011 = 47.28% fails and STOP remains true.
-  - The accepted S1 worst matched-subperiod degradation is -0.006967 (about -0.70pct), not -0.84pct. Cleanup must copy the accepted value rather than recompute or invent a different pair.
-  - Accepted CORRECTION_003 review records 21 tests passed and provenance binding actually consumed inputs plus accepted L1 results/raw artifacts by SHA256. Closeout should use one canonical provenance statement and remove stale counts.
-  - Branches A-E are ideas only. Any universe/window/eligibility redesign requires a fresh PREP and may not be selected under this stopped experiment.
-  - No code change, rerun, forward/paper/live step, or RL work is authorized in the cleanup.
+  - STOP closeout documentation cleanup accepted; the frozen POST_L2 instrument execution-realism experiment is formally closed.
+  - Accepted CORRECTION_003 result remains cumulative return 0.472131, calendar CAGR 0.09738, Sharpe 1.737684, MaxDD -0.042365; S1 and S2 pass; S3 478/1011 = 47.28% fails; STOP remains true.
+  - Accepted S1 worst matched-subperiod degradation is year_2026 -0.006967 (about -0.70pct), net active-day CAGR 0.048620 versus research 0.055587.
+  - Cleanup changed only Claude-owned status/closeout documentation after the prior reviewer state; no source, test, data, artifact, mapping, window, threshold or experiment result changed.
+  - Branches A-E remain unselected. No future research branch is authorized automatically from this stopped experiment.
+  - Any future universe/window/eligibility redesign must be explicitly selected as a new research direction and begin with a fresh PREP review.
   - PPO/SAC/TD3 remain closed unless the user explicitly reopens them.
 
-updated_at: 2026-08-10T13:25:35+08:00
+updated_at: 2026-08-10T14:26:43+08:00
