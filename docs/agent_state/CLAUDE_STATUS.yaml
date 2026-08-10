@@ -1,20 +1,20 @@
 protocol_version: 2
 actor: claude
-handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_001
+handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION_001
 state: READY_FOR_REVIEW
 
 gate: POST_L2
-phase: POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP
+phase: POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CORRECTION
 code_commit: null
 packet: docs/review_packets/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP.md
 
 progress:
-  current_task: PREP only (no run/backtest). User explicitly selected new MaxDiv capital-efficiency research direction after prior execution-realism STOP closed. Reviewer authorized USER_SELECTED_FRESH_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_AUTHORIZED (REVIEW_COMPLETE). Frozen contract: M0 legacy (def cap 50%), M1 (op_cash 5%, CASH_LIKE<=5%, CN_DURATION<=20%, def<=30%), M2 principal (op_cash 5%, CASH_LIKE<=5%, CN_DURATION<=15%, def<=25%), M3 (op_cash 5%, CASH_LIKE=0, CN_DURATION<=15%, def<=20%), all of total NAV; sleeve 95% with transformed caps; MaxDiv 120/0.5 + RiskOverlayV0 semantics preserved; L1 artifact/commit bound; op_cash historical proxy = CASH_LIKE research series; forward sanity 7/8/9% + required_risk_return formula + 1.4% labeled; viability 8 pre-registered criteria; no expected-return in optimizer; stopped 03110 mapping NOT repaired/live-ready.
+  current_task: PREP CORRECTION (docs/contract only; no run/backtest). Reviewer: MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CONTRACT_CLEANUP_REQUIRED. Applied 11 corrections: (1) canonical 11-slot optimizer vector for M1/M2/M3 (op-cash separate accounting sleeve, M3 CASH_LIKE cap=0 same dim); (2) joint-feasible projection (long-only simper/per-slot/growth/defensive intersection), fail-closed only true infeasible, final simultaneous assertions + tests; (3) forward sanity uses actual latest post-risk total-NAV weights (at-cap only labeled stress); (4) bound exact L1 SHA256 (results 917fe96... / raw e1b9b32...) + impl commit f039d369d94295433132e17cf981b2eb6243c17a; (5) freeze L1 T->T+1 causal/cost/CA engine; op-cash 5% target + CASH_LIKE proxy + turnover 0; exact CE per-10ppt formulas + zero-denominator NaN; criterion 6 = min matched CAGR degradation across 5 calendar years + 2 stress segments.
 
 last_consumed_review:
-  handoff_id: USER_SELECTED_G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_001
-  decision: USER_SELECTED_FRESH_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_AUTHORIZED
-  state: REVIEW_COMPLETE
-  response: docs/reviewer_responses/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_AUTHORIZATION.md
+  handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_001
+  decision: MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_CONTRACT_CLEANUP_REQUIRED
+  state: REVISIONS_REQUIRED
+  response: docs/reviewer_responses/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-10T15:00:00+08:00
+updated_at: 2026-08-10T15:50:00+08:00
