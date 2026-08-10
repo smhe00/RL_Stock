@@ -1,34 +1,39 @@
-protocol_version: 2
-actor: chatgpt_reviewer
-handoff_id: REVIEWER_INITIATED_LOCAL_COMMS_SMOKE_20260811_001
+protocol_version: 3
+actor: codex_reviewer
+handoff_id: LOCAL_REVIEWER_COMMS_SMOKE_20260811_001
 state: REVIEW_COMPLETE
 
 reviewed_packet:
-  path: docs/reviewer_responses/LOCAL_REVIEWER_COMMS_SMOKE_AUTHORIZATION.md
-  commit: 5acbaafa6d1a51f0af3c45f2b022257bd4e249a3
+  path: docs/review_packets/LOCAL_REVIEWER_COMMS_SMOKE_20260811_001.md
+  commit: fce6e81ae951d9bcfbd6f3db5d5ce80a7afce823
 
+reviewed_remote_head: fce6e81ae951d9bcfbd6f3db5d5ce80a7afce823
 code_commit: null
 
-decision: LOCAL_REVIEWER_COMMS_SMOKE_AUTHORIZED
+decision: LOCAL_REVIEWER_COMMS_SMOKE_ROUND_1_PASS_SECOND_HANDOFF_AUTHORIZED
 
 response:
-  path: docs/reviewer_responses/LOCAL_REVIEWER_COMMS_SMOKE_AUTHORIZATION.md
+  path: docs/reviewer_responses/LOCAL_REVIEWER_COMMS_SMOKE_20260811_001_REVIEWER_RESPONSE.md
 
 passed:
-  - USER_EXPLICITLY_REQUESTED_COMMUNICATION_TEST
-  - REVIEWER_INITIATED_HANDOFF_PATTERN_MATCHES_REPOSITORY_HISTORY
-  - PROTOCOL_COMMUNICATION_ONLY
-  - REVIEWER_OWNERSHIP_BOUNDARY_PRESERVED
-  - NO_RESEARCH_OR_BACKTEST_AUTHORIZED
-  - NO_STRATEGY_OR_CANONICAL_ARTIFACT_CHANGE_AUTHORIZED
+  - EXPECTED_ROUND_1_HANDOFF_ID
+  - READY_FOR_REVIEW_PACKET_PRESENT
+  - REVIEWER_AUTHORIZATION_CONSUMED
+  - CLAUDE_OWNERSHIP_BOUNDARY_PRESERVED
+  - EXACT_TWO_CLAUDE_OWNED_PATHS_CHANGED
+  - PACKET_COMMIT_SHA_BOUND
+  - NO_RESEARCH_BACKTEST_OR_DATA_REFRESH
+  - NO_STRATEGY_CANONICAL_ARTIFACT_OR_RESULT_CHANGE
+  - NO_EXECUTION_QMT_ACCOUNT_ORDER_OR_MARKET_DATA_ACTION
   - MAXDIV_120_0P5_AND_M2_STATE_PRESERVED
+  - CAPITAL_EFFICIENCY_RESEARCH_REMAINS_COMPLETE
   - STOPPED_03110_MAPPING_REMAINS_UNRESOLVED
   - PPO_SAC_TD3_REMAIN_CLOSED
 
 revision_required: []
 
 authorized_next:
-  - LOCAL_REVIEWER_COMMS_SMOKE_HANDOFF
+  - LOCAL_REVIEWER_COMMS_SMOKE_HANDOFF_002
 
 forbidden_next:
   - NEW_RESEARCH_BRANCH
@@ -37,6 +42,7 @@ forbidden_next:
   - DATA_REFRESH
   - STRATEGY_CHANGE
   - CANONICAL_ARTIFACT_CHANGE
+  - ACCEPTED_RESULT_CHANGE
   - EXECUTION_LOGIC_CHANGE
   - TRADING_PROTOTYPE
   - FORWARD_PAPER_VALIDATION
@@ -58,12 +64,11 @@ forbidden_next:
   - RL_COMPARISON
 
 notes:
-  - This reviewer-initiated authorization exists only to test the established GitHub file communication path.
-  - Claude should consume this review, publish the specified Claude-owned READY_FOR_REVIEW smoke handoff, push it, and stop.
-  - The expected Claude handoff_id is LOCAL_REVIEWER_COMMS_SMOKE_20260811_001.
+  - Round 1 of the user-authorized two-round communication smoke test passed.
+  - Claude may perform only the second protocol echo described in the matching reviewer response.
+  - The expected next Claude handoff_id is LOCAL_REVIEWER_COMMS_SMOKE_20260811_002.
   - No research, execution, or trading step is authorized.
-  - Capital-efficiency research remains complete and no next research branch is opened.
-  - The unresolved 03110 execution-realism STOP remains in force.
-  - PPO/SAC/TD3 remain closed.
+  - After publishing the second Claude-owned packet/status checkpoint, Claude must stop at READY_FOR_REVIEW.
+  - MaxDiv 120/0.5, M2 canonical state, completed capital-efficiency research, unresolved 03110 STOP, and closed PPO/SAC/TD3 remain unchanged.
 
-updated_at: 2026-08-11T04:27:00+08:00
+updated_at: 2026-08-11T04:44:00+08:00
