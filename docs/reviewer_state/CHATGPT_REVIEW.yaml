@@ -1,40 +1,50 @@
 protocol_version: 2
 actor: chatgpt_reviewer
-handoff_id: G4_POST_L2_DETERMINISTIC_ARCH_PREP_CORRECTION_001
-state: REVIEW_COMPLETE
+handoff_id: G4_POST_L2_DETERMINISTIC_ARCH_RUN_001
+state: REVISIONS_REQUIRED
 
 reviewed_packet:
-  path: docs/review_packets/POST_L2_DETERMINISTIC_ARCHITECTURE_PREP.md
-  commit: 9d3b63be28ca2c238c50ff38584b6b39c88c6875
+  path: docs/review_packets/POST_L2_DETERMINISTIC_ARCHITECTURE_RUN.md
+  commit: ea8798831a0df040c4296ff778c239913ae419fd
 
-code_commit: 7781800d4ce996a216aa1e08f1346504c2628b66
+code_commit: d31e3848c9c264e7ce01c2a2162ab0124f904dbd
 
-decision: ARCH_PREP_CORRECTION_ACCEPTED_FROZEN_RUN_AUTHORIZED
+decision: ARCH_RUN_RESULTS_SUBSTANTIVELY_ACCEPTED_R5_TEST_FIX_REQUIRED
 
 response:
-  path: docs/reviewer_responses/POST_L2_DETERMINISTIC_ARCHITECTURE_PREP_CORRECTION_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/POST_L2_DETERMINISTIC_ARCHITECTURE_RUN_REVIEWER_RESPONSE.md
 
 passed:
-  - PREP_CORRECTION_DOC_ONLY_CONFIRMED
-  - NO_COMBINED_RUN_PERFORMED
-  - HK_RETURN_LEVEL_SAME_DATE_CNY_FIXED
-  - HK_SIGNAL_TMINUS1_CONVERTED_LEVEL_FIXED
-  - HK_REALIZED_RETURN_CNY_T_TO_TPLUS1_FIXED
-  - R4_COST_SIGN_FIXED_TO_NET_MINUS_GROSS_GTE_MINUS_3PCT
-  - R1_EXACT_C0_BINDING_FIXED
-  - R2_EXACT_C0_BINDING_FIXED
-  - C0_C1_RECONSTRUCT_AND_PARITY_RULE_FIXED
-  - CANDIDATE_SET_C0_C4_UNCHANGED
-  - PARENT_PARAMS_UNCHANGED
+  - UNIQUE_READY_FOR_REVIEW_HANDOFF
+  - FROZEN_CANDIDATE_SET_C0_C4_PRESERVED
+  - PARENT_PARAMETERS_UNCHANGED
+  - C0_C1_PARITY_TO_GEN3_ZERO_DIFF_REPORTED
+  - SAME_11_SLOT_2800_INTERVAL_TRACK_C_PATH_REUSED
+  - FINAL_RISK_OVERLAY_APPLIED
+  - POST_OVERLAY_VIOLATIONS_ZERO_ALL_CANDIDATES
+  - R1_EXACT_C0_RELATIVE_CAGR_RULE_PRESERVED
+  - R2_EXACT_C0_MAXDD_RULE_PRESERVED
+  - R3_SHARPE_CALMAR_RULE_PRESERVED
+  - R4_NET_MINUS_GROSS_COST_RULE_PRESERVED
+  - TURNOVER_COST_ON_FINAL_EXECUTABLE_PATH
+  - PRIMARY_R1_R4_ARCHITECTURE_CONCLUSION_SUBSTANTIVELY_ACCEPTED
   - NO_DENSE_ALPHA_SEARCH
   - NO_DYNAMIC_ALPHA
   - PPO_SAC_TD3_REMAIN_EXCLUDED
   - QMT_LIVE_REMAINS_FORBIDDEN
 
+revision_required:
+  - R5_PARETO_MAXDD_DIRECTION_REVERSED_IN_CODE
+  - R5_SYNTHETIC_REGRESSION_TEST_MISSING
+  - TEST_EXECUTION_EVIDENCE_MISSING_FROM_PACKET
+  - ARCHITECTURE_GATE_NOT_CLOSED_PENDING_MECHANICAL_FIX
+
 authorized_next:
-  - POST_L2_DETERMINISTIC_ARCHITECTURE_RUN
+  - POST_L2_DETERMINISTIC_ARCHITECTURE_RUN_CORRECTION
 
 forbidden_next:
+  - INSTRUMENT_EXECUTION_REALISM
+  - FORWARD_PAPER_VALIDATION
   - RESULT_INFORMED_BLEND_WEIGHT_SEARCH
   - DYNAMIC_ALPHA
   - PPO
@@ -46,12 +56,12 @@ forbidden_next:
   - QMT_LIVE
 
 notes:
-  - One frozen architecture RUN is authorized for exactly C0-C4: MaxDiv 100%, Momentum 100%, and alpha 0.75/0.50/0.25 static blends.
-  - Frozen blend semantics: w_final(T)=RiskOverlayV0(alpha*w_maxdiv(T)+(1-alpha)*w_mom(T)); turnover/cost computed on final executable path.
-  - HK contract: return_level_hk_cny(t)=raw_hk_index_hkd(t)*hkd_cny(t); signal(T)=return_level(T-1); realized return for decision T=CNY level(T+1)/CNY level(T)-1.
-  - Exact accepted C0 anchors: calendar_cagr=0.059496; max_drawdown=-0.103874. R1 uses +0.005 relative CAGR; R2 allows at most 0.05 additional drawdown; R3 Sharpe>=0.80 and Calmar>=0.40; R4 net-minus-gross cost_cum_delta>=-0.03.
-  - C0/C1 must reconstruct with unchanged accepted implementations and assert parity to gen3 before evaluating C2-C4; parity failure is a STOP condition.
-  - Preserve accepted 2800-interval Track-C panel, 11 slots, parent parameters, timing, FX, fallback, stress regimes, no-lookahead semantics and evaluation table.
-  - Next RUN must return as a new unique READY_FOR_REVIEW handoff. No later gate is authorized here.
+  - Primary result is substantively accepted: C2-C4 do not meet the frozen useful-architecture definition because each fails one or more of R2-R4 despite CAGR improvement.
+  - C0 MaxDiv remains the risk-adjusted core under the frozen criteria; no result-informed blend retuning is authorized.
+  - Current R5 dominates() implementation incorrectly treats more-negative max_drawdown as better; fix direction before gate close.
+  - Manual review indicates the corrected R5 direction still leaves C2-C4 non-dominated by either parent, so the primary economic conclusion is not expected to change.
+  - Add synthetic R5 dominance/non-dominance tests and report actual pytest plus gate4_arch_blend.py --check execution evidence.
+  - Deterministically regenerate artifacts only as needed after the mechanical fix; candidate weights, thresholds, parent parameters, panel, timing, FX, cost convention and stress regimes must remain unchanged.
+  - No later gate is authorized until correction review completes.
 
-updated_at: 2026-08-10T01:34:00+08:00
+updated_at: 2026-08-10T08:33:00+08:00
