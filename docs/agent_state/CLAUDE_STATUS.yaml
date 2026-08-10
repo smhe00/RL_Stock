@@ -1,21 +1,20 @@
 protocol_version: 2
 actor: claude
-handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT_DOC_CLEANUP_001
-state: REVIEW_COMPLETE
-status: EXPERIMENT_CLOSED
+handoff_id: G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_001
+state: READY_FOR_REVIEW
 
-gate: 4
-phase: POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT_DOC_CLEANUP
-code_commit: aabe0ca
-packet: docs/review_packets/POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT.md
+gate: POST_L2
+phase: POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP
+code_commit: null
+packet: docs/review_packets/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP.md
 
 progress:
-  current_task: EXPERIMENT CLOSED. Reviewer: STOP_CLOSEOUT_DOC_CLEANUP_ACCEPTED_CLOSEOUT_COMPLETE_NO_BRANCH_AUTHORIZED (REVIEW_COMPLETE, authorized_next=[]). POST_L2 instrument execution-realism experiment formally closed as valid frozen STOP. Accepted CORRECTION_003 result: cum +47.21% / CAGR 9.74% / Sharpe 1.738 / MaxDD -4.24%; S1 PASS (worst year_2026 -0.006967), S2 PASS (fee 4.457bp / slippage 3.000bp), S3 FAIL (478/1011=47.28%), STOP TRUE. Structural STOP: HK_DIVIDEND=03110.HK not Southbound-eligible 461 days in window. Branches A-E unselected; any future redesign needs explicit selection + fresh PREP. PPO/SAC/TD3 closed; QMT live / FORWARD / PAPER / LIVE forbidden.
+  current_task: PREP only (no run/backtest). User explicitly selected new MaxDiv capital-efficiency research direction after prior execution-realism STOP closed. Reviewer authorized USER_SELECTED_FRESH_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_AUTHORIZED (REVIEW_COMPLETE). Frozen contract: M0 legacy (def cap 50%), M1 (op_cash 5%, CASH_LIKE<=5%, CN_DURATION<=20%, def<=30%), M2 principal (op_cash 5%, CASH_LIKE<=5%, CN_DURATION<=15%, def<=25%), M3 (op_cash 5%, CASH_LIKE=0, CN_DURATION<=15%, def<=20%), all of total NAV; sleeve 95% with transformed caps; MaxDiv 120/0.5 + RiskOverlayV0 semantics preserved; L1 artifact/commit bound; op_cash historical proxy = CASH_LIKE research series; forward sanity 7/8/9% + required_risk_return formula + 1.4% labeled; viability 8 pre-registered criteria; no expected-return in optimizer; stopped 03110 mapping NOT repaired/live-ready.
 
 last_consumed_review:
-  handoff_id: G4_POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT_DOC_CLEANUP_001
-  decision: STOP_CLOSEOUT_DOC_CLEANUP_ACCEPTED_CLOSEOUT_COMPLETE_NO_BRANCH_AUTHORIZED
+  handoff_id: USER_SELECTED_G4_POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_001
+  decision: USER_SELECTED_FRESH_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_AUTHORIZED
   state: REVIEW_COMPLETE
-  response: docs/reviewer_responses/POST_L2_INSTRUMENT_EXECUTION_REALISM_STOP_CLOSEOUT_DOC_CLEANUP_REVIEWER_RESPONSE.md
+  response: docs/reviewer_responses/POST_L2_MAXDIV_LIVE_CAPITAL_EFFICIENCY_PREP_AUTHORIZATION.md
 
-updated_at: 2026-08-10T14:30:00+08:00
+updated_at: 2026-08-10T15:00:00+08:00
