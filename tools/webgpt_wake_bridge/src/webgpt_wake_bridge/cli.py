@@ -14,14 +14,24 @@ from .markers import BRIDGE_OWNED_MARKERS, MARKER_ORDER, MARKER_OWNERS
 from .transport_git import GitTransport
 
 
-def _runtime(config: BridgeConfig) -> tuple[RemoteMarkerWatcher, object]:
+class _MarkerOnlySender:
+    """Sentinel used by commands that must never touch the browser."""
+
+    def send(self, handoff_id: str) -> None:  # pragma: no cover - a safety tripwire
+        raise BridgeError(f"browser sender disabled for marker-only command: {handoff_id}")
+
+
+def _runtime(config: BridgeConfig, *, browser_enabled: bool) -> tuple[RemoteMarkerWatcher, object]:
     logger = configure_logging(config)
-    sender = CdpFetchSender(
-        config.cdp_endpoint,
-        config.target_conversation_url or "",
-        config.chrome_profile_path,
-        playwright_module=config.playwright_module,
-    )
+    if browser_enabled:
+        sender = CdpFetchSender(
+            config.cdp_endpoint,
+            config.target_conversation_url or "",
+            config.chrome_profile_path,
+            playwright_module=config.playwright_module,
+        )
+    else:
+        sender = _MarkerOnlySender()
     transport = GitTransport(
         config.repo_root,
         config.runtime_dir,
@@ -101,22 +111,6 @@ def main() -> int:
             print(f"doorbell created: {path}")
             print("commit and push this marker as the FINAL push of the review-requesting handoff")
             return 0
-        watcher, _logger = _runtime(config)
-        if args.command == "once":
-            outcomes = watcher.scan_once()
-            print("\n".join(outcomes) if outcomes else "no eligible handoff")
-            return 0
-        if args.command == "daemon":
-            watcher.run_forever()
-            return 0
-        if args.command == "retry":
-            cleared = watcher.clear_failure(args.handoff)
-            print(f"explicit retry cleared uncertain/failed attempt: {cleared}")
-            return 0 if cleared else 1
-        if args.command == "reconcile":
-            result = watcher.reconcile_missing_trigger(args.handoff)
-            print(f"reconcile: {result}")
-            return 0 if result in {"RECONCILE_PUBLISHED", "ALREADY_PUBLISHED"} else 1
         if args.command == "noop":
             result = NoopLifecycleDiagnostic(
                 config.cdp_endpoint,
@@ -125,6 +119,24 @@ def main() -> int:
                 config.playwright_module,
             ).run()
             print(f"noop lifecycle: PASS target={result['after']['url']}")
+            return 0
+        if args.command in {"retry", "reconcile"}:
+            watcher, _logger = _runtime(config, browser_enabled=False)
+            if args.command == "retry":
+                cleared = watcher.clear_failure(args.handoff)
+                print(f"explicit retry cleared uncertain/failed attempt: {cleared}")
+                return 0 if cleared else 1
+            result = watcher.reconcile_missing_trigger(args.handoff)
+            print(f"reconcile: {result}")
+            return 0 if result in {"RECONCILE_PUBLISHED", "ALREADY_PUBLISHED"} else 1
+
+        watcher, _logger = _runtime(config, browser_enabled=True)
+        if args.command == "once":
+            outcomes = watcher.scan_once()
+            print("\n".join(outcomes) if outcomes else "no eligible handoff")
+            return 0
+        if args.command == "daemon":
+            watcher.run_forever()
             return 0
     except BridgeError as exc:
         print(f"webgpt-bridge error: {exc}")
