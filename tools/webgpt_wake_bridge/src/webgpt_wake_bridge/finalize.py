@@ -42,31 +42,37 @@ def _is_ancestor(repo: Path, ancestor: str, descendant: str) -> bool:
 def finalize_handoff(config: BridgeConfig, handoff_id: str, code_commit: str, expect_head: str = "") -> Path:
     """Create the Claude-owned review doorbell locally; caller commits/pushes it LAST.
 
-    The referenced code commit must resolve to a real commit object and already be
-    contained in the configured remote branch. A doorbell must never advertise work
-    that exists only locally or on an unrelated branch.
+    Preconditions are intentionally strict: the consumer worktree is clean, local
+    HEAD is remote-confirmed, and the referenced code commit is a real commit already
+    contained in the configured remote branch.
     """
     validate_handoff_id(handoff_id)
     if not GIT_SHA_RE.fullmatch(code_commit):
         raise BridgeError("code_commit must be a 7-40 character git SHA")
+    if expect_head and not GIT_SHA_RE.fullmatch(expect_head):
+        raise BridgeError("expect_head must be a 7-40 character git SHA")
 
     target = config.repo_root / config.marker_root / handoff_id / DOORBELL
     if target.exists():
         raise BridgeError("doorbell already exists locally; append-only fail closed")
+
+    # The agent must have committed everything except the doorbell itself before
+    # finalization. Ignored local config/runtime files do not appear here.
+    dirty = _git(config.repo_root, "status", "--porcelain", "--untracked-files=normal")
+    if dirty:
+        raise BridgeError("consumer worktree is not clean; commit/push all work before finalization")
 
     _git(config.repo_root, "fetch", config.remote, config.branch)
     remote_ref = f"{config.remote}/{config.branch}"
     remote_head = _git(config.repo_root, "rev-parse", remote_ref)
     local_head = _git(config.repo_root, "rev-parse", "HEAD")
     if expect_head:
-        expected = _git(config.repo_root, "rev-parse", expect_head)
+        expected = _git(config.repo_root, "rev-parse", f"{expect_head}^{{commit}}")
         if remote_head != expected:
             raise BridgeError(f"remote HEAD {remote_head} != expected {expected}")
     elif local_head != remote_head:
         raise BridgeError("local HEAD != remote HEAD; remote confirmation required before doorbell")
 
-    # Resolve the supplied SHA specifically as a commit object, then require it to be
-    # part of the remote branch already confirmed above.
     try:
         resolved_code_commit = _git(config.repo_root, "rev-parse", f"{code_commit}^{{commit}}")
     except BridgeError as exc:
@@ -75,8 +81,6 @@ def finalize_handoff(config: BridgeConfig, handoff_id: str, code_commit: str, ex
         raise BridgeError("code_commit is not contained in the configured remote branch")
 
     rel = config.marker_root / handoff_id / DOORBELL
-    # `git ls-tree` distinguishes a genuinely absent path (empty output) from a Git
-    # failure. Remote query failures must not be treated as permission to duplicate.
     remote_marker = _git(
         config.repo_root,
         "ls-tree",
