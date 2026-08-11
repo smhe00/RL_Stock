@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import json
 import subprocess
 from pathlib import Path
 
 from .errors import BridgeError
-from .markers import BRIDGE_OWNED_MARKERS, atomic_write_text, validate_handoff_id
+from .markers import (
+    BRIDGE_OWNED_MARKERS,
+    atomic_write_text,
+    validate_handoff_id,
+    validate_marker,
+)
 
 
 class GitTransport:
@@ -34,8 +40,6 @@ class GitTransport:
         if (self.worktree / ".git").exists():
             return
         try:
-            # Refresh the consumer repository's remote-tracking ref before creating
-            # the detached bridge worktree. This never modifies the consumer worktree.
             subprocess.run(
                 ["git", "fetch", self.remote, self.branch],
                 cwd=self.repo_root,
@@ -70,12 +74,7 @@ class GitTransport:
         return self.marker_root / handoff_id / name
 
     def marker_exists(self, handoff_id: str, name: str) -> bool:
-        """Return marker existence without conflating absence with Git failure.
-
-        `git ls-tree` exits successfully with empty output for an absent path. A
-        missing/broken remote ref remains a hard error. Swallowing every Git error as
-        "not found" could otherwise turn a transport failure into a duplicate send.
-        """
+        """Return marker existence without conflating absence with Git failure."""
         rel = self._rel(handoff_id, name)
         listing = self._git(
             "ls-tree", "--name-only", f"{self.remote}/{self.branch}", "--", rel.as_posix()
@@ -86,8 +85,6 @@ class GitTransport:
         rel = self._rel(handoff_id, name)
         if not self.marker_exists(handoff_id, name):
             return None
-        # Existence was positively established. A subsequent show failure is a real
-        # transport/remote-state error and must propagate fail closed.
         return self._git("show", f"{self.remote}/{self.branch}:{rel.as_posix()}")
 
     def list_handoff_dirs(self) -> set[str]:
@@ -104,9 +101,22 @@ class GitTransport:
                 dirs.add(parts[root_parts])
         return dirs
 
+    @staticmethod
+    def _validate_publish_payload(handoff_id: str, name: str, content: str) -> None:
+        try:
+            marker = json.loads(content)
+        except (TypeError, json.JSONDecodeError) as exc:
+            raise BridgeError("bridge marker content must be valid JSON") from exc
+        validate_marker(Path(name), marker, expected_owner="bridge_trigger")
+        if marker.get("handoff_id") != handoff_id:
+            raise BridgeError("bridge marker payload handoff_id does not match publish target")
+
     def publish_bridge_marker(self, handoff_id: str, name: str, content: str) -> None:
         if name not in BRIDGE_OWNED_MARKERS:
             raise BridgeError(f"bridge may only publish {sorted(BRIDGE_OWNED_MARKERS)}")
+        validate_handoff_id(handoff_id)
+        self._validate_publish_payload(handoff_id, name, content)
+
         rel = self._rel(handoff_id, name)
         last_error: BridgeError | None = None
         for _ in range(3):
@@ -122,12 +132,16 @@ class GitTransport:
                 self._git("add", "--", rel.as_posix())
                 self._git("commit", "-m", f"bridge: {handoff_id} {name}")
                 self._git("push", self.remote, f"HEAD:{self.branch}")
-                self.fetch()  # refresh authoritative remote-tracking ref after push
+                # Push success is the durable publication boundary. A later refresh is
+                # best-effort only; failure here must not turn a successful push into an
+                # apparent send/publication failure.
+                try:
+                    self.fetch()
+                except BridgeError:
+                    pass
                 return
             except BridgeError as exc:
                 last_error = exc
             finally:
-                # The commit object retains the marker; the next retry hard-resets the
-                # isolated worktree to the newest remote state.
                 target.unlink(missing_ok=True)
         raise BridgeError(f"marker publish failed after concurrent remote changes: {last_error}")
