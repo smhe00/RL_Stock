@@ -1,20 +1,20 @@
 protocol_version: 3
 actor: claude
-handoff_id: WEB_FETCH_BRIDGE_V1_E2E_TRANSPORT_CORRECTION_001_001
+handoff_id: WEB_FETCH_BRIDGE_V1_FAIL_CLOSED_AND_TRUE_E2E_RETRY_001_001
 state: READY_FOR_REVIEW
 
 gate: LOCAL_PROTOCOL
-phase: WEB_FETCH_BRIDGE_V1_E2E_TRANSPORT_CORRECTION_001
-code_commit: c977265
-packet: docs/review_packets/WEB_FETCH_BRIDGE_V1_E2E_TRANSPORT_CORRECTION_001.md
+phase: WEB_FETCH_BRIDGE_V1_FAIL_CLOSED_AND_TRUE_E2E_RETRY_001
+code_commit: 90264e3
+packet: docs/review_packets/WEB_FETCH_BRIDGE_V1_FAIL_CLOSED_AND_TRUE_E2E_RETRY_001.md
 
 progress:
-  current_task: WEB_FETCH_BRIDGE_V1 E2E transport correction delivered. GitHub marker transport (fetch/ls-tree/publish origin/main, STOP-WRITE no force push, isolated bridge worktree); autonomous marker-only daemon (5-10s poll, no codex, no research-YAML parsing); Claude doorbell claude_work_complete pushed LAST; trigger_fetch_sent remote append-only publish; remote ACK observation; send-success/publish-failure durable dedup NO auto-resend; exact-one-open chatgpt.com/c/* tab discovery fallback + target URL in ignored local config; playwright Python package installed (connect_over_cdp); session_alive_after_disconnect probe. 27 tests + --check PASSED. E2E smoke: daemon discovered fresh doorbell from origin/main + connected CDP (Chrome 151), but SEND_FAILED_FAIL_CLOSED (no open chatgpt.com/c/* conversation tab in dedicated profile; only chatgpt.com/ home). Minimal manual prerequisite: open exactly one /c/ conversation in C:\ChatGPT_Automation_Profile OR fill local target_conversation_url, then rerun --daemon.
+  current_task: WEB_FETCH_BRIDGE_V1 fail-closed + true E2E retry delivered. send-failure TERMINAL (daemon never auto-retries; explicit --retry-handoff clears exactly once; trigger_fetch_sent only after real submission); timezone-aware marker timestamp validation; explicit Playwright lifecycle (driver stop, no unrelated-tab navigation, session/tab probes). 33 tests + --check PASSED. True E2E smoke in progress: fresh doorbell pushed LAST with tz-aware UTC timestamp; daemon auto-discovers from origin/main.
 
 last_consumed_review:
-  handoff_id: WEB_FETCH_BRIDGE_V1_IMPLEMENTATION_AND_SINGLE_E2E_SMOKE_001
-  decision: WEB_FETCH_BRIDGE_V1_CORE_ACCEPTED_BUT_E2E_TRANSPORT_INCOMPLETE_CORRECTION_REQUIRED
+  handoff_id: WEB_FETCH_BRIDGE_V1_E2E_TRANSPORT_CORRECTION_001_001
+  decision: WEB_FETCH_BRIDGE_V1_TRANSPORT_CORE_ACCEPTED_E2E_RETRY_AND_FAIL_CLOSED_FIX_REQUIRED
   state: REVISIONS_REQUIRED
-  response: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_IMPLEMENTATION_REVIEWER_RESPONSE.md
+  response: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_E2E_TRANSPORT_CORRECTION_001_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-11T15:10:00+08:00
+updated_at: 2026-08-11T15:35:00+08:00
