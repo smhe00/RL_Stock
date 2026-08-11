@@ -1,0 +1,6 @@
+{
+  "protocol": "web_fetch_bridge_v1",
+  "handoff_id": "WEB_FETCH_BRIDGE_V1_COMPOSER_LOCATOR_CORRECTION_AND_SINGLE_E2E_001_001",
+  "event": "CHATGPT_FETCH_ACK",
+  "timestamp": "2026-08-11T16:21:00+08:00"
+}
