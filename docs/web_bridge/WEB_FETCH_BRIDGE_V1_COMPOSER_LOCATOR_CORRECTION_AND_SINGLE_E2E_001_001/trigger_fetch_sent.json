@@ -1,0 +1,6 @@
+{
+  "event": "trigger_fetch_sent.json",
+  "handoff_id": "WEB_FETCH_BRIDGE_V1_COMPOSER_LOCATOR_CORRECTION_AND_SINGLE_E2E_001_001",
+  "protocol": "web_fetch_bridge_v1",
+  "timestamp": "2026-08-11T08:21:38.935396+00:00"
+}
