@@ -1,0 +1,1 @@
+{"protocol": "web_fetch_bridge_v1", "handoff_id": "WEB_FETCH_BRIDGE_V1_COMPOSER_LOCATOR_CORRECTION_AND_SINGLE_E2E_001_001", "event": "claude_review_ack.json", "review_commit": "6fa5cb195c138a43a86593546480bb5f973d7638", "decision": "E2E_BROWSER_FETCH_SUCCEEDED_COMPOSER_FIX_ACCEPTED_ACK_TRIGGER_RACE_CORRECTION_REQUIRED", "timestamp": "2026-08-11T08:57:18.914996+00:00"}
