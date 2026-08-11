@@ -11,6 +11,7 @@ from .errors import BridgeError
 
 REMOTE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 BRANCH_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,255}$")
+REPOSITORY_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 
 
 @dataclass(frozen=True)
@@ -19,6 +20,7 @@ class BridgeConfig:
     marker_root: Path
     remote: str
     branch: str
+    review_repository: str | None
     cdp_endpoint: str
     chrome_profile_path: str
     target_conversation_url: str | None
@@ -100,6 +102,17 @@ def validate_target_conversation_url(raw: str | None, *, required: bool = False)
     return value
 
 
+def validate_repository_locator(raw: str | None, *, required: bool = False) -> str | None:
+    value = str(raw or "").strip().strip("/") or None
+    if value is None:
+        if required:
+            raise BridgeError("[review].repository is required for live Web review commands")
+        return None
+    if not REPOSITORY_RE.fullmatch(value) or value.startswith(".") or "/." in value:
+        raise BridgeError("[review].repository must be a GitHub owner/repo locator")
+    return value
+
+
 def validate_remote_name(raw: str) -> str:
     value = str(raw).strip()
     if not REMOTE_RE.fullmatch(value):
@@ -121,17 +134,23 @@ def validate_branch_name(raw: str) -> str:
     return value
 
 
-def load_config(path: Path, *, require_url: bool = False) -> BridgeConfig:
+def load_config(
+    path: Path,
+    *,
+    require_url: bool = False,
+    require_review_repository: bool = False,
+) -> BridgeConfig:
     try:
         raw = tomllib.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, tomllib.TOMLDecodeError) as exc:
         raise BridgeError(f"cannot read bridge config: {path}") from exc
 
     project = raw.get("project", {})
+    review = raw.get("review", {})
     browser = raw.get("browser", {})
     runtime = raw.get("runtime", {})
-    if not isinstance(project, dict) or not isinstance(browser, dict) or not isinstance(runtime, dict):
-        raise BridgeError("config sections [project], [browser], [runtime] must be tables")
+    if not all(isinstance(section, dict) for section in (project, review, browser, runtime)):
+        raise BridgeError("config sections [project], [review], [browser], [runtime] must be tables")
 
     repo_raw = str(project.get("repo_root", "")).strip()
     if not repo_raw:
@@ -160,14 +179,15 @@ def load_config(path: Path, *, require_url: bool = False) -> BridgeConfig:
         raise BridgeError("runtime_dir must not be the repository or filesystem root")
     if _is_within(runtime_dir, git_dir):
         raise BridgeError("runtime_dir must not be inside .git")
-    # Runtime may intentionally live outside the repo. If it lives inside, it must
-    # remain disjoint from the durable marker tree.
     if _is_within(runtime_dir, repo_root):
         if _is_within(runtime_dir, marker_abs) or _is_within(marker_abs, runtime_dir):
             raise BridgeError("runtime_dir and marker_root must not overlap")
 
     remote = validate_remote_name(str(project.get("remote", "origin")))
     branch = validate_branch_name(str(project.get("branch", "main")))
+    review_repository = validate_repository_locator(
+        str(review.get("repository", "")), required=require_review_repository
+    )
     cdp = validate_cdp_endpoint(str(browser.get("cdp_endpoint", "http://127.0.0.1:9222")))
     url = validate_target_conversation_url(
         str(browser.get("target_conversation_url", "")), required=require_url
@@ -178,6 +198,7 @@ def load_config(path: Path, *, require_url: bool = False) -> BridgeConfig:
         marker_root=marker_root,
         remote=remote,
         branch=branch,
+        review_repository=review_repository,
         cdp_endpoint=cdp,
         chrome_profile_path=str(browser.get("chrome_profile_path", r"C:\ChatGPT_Automation_Profile")),
         target_conversation_url=url,
