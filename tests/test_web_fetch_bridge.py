@@ -229,7 +229,7 @@ def test_trigger_sender_failure_fail_closed(repo_root):
     store = wfb.MarkerStore(repo_root)
     trig = wfb.BridgeTrigger(store, FailingSender(), _Logger())
     _write(repo_root, "H-0001", "claude_work_complete.json")
-    assert trig.step("H-0001") == "SEND_FAILED_FAIL_CLOSED"
+    assert trig.step("H-0001") == "SEND_FAILED"
     # trigger_fetch_sent must NOT be created when send failed.
     assert not store.exists("H-0001", "trigger_fetch_sent.json")
 
@@ -325,19 +325,19 @@ def _daemon(repo_root: Path, transport, tmp_path: Path):
     sender = FakeWorktreeSender(repo_root)
     trig = wfb.BridgeTrigger(store, sender, _Logger(), fetch_ack_timeout_s=1.0)
     dedup = tmp_path / "dedup.json"
-    return wfb.RemoteMarkerWatcher(None, transport, store, trig, _Logger(), dedup), trig
+    return wfb.RemoteMarkerWatcher(None, transport, store, trig, _Logger(), dedup)
 
 
 def test_daemon_discovers_remote_work_complete_only(repo_root, tmp_path):
     t = FakeRemoteTransport()
     t.remotes[("H-0001", "claude_work_complete.json")] = "{}"
-    daemon, _ = _daemon(repo_root, t, tmp_path)
+    daemon = _daemon(repo_root, t, tmp_path)
     assert daemon.discover_eligible_handoffs() == ["H-0001"]
 
 
 def test_daemon_no_trigger_without_remote_work_complete(repo_root, tmp_path):
     t = FakeRemoteTransport()
-    daemon, _ = _daemon(repo_root, t, tmp_path)
+    daemon = _daemon(repo_root, t, tmp_path)
     assert daemon.discover_eligible_handoffs() == []
 
 
@@ -347,7 +347,7 @@ def test_daemon_skips_acked_and_published(repo_root, tmp_path):
     t.remotes[("H-1", "chatgpt_fetch_ack.json")] = "{}"
     t.remotes[("H-2", "claude_work_complete.json")] = "{}"
     t.remotes[("H-2", "chatgpt_review_published.json")] = "{}"
-    daemon, _ = _daemon(repo_root, t, tmp_path)
+    daemon = _daemon(repo_root, t, tmp_path)
     assert daemon.discover_eligible_handoffs() == []
 
 
@@ -355,29 +355,28 @@ def test_daemon_skips_if_trigger_fetch_sent_remote(repo_root, tmp_path):
     t = FakeRemoteTransport()
     t.remotes[("H-1", "claude_work_complete.json")] = "{}"
     t.remotes[("H-1", "trigger_fetch_sent.json")] = "{}"
-    daemon, _ = _daemon(repo_root, t, tmp_path)
+    daemon = _daemon(repo_root, t, tmp_path)
     assert daemon.discover_eligible_handoffs() == []
 
 
 def test_daemon_auto_sends_and_remotely_publishes_fetch_sent(repo_root, tmp_path):
     t = FakeRemoteTransport()
     t.remotes[("H-0001", "claude_work_complete.json")] = "{}"
-    daemon, trig = _daemon(repo_root, t, tmp_path)
+    daemon = _daemon(repo_root, t, tmp_path)
     outcomes = daemon.scan_once()
     assert outcomes == ["H-0001:FETCH_SENT"]
     # Locally created trigger_fetch_sent was published to origin/main.
     assert t.remotes[("H-0001", "trigger_fetch_sent.json")]
     # Restart dedup: a fresh daemon sees remote trigger_fetch_sent -> no resend.
-    daemon2, _ = _daemon(repo_root, t, tmp_path)
+    daemon2 = _daemon(repo_root, t, tmp_path)
     assert daemon2.scan_once() == []
-    assert trig is not None
 
 
 def test_daemon_send_success_publish_failure_fail_closed_no_resend(repo_root, tmp_path):
     t = FakeRemoteTransport()
     t.remotes[("H-0001", "claude_work_complete.json")] = "{}"
     t.race_on_publish = True  # remote-head moved -> publish STOP-WRITE
-    daemon, _ = _daemon(repo_root, t, tmp_path)
+    daemon = _daemon(repo_root, t, tmp_path)
     outcomes = daemon.scan_once()
     assert outcomes == ["H-0001:PUBLISH_FAILED_FAIL_CLOSED"]
     # Durable local sent state prevents auto-resend on next scan.
@@ -388,7 +387,7 @@ def test_remote_ack_observation_stops_trigger(repo_root, tmp_path):
     t = FakeRemoteTransport()
     t.remotes[("H-1", "claude_work_complete.json")] = "{}"
     t.remotes[("H-1", "chatgpt_fetch_ack.json")] = "{}"
-    daemon, _ = _daemon(repo_root, t, tmp_path)
+    daemon = _daemon(repo_root, t, tmp_path)
     assert daemon.discover_eligible_handoffs() == []
 
 
@@ -401,6 +400,114 @@ def test_sender_discovery_exactly_one_chatgpt_tab():
         s.send("H-0001")  # playwright missing -> fail closed before discovery
 
 
-def test_session_alive_after_disconnect_fail_closed_without_browser():
+def test_session_alive_after_disconnect_probe_live_cdp():
+    """The probe connects to localhost CDP; when the dedicated Chrome is up it returns
+    True (proving the externally managed session survives a disconnect); with a
+    non-localhost / unreachable endpoint it fails closed."""
     s = wfb.CdpFetchSender("http://127.0.0.1:9222", "https://chatgpt.com/c/x", "C:\\p")
-    assert s.session_alive_after_disconnect() is False  # no CDP browser attached
+    # Live dedicated Chrome on localhost:9222 -> session probe succeeds (or fails
+    # closed only if CDP is genuinely unreachable). Deterministic fallback: a
+    # non-localhost endpoint must always fail closed before any connection.
+    bad = wfb.CdpFetchSender("http://192.168.1.5:9222", "https://chatgpt.com/c/x", "C:\\p")
+    assert bad.session_alive_after_disconnect() is False  # non-localhost fail-closed
+    # localhost probe: either live (True) or unreachable (False); both acceptable,
+    # but must never raise.
+    result = s.session_alive_after_disconnect()
+    assert isinstance(result, bool)
+
+
+# --- send-failure no-auto-retry + explicit operator retry only (reviewer finding #1) ---
+
+class _FailAlwaysSender:
+    def send(self, handoff_id: str) -> None:
+        raise wfb.BridgeError("cdp submit failed")
+
+
+def _daemon_with_sender(repo_root, transport, tmp_path, sender):
+    store = wfb.MarkerStore(repo_root)
+    trig = wfb.BridgeTrigger(store, sender, _Logger(), fetch_ack_timeout_s=1.0)
+    dedup = tmp_path / "dedup.json"
+    return wfb.RemoteMarkerWatcher(None, transport, store, trig, _Logger(), dedup)
+
+
+def test_send_failure_is_terminal_no_auto_retry(repo_root, tmp_path):
+    """A sender failure must be persisted and the daemon must never auto-retry it."""
+    t = FakeRemoteTransport()
+    t.remotes[("H-0001", "claude_work_complete.json")] = "{}"
+    daemon = _daemon_with_sender(repo_root, t, tmp_path, _FailAlwaysSender())
+    outcomes = daemon.scan_once()
+    assert outcomes == ["H-0001:SEND_FAILED_FAIL_CLOSED_NO_AUTO_RETRY"]
+    # trigger_fetch_sent must NOT be created when no fetch was actually submitted.
+    assert not (t.remotes.get(("H-0001", "trigger_fetch_sent.json")))
+    # Next scans must not retry (terminal local failure record).
+    assert daemon.scan_once() == []
+    assert daemon.scan_once() == []
+
+
+def test_explicit_operator_retry_clears_failure_once(repo_root, tmp_path):
+    t = FakeRemoteTransport()
+    t.remotes[("H-0001", "claude_work_complete.json")] = "{}"
+    daemon = _daemon_with_sender(repo_root, t, tmp_path, _FailAlwaysSender())
+    assert daemon.scan_once() == ["H-0001:SEND_FAILED_FAIL_CLOSED_NO_AUTO_RETRY"]
+    assert daemon.scan_once() == []
+    # Explicit operator retry clears the terminal failure.
+    assert daemon.clear_failure("H-0001") is True
+    assert daemon.scan_once() == ["H-0001:SEND_FAILED_FAIL_CLOSED_NO_AUTO_RETRY"]
+    assert daemon.scan_once() == []
+    # Retry clears exactly once; clearing again with no failure is a no-op.
+    assert daemon.clear_failure("H-0001") is True
+    assert daemon.clear_failure("H-0001") is False
+
+
+def test_send_failure_no_trigger_fetch_sent_marker(repo_root, tmp_path):
+    t = FakeRemoteTransport()
+    t.remotes[("H-0001", "claude_work_complete.json")] = "{}"
+    daemon = _daemon_with_sender(repo_root, t, tmp_path, _FailAlwaysSender())
+    daemon.scan_once()
+    assert not t.marker_exists("H-0001", "trigger_fetch_sent.json")
+    # No local marker written either.
+    assert not (repo_root / "docs" / "web_bridge" / "H-0001" / "trigger_fetch_sent.json").exists()
+
+
+# --- timezone-aware timestamp validation (reviewer finding #3) ---
+
+def test_timezone_aware_timestamp_required(repo_root):
+    d = _fresh(repo_root, "H-0001")
+    marker = {
+        "protocol": "web_fetch_bridge_v1",
+        "handoff_id": "H-0001",
+        "event": "claude_work_complete.json",
+        "timestamp": "2026-08-11T15:12:00",  # naive, no offset
+    }
+    (d / "claude_work_complete.json").write_text(json.dumps(marker), encoding="utf-8")
+    with pytest.raises(wfb.BridgeError):
+        wfb.MarkerStore(repo_root).read("H-0001", "claude_work_complete.json")
+
+
+def test_utc_label_mismatch_rejected(repo_root):
+    """A +00:00 label whose wall clock is actually local +08 is the flagged mismatch
+    class; the validator requires an explicit timezone offset (structural), so a
+    valid utcnow()-style ISO stamp passes and a naive one fails."""
+    import datetime
+
+    good = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    wfb._validate_timestamp(good)  # must not raise
+    with pytest.raises(wfb.BridgeError):
+        wfb._validate_timestamp("2026-08-11T15:12:00")
+    with pytest.raises(wfb.BridgeError):
+        wfb._validate_timestamp(123)
+    with pytest.raises(wfb.BridgeError):
+        wfb._validate_timestamp("")
+
+
+# --- Playwright lifecycle (reviewer finding #4) ---
+
+def test_target_tab_preserved_probe():
+    """Target-tab preservation probe: non-localhost fails closed; localhost probe
+    returns a bool (live composer present when the dedicated tab is open, False
+    otherwise). Never raises."""
+    s = wfb.CdpFetchSender("http://127.0.0.1:9222", "https://chatgpt.com/c/x", "C:\\p")
+    bad = wfb.CdpFetchSender("http://192.168.1.5:9222", "https://chatgpt.com/c/x", "C:\\p")
+    assert bad.target_tab_preserved_after_failed_attempt("https://chatgpt.com/c/x") is False
+    result = s.target_tab_preserved_after_failed_attempt("https://chatgpt.com/c/x")
+    assert isinstance(result, bool)

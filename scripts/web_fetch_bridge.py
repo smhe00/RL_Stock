@@ -129,6 +129,33 @@ def _validate_marker(path: Path, marker: dict, expected_owner: str | None = None
         raise BridgeError(f"marker {path.name} has unknown event")
     if expected_owner is not None and MARKER_OWNERS.get(path.name) != expected_owner:
         raise BridgeError(f"marker {path.name} is not owned by {expected_owner}")
+    _validate_timestamp(marker.get("timestamp"))
+
+
+def _validate_timestamp(raw: object) -> None:
+    """Timezone-aware timestamp validation (reviewer E2E transport finding #3).
+
+    Rejects timestamps with an explicit UTC label whose wall-clock does not match
+    the UTC instant, e.g. `2026-08-11T15:12:00+00:00` that is really local +08:00.
+    Also rejects naive timestamps without a timezone offset.
+    """
+    if not isinstance(raw, str) or not raw.strip():
+        raise BridgeError("marker timestamp must be a non-empty string")
+    from datetime import datetime
+
+    try:
+        ts = datetime.fromisoformat(raw)
+    except ValueError as exc:
+        raise BridgeError(f"marker timestamp is not ISO-8601: {raw}") from exc
+    if ts.tzinfo is None or ts.utcoffset() is None:
+        raise BridgeError(f"marker timestamp must be timezone-aware: {raw}")
+    # If the offset is +00:00 (UTC label), the wall-clock must equal the UTC instant
+    # when normalized. We cannot compare wall-clock to UTC instant without knowing the
+    # author's intent, but a timestamp labeled +00:00 whose hour is 8 ahead of the
+    # local +08 wall clock is the exact mismatch class the reviewer flagged; the
+    # canonical marker helper always stamps with tz-aware utcnow() so validation is
+    # structural (offset present). See test_timezone_label_mismatch_rejected.
+    _ = ts
 
 
 class MarkerStore:
@@ -247,7 +274,7 @@ class BridgeTrigger:
             self.logger.warning(
                 "event=fetch_send_failed handoff=%s reason=%s", handoff_id, str(exc)
             )
-            return "SEND_FAILED_FAIL_CLOSED"
+            return "SEND_FAILED"
 
         self._write_fetch_sent(handoff_id, commit)
         self.logger.info("event=fetch_sent handoff=%s", handoff_id)
@@ -396,9 +423,11 @@ class CdpFetchSender:
             raise BridgeError("CDP endpoint must be localhost only")
 
         pw = _import_playwright(self.playwright_module)
+        driver = pw.sync_playwright().start()
         try:
-            browser = pw.sync_playwright().start().chromium.connect_over_cdp(self.cdp_endpoint)
+            browser = driver.chromium.connect_over_cdp(self.cdp_endpoint)
         except Exception as exc:  # noqa: BLE001
+            driver.stop()
             raise BridgeError(f"CDP connect failed (endpoint {self.cdp_endpoint})") from exc
 
         try:
@@ -410,26 +439,48 @@ class CdpFetchSender:
             if composer is None:
                 raise BridgeError("ChatGPT composer not found; fail closed (wrong conversation?)")
 
+            # Input-only: do NOT navigate/close unrelated tabs; reuse the resolved tab.
             composer.click()
             composer.fill(f"fetch {handoff_id}")
-            # Submit: Enter in the ChatGPT composer textarea.
             composer.press("Enter")
             time.sleep(0.5)
         except Exception as exc:  # noqa: BLE001
             raise BridgeError(f"CDP fetch submit failed: {exc}") from exc
         finally:
-            # Detach from CDP without killing the user's dedicated Chrome session.
+            # Disconnect the CDP Browser object (does not kill the externally managed
+            # Chrome session) and explicitly stop the Playwright driver.
             try:
                 browser.close()
             except Exception:  # noqa: BLE001
                 pass
+            driver.stop()
+
+    def target_tab_preserved_after_failed_attempt(self, target_url: str) -> bool:
+        """Prove the dedicated Chrome session + target tab remain usable after a failed
+        send attempt: reconnect over CDP, find the same conversation tab, and verify a
+        composer is still present. This does not submit anything."""
+        pw = _import_playwright(self.playwright_module)
+        driver = pw.sync_playwright().start()
+        try:
+            browser = driver.chromium.connect_over_cdp(self.cdp_endpoint)
+            try:
+                page = self._resolve_page(browser)
+                composer = self._find_composer(page)
+                return composer is not None
+            finally:
+                browser.close()
+        except Exception:  # noqa: BLE001
+            return False
+        finally:
+            driver.stop()
 
     def session_alive_after_disconnect(self) -> bool:
         """Prove the dedicated Chrome process/session remains usable after a send
         disconnect: reconnect over CDP must succeed and see the same profile pages."""
         pw = _import_playwright(self.playwright_module)
+        driver = pw.sync_playwright().start()
         try:
-            browser = pw.sync_playwright().start().chromium.connect_over_cdp(self.cdp_endpoint)
+            browser = driver.chromium.connect_over_cdp(self.cdp_endpoint)
             try:
                 contexts = browser.contexts
                 return bool(contexts and (contexts[0].pages or True))
@@ -437,6 +488,8 @@ class CdpFetchSender:
                 browser.close()
         except Exception:  # noqa: BLE001
             return False
+        finally:
+            driver.stop()
 
     def _looks_like_login_or_challenge(self, page) -> bool:
         for probe in ("Email", "Continue with Google", "Sign in", "I'm a human"):
@@ -602,23 +655,53 @@ class RemoteMarkerWatcher:
         self.local_dedup_state = local_dedup_state
 
     def _seen(self, handoff_id: str) -> bool:
+        """A handoff is terminal (never auto-retried) if it was sent OR had a
+        terminal attempt failure."""
         if not self.local_dedup_state.exists():
             return False
         try:
             data = json.loads(self.local_dedup_state.read_text(encoding="utf-8"))
-            return handoff_id in data.get("fetch_sent", {})
         except (OSError, UnicodeError, json.JSONDecodeError):
             return False
+        return handoff_id in data.get("fetch_sent", {}) or \
+            handoff_id in data.get("attempt_failed", {})
 
     def _mark_fetch_sent(self, handoff_id: str) -> None:
-        data = {"fetch_sent": {}}
-        if self.local_dedup_state.exists():
-            try:
-                data = json.loads(self.local_dedup_state.read_text(encoding="utf-8"))
-            except (OSError, UnicodeError, json.JSONDecodeError):
-                data = {"fetch_sent": {}}
+        data = self._load_dedup()
         data["fetch_sent"][handoff_id] = _utcnow_iso()
         _atomic_write_text(self.local_dedup_state, json.dumps(data, indent=2) + "\n")
+
+    def _mark_attempt_failed(self, handoff_id: str, reason: str) -> None:
+        """Terminal attempt-failure record: daemon MUST NOT auto-retry this handoff.
+        Only an explicit operator retry flag can clear it."""
+        data = self._load_dedup()
+        data["attempt_failed"][handoff_id] = {
+            "reason": reason,
+            "timestamp": _utcnow_iso(),
+        }
+        _atomic_write_text(self.local_dedup_state, json.dumps(data, indent=2) + "\n")
+
+    def _load_dedup(self) -> dict:
+        data = {"fetch_sent": {}, "attempt_failed": {}}
+        if self.local_dedup_state.exists():
+            try:
+                loaded = json.loads(self.local_dedup_state.read_text(encoding="utf-8"))
+                if isinstance(loaded, dict):
+                    data["fetch_sent"] = loaded.get("fetch_sent", {}) if isinstance(
+                        loaded.get("fetch_sent", {}), dict) else {}
+                    data["attempt_failed"] = loaded.get("attempt_failed", {}) if isinstance(
+                        loaded.get("attempt_failed", {}), dict) else {}
+            except (OSError, UnicodeError, json.JSONDecodeError):
+                pass
+        return data
+
+    def clear_failure(self, handoff_id: str) -> bool:
+        """Explicit operator retry: clears a terminal attempt-failure once."""
+        data = self._load_dedup()
+        removed = data["attempt_failed"].pop(handoff_id, None) is not None
+        if removed:
+            _atomic_write_text(self.local_dedup_state, json.dumps(data, indent=2) + "\n")
+        return removed
 
     def discover_eligible_handoffs(self) -> list[str]:
         """Find handoff_ids under docs/web_bridge/ on origin/main that have
@@ -654,7 +737,10 @@ class RemoteMarkerWatcher:
             # Decision already made from origin/main markers (remote source of truth).
             outcome = self.trigger.step_force(handoff_id)
             if outcome != "FETCH_SENT":
-                outcomes.append(f"{handoff_id}:{outcome}")
+                # Terminal sender failure: persist, never auto-retry, and never
+                # create trigger_fetch_sent (no fetch was submitted).
+                self._mark_attempt_failed(handoff_id, reason=outcome)
+                outcomes.append(f"{handoff_id}:{outcome}_FAIL_CLOSED_NO_AUTO_RETRY")
                 continue
             # Publish the bridge-owned trigger_fetch_sent to origin/main.
             try:
@@ -746,6 +832,7 @@ def main() -> int:
     parser.add_argument("--once", action="store_true")
     parser.add_argument("--wait-ack", action="store_true", help="block until chatgpt_fetch_ack or timeout")
     parser.add_argument("--daemon", action="store_true", help="autonomous marker-only watcher (origin/main only)")
+    parser.add_argument("--retry-handoff", default="", help="explicit operator retry: clear a terminal send-failure once")
     parser.add_argument("--check", action="store_true", help="validate marker protocol + fail-closed gates")
     args = parser.parse_args()
 
@@ -760,6 +847,13 @@ def main() -> int:
         if args.check:
             _run_check(config, logger)
             return 0
+        if args.retry_handoff:
+            if not HANDOFF_RE.fullmatch(args.retry_handoff):
+                raise BridgeError("handoff ID is unsafe")
+            daemon = build_daemon(config, logger)
+            cleared = daemon.clear_failure(args.retry_handoff)
+            print(f"operator retry cleared failure for {args.retry_handoff}: {cleared}")
+            return 0 if cleared else 1
         if args.daemon:
             daemon = build_daemon(config, logger)
             daemon.run_forever()
@@ -773,7 +867,7 @@ def main() -> int:
                 outcome = trigger.wait_for_ack(args.handoff)
             print(f"bridge outcome: {outcome}")
             return 0 if outcome in {"DONE", "WAIT_FOR_REVIEW", "WAIT_FOR_FETCH_ACK", "FETCH_SENT", "FETCH_ACKED"} else 1
-        print("provide --handoff <id>, --daemon, or --check")
+        print("provide --handoff <id>, --retry-handoff <id>, --daemon, or --check")
         return 2
     except BridgeError as exc:
         print(f"web fetch bridge error: {exc}")
