@@ -43,12 +43,14 @@ def head(repo: Path) -> str:
 
 def test_finalize_creates_tz_aware_append_only_doorbell(tmp_path):
     repo = init_repo(tmp_path)
-    path = finalize_handoff(cfg(repo), "DEMO_001", head(repo)[:7])
+    expected = head(repo)
+    path = finalize_handoff(cfg(repo), "DEMO_001", expected[:7])
     marker = json.loads(path.read_text(encoding="utf-8"))
     assert marker["handoff_id"] == "DEMO_001"
     assert marker["timestamp"].endswith("+00:00")
+    assert marker["code_commit"] == expected
     with pytest.raises(BridgeError):
-        finalize_handoff(cfg(repo), "DEMO_001", head(repo)[:7])
+        finalize_handoff(cfg(repo), "DEMO_001", expected[:7])
 
 
 def test_finalize_fails_when_local_not_remote_confirmed(tmp_path):
@@ -58,3 +60,20 @@ def test_finalize_fails_when_local_not_remote_confirmed(tmp_path):
     subprocess.run(["git", "-C", str(repo), "commit", "-q", "-m", "local"], check=True)
     with pytest.raises(BridgeError):
         finalize_handoff(cfg(repo), "DEMO_002", head(repo)[:7])
+
+
+def test_finalize_rejects_nonexistent_or_unrelated_code_commit(tmp_path):
+    repo = init_repo(tmp_path)
+    with pytest.raises(BridgeError):
+        finalize_handoff(cfg(repo), "DEMO_003", "deadbee")
+
+    # Create a real commit on a side branch, then return to remote-confirmed main.
+    subprocess.run(["git", "-C", str(repo), "checkout", "-q", "-b", "side"], check=True)
+    (repo / "side.txt").write_text("side\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(repo), "add", "side.txt"], check=True)
+    subprocess.run(["git", "-C", str(repo), "commit", "-q", "-m", "side"], check=True)
+    side_commit = head(repo)
+    subprocess.run(["git", "-C", str(repo), "checkout", "-q", "main"], check=True)
+    assert head(repo) != side_commit
+    with pytest.raises(BridgeError):
+        finalize_handoff(cfg(repo), "DEMO_004", side_commit)
