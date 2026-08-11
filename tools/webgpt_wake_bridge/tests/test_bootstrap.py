@@ -24,7 +24,7 @@ def test_default_bootstrap_locations_are_user_local_not_consumer_repo(tmp_path, 
     repo = make_repo(tmp_path)
     home = tmp_path / "home"
     home.mkdir()
-    monkeypatch.setattr(Path, "home", lambda: home)
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
     config_path = default_config_path(repo)
     runtime = default_runtime_dir(repo)
     assert str(config_path).startswith(str(home))
