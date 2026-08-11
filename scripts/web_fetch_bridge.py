@@ -232,7 +232,14 @@ class BridgeTrigger:
         decision = self.decide(handoff_id)
         if decision != "SEND_FETCH":
             return decision
+        return self._send_and_write(handoff_id, commit)
 
+    def step_force(self, handoff_id: str, commit: str | None = None) -> str:
+        """Send without a local decide gate. Used by the daemon only after the
+        eligibility decision was made from origin/main markers (remote source of truth)."""
+        return self._send_and_write(handoff_id, commit)
+
+    def _send_and_write(self, handoff_id: str, commit: str | None = None) -> str:
         self.logger.info("event=fetch_send_start handoff=%s", handoff_id)
         try:
             self.sender.send(handoff_id)
@@ -352,11 +359,39 @@ class CdpFetchSender:
         self.playwright_module = playwright_module
         self.page_timeout_ms = page_timeout_ms
 
+    def _resolve_page(self, browser):
+        """Pick the dedicated ChatGPT page: target URL if configured, else exactly one
+        already-open https://chatgpt.com/c/* conversation tab. 0 or >1 -> fail closed."""
+        contexts = browser.contexts
+        if not contexts:
+            raise BridgeError("no browser context; dedicated Chrome profile not attached")
+        pages = [p for c in contexts for p in c.pages]
+        if self.target_url:
+            # Prefer the configured conversation URL. Navigate only if we don't
+            # already sit on it; otherwise reuse the tab.
+            page = pages[0] if pages else contexts[0].new_page()
+            page.set_default_timeout(self.page_timeout_ms)
+            if self.target_url not in (page.url or ""):
+                page.goto(self.target_url, wait_until="domcontentloaded")
+            return page
+        # Fallback: discover exactly one open chatgpt.com/c/* conversation tab.
+        chat_pages = [p for p in pages if (p.url or "").startswith("https://chatgpt.com/c/")]
+        if len(chat_pages) == 0:
+            raise BridgeError(
+                "no already-open ChatGPT conversation tab found in dedicated CDP profile; "
+                "provide target_conversation_url or open exactly one conversation"
+            )
+        if len(chat_pages) > 1:
+            raise BridgeError(
+                "multiple already-open ChatGPT conversation tabs; fail closed (never guess)"
+            )
+        page = chat_pages[0]
+        page.set_default_timeout(self.page_timeout_ms)
+        return page
+
     def send(self, handoff_id: str) -> None:
         if not HANDOFF_RE.fullmatch(handoff_id):
             raise BridgeError("handoff_id is unsafe")
-        if not self.target_url:
-            raise BridgeError("no dedicated ChatGPT conversation URL configured")
         if not self.cdp_endpoint.lower().startswith("http://127.0.0.1"):
             raise BridgeError("CDP endpoint must be localhost only")
 
@@ -367,16 +402,7 @@ class CdpFetchSender:
             raise BridgeError(f"CDP connect failed (endpoint {self.cdp_endpoint})") from exc
 
         try:
-            contexts = browser.contexts
-            if not contexts:
-                raise BridgeError("no browser context; dedicated Chrome profile not attached")
-            page = contexts[0].pages[0] if contexts[0].pages else None
-            if page is None:
-                page = contexts[0].new_page()
-            page.set_default_timeout(self.page_timeout_ms)
-
-            # Navigate to the dedicated conversation; fail closed if auth gate appears.
-            page.goto(self.target_url, wait_until="domcontentloaded")
+            page = self._resolve_page(browser)
             if self._looks_like_login_or_challenge(page):
                 raise BridgeError("login screen or CAPTCHA/challenge detected; fail closed")
 
@@ -392,10 +418,25 @@ class CdpFetchSender:
         except Exception as exc:  # noqa: BLE001
             raise BridgeError(f"CDP fetch submit failed: {exc}") from exc
         finally:
+            # Detach from CDP without killing the user's dedicated Chrome session.
             try:
                 browser.close()
             except Exception:  # noqa: BLE001
                 pass
+
+    def session_alive_after_disconnect(self) -> bool:
+        """Prove the dedicated Chrome process/session remains usable after a send
+        disconnect: reconnect over CDP must succeed and see the same profile pages."""
+        pw = _import_playwright(self.playwright_module)
+        try:
+            browser = pw.sync_playwright().start().chromium.connect_over_cdp(self.cdp_endpoint)
+            try:
+                contexts = browser.contexts
+                return bool(contexts and (contexts[0].pages or True))
+            finally:
+                browser.close()
+        except Exception:  # noqa: BLE001
+            return False
 
     def _looks_like_login_or_challenge(self, page) -> bool:
         for probe in ("Email", "Continue with Google", "Sign in", "I'm a human"):
@@ -407,7 +448,8 @@ class CdpFetchSender:
         return False
 
     def _find_composer(self, page):
-        """Locate the ChatGPT composer textarea. Fail closed if ambiguous/missing."""
+        """Locate the current ChatGPT composer textarea. Fail closed on ambiguity.
+        Input-only: never inspects assistant output; only the composer input element."""
         try:
             textareas = page.locator("textarea").all()
         except Exception:  # noqa: BLE001
@@ -415,9 +457,238 @@ class CdpFetchSender:
         if len(textareas) == 0:
             return None
         if len(textareas) > 1:
-            # Multiple composers is ambiguous -> fail closed (never guess).
             return None
         return textareas[0]
+
+
+class GitTransport:
+    """Safe GitHub marker transport.
+
+    - fetches/refreshes origin/main without mutating a dirty Claude worktree;
+    - commits/pushes bridge-owned markers (trigger_fetch_sent.json) append-only;
+    - remote-head changes fail closed (STOP-WRITE); never force-push;
+    - uses an isolated bridge clone/worktree so a dirty Claude worktree is never
+      disturbed.
+    """
+
+    def __init__(self, repo_root: Path, runtime_dir: Path, remote: str, branch: str):
+        self.repo_root = repo_root
+        self.runtime_dir = runtime_dir
+        self.remote = remote
+        self.branch = branch
+        self.worktree = runtime_dir / "bridge_worktree"
+
+    def _git(self, *args: str) -> str:
+        import subprocess
+
+        try:
+            return subprocess.check_output(
+                ["git", *args],
+                cwd=self.worktree if self.worktree.is_dir() else self.repo_root,
+                text=True,
+                encoding="utf-8",
+                stderr=subprocess.STDOUT,
+            ).strip()
+        except (OSError, UnicodeError, subprocess.CalledProcessError) as exc:
+            raise BridgeError(f"git command failed: {' '.join(args[:2])}") from exc
+
+    def _ensure_worktree(self) -> None:
+        """Create/refresh an isolated bridge worktree without touching Claude's worktree."""
+        self.runtime_dir.mkdir(parents=True, exist_ok=True)
+        if not (self.worktree / ".git").exists():
+            import subprocess
+
+            try:
+                subprocess.run(
+                    ["git", "worktree", "add", "--detach", str(self.worktree), "origin/main"],
+                    cwd=self.repo_root,
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+            except Exception as exc:  # noqa: BLE001
+                raise BridgeError(f"cannot create bridge worktree: {exc}") from exc
+
+    def fetch(self) -> None:
+        self._ensure_worktree()
+        self._git("fetch", self.remote, self.branch)
+
+    def remote_head(self) -> str:
+        self.fetch()
+        return self._git("rev-parse", f"{self.remote}/{self.branch}")
+
+    def marker_exists(self, handoff_id: str, name: str) -> bool:
+        path = Path("docs") / "web_bridge" / handoff_id / name
+        try:
+            self._git("cat-file", "-e", f"{self.remote}/{self.branch}:{path.as_posix()}")
+            return True
+        except BridgeError:
+            return False
+
+    def marker_text(self, handoff_id: str, name: str) -> str | None:
+        path = Path("docs") / "web_bridge" / handoff_id / name
+        try:
+            return self._git("show", f"{self.remote}/{self.branch}:{path.as_posix()}")
+        except BridgeError:
+            return None
+
+    def list_bridge_handoff_dirs(self) -> set[str]:
+        """All handoff dirs under docs/web_bridge/ on origin/main (git ls-tree)."""
+        self.fetch()
+        try:
+            tree = self._git(
+                "ls-tree", "-r", "--name-only",
+                f"{self.remote}/{self.branch}", "docs/web_bridge/",
+            )
+        except BridgeError:
+            return set()
+        dirs: set[str] = set()
+        for line in tree.splitlines():
+            parts = line.split("/")
+            if len(parts) >= 3:
+                dirs.add(parts[2])
+        return dirs
+
+    def publish_bridge_marker(self, handoff_id: str, name: str, content: str) -> None:
+        """Append-only publish of a bridge-owned marker to origin/main.
+
+        Remote-head race -> STOP-WRITE (never force-push).
+        """
+        if name not in BRIDGE_OWNED_MARKERS:
+            raise BridgeError(f"bridge may only publish {sorted(BRIDGE_OWNED_MARKERS)}")
+        self.fetch()
+        head_before = self._git("rev-parse", f"{self.remote}/{self.branch}")
+        rel = Path("docs") / "web_bridge" / handoff_id / name
+        target = self.worktree / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if target.exists():
+            raise BridgeError(f"bridge marker {name} already exists; append-only")
+        _atomic_write_text(target, content)
+
+        # Stage only the marker path, commit, then verify remote-head unchanged before push.
+        try:
+            self._git("add", "--", rel.as_posix())
+            self._git("commit", "-m", f"bridge(local-protocol): {handoff_id} {name}")
+        finally:
+            target.unlink(missing_ok=True)  # never leave untracked marker in worktree
+        self.fetch()
+        head_after = self._git("rev-parse", f"{self.remote}/{self.branch}")
+        if head_after != head_before:
+            raise BridgeError("remote-head changed during bridge publish; STOP-WRITE (no force push)")
+        self._git("push", self.remote, f"HEAD:{self.branch}")
+
+
+class RemoteMarkerWatcher:
+    """Autonomous marker-only daemon.
+
+    Discovers eligible handoffs by inspecting GitHub/origin/main bridge markers ONLY.
+    Never parses research YAML. Default poll interval 5-10 s. Never invokes codex.
+    """
+
+    def __init__(
+        self,
+        config: BridgeConfig,
+        transport: GitTransport,
+        store: MarkerStore,
+        trigger: BridgeTrigger,
+        logger: logging.Logger,
+        local_dedup_state: Path,
+    ):
+        self.config = config
+        self.transport = transport
+        self.store = store
+        self.trigger = trigger
+        self.logger = logger
+        self.local_dedup_state = local_dedup_state
+
+    def _seen(self, handoff_id: str) -> bool:
+        if not self.local_dedup_state.exists():
+            return False
+        try:
+            data = json.loads(self.local_dedup_state.read_text(encoding="utf-8"))
+            return handoff_id in data.get("fetch_sent", {})
+        except (OSError, UnicodeError, json.JSONDecodeError):
+            return False
+
+    def _mark_fetch_sent(self, handoff_id: str) -> None:
+        data = {"fetch_sent": {}}
+        if self.local_dedup_state.exists():
+            try:
+                data = json.loads(self.local_dedup_state.read_text(encoding="utf-8"))
+            except (OSError, UnicodeError, json.JSONDecodeError):
+                data = {"fetch_sent": {}}
+        data["fetch_sent"][handoff_id] = _utcnow_iso()
+        _atomic_write_text(self.local_dedup_state, json.dumps(data, indent=2) + "\n")
+
+    def discover_eligible_handoffs(self) -> list[str]:
+        """Find handoff_ids under docs/web_bridge/ on origin/main that have
+        claude_work_complete.json but no trigger_fetch_sent / chatgpt_fetch_ack /
+        chatgpt_review_published. Uses only marker-existence checks; never parses
+        research YAML."""
+        self.transport.fetch()
+        dirs: set[str] = set()
+        try:
+            listing = self.transport.list_bridge_handoff_dirs()
+        except BridgeError:
+            return []
+        dirs.update(listing)
+        eligible = []
+        for handoff_id in sorted(dirs):
+            if not HANDOFF_RE.fullmatch(handoff_id):
+                continue
+            if self.transport.marker_exists(handoff_id, "chatgpt_review_published.json"):
+                continue
+            if self.transport.marker_exists(handoff_id, "chatgpt_fetch_ack.json"):
+                continue
+            if self.transport.marker_exists(handoff_id, "trigger_fetch_sent.json"):
+                continue
+            if self.transport.marker_exists(handoff_id, "claude_work_complete.json"):
+                eligible.append(handoff_id)
+        return eligible
+
+    def scan_once(self) -> list[str]:
+        outcomes = []
+        for handoff_id in self.discover_eligible_handoffs():
+            if self._seen(handoff_id):
+                continue
+            # Decision already made from origin/main markers (remote source of truth).
+            outcome = self.trigger.step_force(handoff_id)
+            if outcome != "FETCH_SENT":
+                outcomes.append(f"{handoff_id}:{outcome}")
+                continue
+            # Publish the bridge-owned trigger_fetch_sent to origin/main.
+            try:
+                marker_path = self.store._handoff_dir(handoff_id) / "trigger_fetch_sent.json"
+                content = marker_path.read_text(encoding="utf-8")
+                self.transport.publish_bridge_marker(handoff_id, "trigger_fetch_sent.json", content)
+                self._mark_fetch_sent(handoff_id)
+                outcomes.append(f"{handoff_id}:FETCH_SENT")
+            except Exception as exc:  # noqa: BLE001
+                # send-success / publish-failure: durable local sent state, NO auto-resend.
+                self._mark_fetch_sent(handoff_id)
+                self.logger.warning(
+                    "event=trigger_fetch_publish_failed handoff=%s reason=%s "
+                    "(no auto-resend; fail closed for operator)",
+                    handoff_id,
+                    str(exc),
+                )
+                outcomes.append(f"{handoff_id}:PUBLISH_FAILED_FAIL_CLOSED")
+        return outcomes
+
+    def run_forever(self) -> None:
+        self.logger.info("event=bridge_daemon_started")
+        while True:
+            try:
+                outcomes = self.scan_once()
+                if outcomes:
+                    self.logger.info("event=bridge_scan outcomes=%s", ";".join(outcomes))
+                time.sleep(max(5.0, min(10.0, self.config.poll_interval_s)))
+            except KeyboardInterrupt:
+                self.logger.info("event=bridge_daemon_stopped")
+                return
+            except Exception:  # noqa: BLE001
+                self.logger.exception("event=bridge_scan_failed", exc_info=False)
+                time.sleep(max(5.0, self.config.poll_interval_s))
 
 
 def configure_logging(config: BridgeConfig) -> logging.Logger:
@@ -452,12 +723,29 @@ def build_trigger(config: BridgeConfig, logger: logging.Logger) -> BridgeTrigger
     return BridgeTrigger(store, sender, logger, config.fetch_ack_timeout_s)
 
 
+def build_daemon(
+    config: BridgeConfig, logger: logging.Logger
+) -> RemoteMarkerWatcher:
+    store = MarkerStore(config.repo_root)
+    sender = CdpFetchSender(
+        config.cdp_endpoint,
+        config.target_conversation_url or "",
+        config.chrome_profile_path,
+        playwright_module=config.playwright_module,
+    )
+    trigger = BridgeTrigger(store, sender, logger, config.fetch_ack_timeout_s)
+    transport = GitTransport(config.repo_root, config.runtime_dir, config.remote, config.remote_branch)
+    dedup = config.runtime_dir / "dedup.json"
+    return RemoteMarkerWatcher(config, transport, store, trigger, logger, dedup)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--handoff", default="", help="handoff_id to trigger (unsafe chars rejected)")
     parser.add_argument("--once", action="store_true")
     parser.add_argument("--wait-ack", action="store_true", help="block until chatgpt_fetch_ack or timeout")
+    parser.add_argument("--daemon", action="store_true", help="autonomous marker-only watcher (origin/main only)")
     parser.add_argument("--check", action="store_true", help="validate marker protocol + fail-closed gates")
     args = parser.parse_args()
 
@@ -467,10 +755,14 @@ def main() -> int:
         config_path = repo_root / config_path
 
     try:
-        config = load_config(config_path.resolve(), repo_root, require_url=args.handoff != "")
+        config = load_config(config_path.resolve(), repo_root, require_url=(args.handoff != ""))
         logger = configure_logging(config)
         if args.check:
             _run_check(config, logger)
+            return 0
+        if args.daemon:
+            daemon = build_daemon(config, logger)
+            daemon.run_forever()
             return 0
         if args.handoff:
             if not HANDOFF_RE.fullmatch(args.handoff):
@@ -481,7 +773,7 @@ def main() -> int:
                 outcome = trigger.wait_for_ack(args.handoff)
             print(f"bridge outcome: {outcome}")
             return 0 if outcome in {"DONE", "WAIT_FOR_REVIEW", "WAIT_FOR_FETCH_ACK", "FETCH_SENT", "FETCH_ACKED"} else 1
-        print("provide --handoff <id> (or --check); bridge run mode reserved for scheduled trigger")
+        print("provide --handoff <id>, --daemon, or --check")
         return 2
     except BridgeError as exc:
         print(f"web fetch bridge error: {exc}")

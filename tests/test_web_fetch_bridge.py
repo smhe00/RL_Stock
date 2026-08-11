@@ -265,3 +265,142 @@ def test_bridge_check_no_git_no_browser(repo_root, tmp_path):
         log_backups=1,
     )
     wfb._run_check(cfg, _Logger())
+
+
+# --- GitHub marker transport / autonomous watcher ---
+
+class FakeRemoteTransport:
+    """A fake GitTransport whose marker set mimics origin/main and can simulate
+    remote-head races. Does not touch git."""
+
+    def __init__(self):
+        self.remotes: dict[tuple[str, str], str] = {}
+        self.published: list[tuple[str, str, str]] = []
+        self.race_on_publish = False
+
+    def fetch(self) -> None:
+        return None
+
+    def marker_exists(self, handoff_id: str, name: str) -> bool:
+        return (handoff_id, name) in self.remotes
+
+    def marker_text(self, handoff_id: str, name: str) -> str | None:
+        return self.remotes.get((handoff_id, name))
+
+    def publish_bridge_marker(self, handoff_id: str, name: str, content: str) -> None:
+        if name not in wfb.BRIDGE_OWNED_MARKERS:
+            raise wfb.BridgeError("bridge may only publish owned markers")
+        if (handoff_id, name) in self.remotes:
+            raise wfb.BridgeError("marker already exists; append-only")
+        if self.race_on_publish:
+            raise wfb.BridgeError("remote-head changed during publish; STOP-WRITE")
+        self.remotes[(handoff_id, name)] = content
+        self.published.append((handoff_id, name, content))
+
+    def list_bridge_handoff_dirs(self) -> set[str]:
+        return {h for (h, _n) in self.remotes}
+
+    def discover(self) -> list[str]:
+        ids = {h for (h, n) in self.remotes if n == "claude_work_complete.json"}
+        done = {h for (h, n) in self.remotes if n in ("chatgpt_review_published.json",)}
+        acked = {h for (h, n) in self.remotes if n == "chatgpt_fetch_ack.json"}
+        sent = {h for (h, n) in self.remotes if n == "trigger_fetch_sent.json"}
+        return sorted(ids - done - acked - sent)
+
+
+class FakeWorktreeSender:
+    """Records send calls. The trigger writes trigger_fetch_sent locally after a
+    successful send; the daemon then publishes that local marker remotely."""
+
+    def __init__(self, repo_root: Path):
+        self.repo_root = repo_root
+        self.calls: list[str] = []
+
+    def send(self, handoff_id: str) -> None:
+        self.calls.append(handoff_id)
+
+
+def _daemon(repo_root: Path, transport, tmp_path: Path):
+    store = wfb.MarkerStore(repo_root)
+    sender = FakeWorktreeSender(repo_root)
+    trig = wfb.BridgeTrigger(store, sender, _Logger(), fetch_ack_timeout_s=1.0)
+    dedup = tmp_path / "dedup.json"
+    return wfb.RemoteMarkerWatcher(None, transport, store, trig, _Logger(), dedup), trig
+
+
+def test_daemon_discovers_remote_work_complete_only(repo_root, tmp_path):
+    t = FakeRemoteTransport()
+    t.remotes[("H-0001", "claude_work_complete.json")] = "{}"
+    daemon, _ = _daemon(repo_root, t, tmp_path)
+    assert daemon.discover_eligible_handoffs() == ["H-0001"]
+
+
+def test_daemon_no_trigger_without_remote_work_complete(repo_root, tmp_path):
+    t = FakeRemoteTransport()
+    daemon, _ = _daemon(repo_root, t, tmp_path)
+    assert daemon.discover_eligible_handoffs() == []
+
+
+def test_daemon_skips_acked_and_published(repo_root, tmp_path):
+    t = FakeRemoteTransport()
+    t.remotes[("H-1", "claude_work_complete.json")] = "{}"
+    t.remotes[("H-1", "chatgpt_fetch_ack.json")] = "{}"
+    t.remotes[("H-2", "claude_work_complete.json")] = "{}"
+    t.remotes[("H-2", "chatgpt_review_published.json")] = "{}"
+    daemon, _ = _daemon(repo_root, t, tmp_path)
+    assert daemon.discover_eligible_handoffs() == []
+
+
+def test_daemon_skips_if_trigger_fetch_sent_remote(repo_root, tmp_path):
+    t = FakeRemoteTransport()
+    t.remotes[("H-1", "claude_work_complete.json")] = "{}"
+    t.remotes[("H-1", "trigger_fetch_sent.json")] = "{}"
+    daemon, _ = _daemon(repo_root, t, tmp_path)
+    assert daemon.discover_eligible_handoffs() == []
+
+
+def test_daemon_auto_sends_and_remotely_publishes_fetch_sent(repo_root, tmp_path):
+    t = FakeRemoteTransport()
+    t.remotes[("H-0001", "claude_work_complete.json")] = "{}"
+    daemon, trig = _daemon(repo_root, t, tmp_path)
+    outcomes = daemon.scan_once()
+    assert outcomes == ["H-0001:FETCH_SENT"]
+    # Locally created trigger_fetch_sent was published to origin/main.
+    assert t.remotes[("H-0001", "trigger_fetch_sent.json")]
+    # Restart dedup: a fresh daemon sees remote trigger_fetch_sent -> no resend.
+    daemon2, _ = _daemon(repo_root, t, tmp_path)
+    assert daemon2.scan_once() == []
+    assert trig is not None
+
+
+def test_daemon_send_success_publish_failure_fail_closed_no_resend(repo_root, tmp_path):
+    t = FakeRemoteTransport()
+    t.remotes[("H-0001", "claude_work_complete.json")] = "{}"
+    t.race_on_publish = True  # remote-head moved -> publish STOP-WRITE
+    daemon, _ = _daemon(repo_root, t, tmp_path)
+    outcomes = daemon.scan_once()
+    assert outcomes == ["H-0001:PUBLISH_FAILED_FAIL_CLOSED"]
+    # Durable local sent state prevents auto-resend on next scan.
+    assert daemon.scan_once() == []
+
+
+def test_remote_ack_observation_stops_trigger(repo_root, tmp_path):
+    t = FakeRemoteTransport()
+    t.remotes[("H-1", "claude_work_complete.json")] = "{}"
+    t.remotes[("H-1", "chatgpt_fetch_ack.json")] = "{}"
+    daemon, _ = _daemon(repo_root, t, tmp_path)
+    assert daemon.discover_eligible_handoffs() == []
+
+
+def test_sender_discovery_exactly_one_chatgpt_tab():
+    """Tab discovery fallback: URL-based routing is covered by CdpFetchSender's
+    _resolve_page contract. Without playwright a send fails closed; the discovery
+    logic (target URL or exact-one tab) is enforced in _resolve_page."""
+    s = wfb.CdpFetchSender("http://127.0.0.1:9222", "", "C:\\p")
+    with pytest.raises(wfb.BridgeError):
+        s.send("H-0001")  # playwright missing -> fail closed before discovery
+
+
+def test_session_alive_after_disconnect_fail_closed_without_browser():
+    s = wfb.CdpFetchSender("http://127.0.0.1:9222", "https://chatgpt.com/c/x", "C:\\p")
+    assert s.session_alive_after_disconnect() is False  # no CDP browser attached
