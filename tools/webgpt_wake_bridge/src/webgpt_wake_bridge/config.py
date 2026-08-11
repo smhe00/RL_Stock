@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import re
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlparse
 
 from .errors import BridgeError
+
+REMOTE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+BRANCH_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,255}$")
 
 
 @dataclass(frozen=True)
@@ -36,6 +40,14 @@ def _inside_repo(repo_root: Path, relative: str | Path) -> Path:
     except ValueError as exc:
         raise BridgeError(f"path escapes repository: {relative}") from exc
     return path
+
+
+def _is_within(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+        return True
+    except ValueError:
+        return False
 
 
 def validate_cdp_endpoint(raw: str) -> str:
@@ -79,6 +91,27 @@ def validate_target_conversation_url(raw: str | None, *, required: bool = False)
     return value
 
 
+def validate_remote_name(raw: str) -> str:
+    value = str(raw).strip()
+    if not REMOTE_RE.fullmatch(value):
+        raise BridgeError("[project].remote must be a simple configured Git remote name")
+    return value
+
+
+def validate_branch_name(raw: str) -> str:
+    value = str(raw).strip()
+    if (
+        not BRANCH_RE.fullmatch(value)
+        or ".." in value
+        or "//" in value
+        or "@{" in value
+        or value.endswith(("/", ".", ".lock"))
+        or "/." in value
+    ):
+        raise BridgeError("[project].branch is not a safe Git branch name")
+    return value
+
+
 def load_config(path: Path, *, require_url: bool = False) -> BridgeConfig:
     try:
         raw = tomllib.loads(path.read_text(encoding="utf-8"))
@@ -95,6 +128,7 @@ def load_config(path: Path, *, require_url: bool = False) -> BridgeConfig:
     if not repo_raw:
         raise BridgeError("[project].repo_root is required")
     repo_root = Path(repo_raw).expanduser().resolve()
+    git_dir = (repo_root / ".git").resolve()
     if not (repo_root / ".git").exists():
         raise BridgeError(f"repo_root is not a git worktree: {repo_root}")
 
@@ -105,17 +139,22 @@ def load_config(path: Path, *, require_url: bool = False) -> BridgeConfig:
     marker_root = marker_abs.relative_to(repo_root)
     if marker_root == Path("."):
         raise BridgeError("marker_root must be a subdirectory of the consumer repository")
+    if _is_within(marker_abs, git_dir):
+        raise BridgeError("marker_root must not be inside .git")
 
     runtime_raw = str(runtime.get("runtime_dir", ".runtime/webgpt_wake_bridge")).strip()
     if not runtime_raw:
         raise BridgeError("[runtime].runtime_dir must not be empty")
     runtime_dir = _inside_repo(repo_root, runtime_raw)
+    if runtime_dir == repo_root:
+        raise BridgeError("runtime_dir must be a subdirectory of the consumer repository")
+    if _is_within(runtime_dir, git_dir):
+        raise BridgeError("runtime_dir must not be inside .git")
+    if _is_within(runtime_dir, marker_abs) or _is_within(marker_abs, runtime_dir):
+        raise BridgeError("runtime_dir and marker_root must not overlap")
 
-    remote = str(project.get("remote", "origin")).strip()
-    branch = str(project.get("branch", "main")).strip()
-    if not remote or not branch:
-        raise BridgeError("[project].remote and [project].branch must not be empty")
-
+    remote = validate_remote_name(str(project.get("remote", "origin")))
+    branch = validate_branch_name(str(project.get("branch", "main")))
     cdp = validate_cdp_endpoint(str(browser.get("cdp_endpoint", "http://127.0.0.1:9222")))
     url = validate_target_conversation_url(
         str(browser.get("target_conversation_url", "")), required=require_url
