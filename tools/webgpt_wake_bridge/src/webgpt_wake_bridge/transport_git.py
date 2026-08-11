@@ -70,27 +70,32 @@ class GitTransport:
         return self.marker_root / handoff_id / name
 
     def marker_exists(self, handoff_id: str, name: str) -> bool:
+        """Return marker existence without conflating absence with Git failure.
+
+        `git ls-tree` exits successfully with empty output for an absent path. A
+        missing/broken remote ref remains a hard error. Swallowing every Git error as
+        "not found" could otherwise turn a transport failure into a duplicate send.
+        """
         rel = self._rel(handoff_id, name)
-        try:
-            self._git("cat-file", "-e", f"{self.remote}/{self.branch}:{rel.as_posix()}")
-            return True
-        except BridgeError:
-            return False
+        listing = self._git(
+            "ls-tree", "--name-only", f"{self.remote}/{self.branch}", "--", rel.as_posix()
+        )
+        return any(line.strip() == rel.as_posix() for line in listing.splitlines())
 
     def marker_text(self, handoff_id: str, name: str) -> str | None:
         rel = self._rel(handoff_id, name)
-        try:
-            return self._git("show", f"{self.remote}/{self.branch}:{rel.as_posix()}")
-        except BridgeError:
+        if not self.marker_exists(handoff_id, name):
             return None
+        # Existence was positively established. A subsequent show failure is a real
+        # transport/remote-state error and must propagate fail closed.
+        return self._git("show", f"{self.remote}/{self.branch}:{rel.as_posix()}")
 
     def list_handoff_dirs(self) -> set[str]:
         self.fetch()
         prefix = self.marker_root.as_posix().rstrip("/") + "/"
-        try:
-            tree = self._git("ls-tree", "-r", "--name-only", f"{self.remote}/{self.branch}", prefix)
-        except BridgeError:
-            return set()
+        tree = self._git(
+            "ls-tree", "-r", "--name-only", f"{self.remote}/{self.branch}", "--", prefix
+        )
         dirs: set[str] = set()
         root_parts = len(self.marker_root.parts)
         for line in tree.splitlines():
@@ -117,10 +122,12 @@ class GitTransport:
                 self._git("add", "--", rel.as_posix())
                 self._git("commit", "-m", f"bridge: {handoff_id} {name}")
                 self._git("push", self.remote, f"HEAD:{self.branch}")
-                self.fetch()  # remote-tracking ref is authoritative for subsequent checks
+                self.fetch()  # refresh authoritative remote-tracking ref after push
                 return
             except BridgeError as exc:
                 last_error = exc
             finally:
+                # The commit object retains the marker; the next retry hard-resets the
+                # isolated worktree to the newest remote state.
                 target.unlink(missing_ok=True)
         raise BridgeError(f"marker publish failed after concurrent remote changes: {last_error}")
