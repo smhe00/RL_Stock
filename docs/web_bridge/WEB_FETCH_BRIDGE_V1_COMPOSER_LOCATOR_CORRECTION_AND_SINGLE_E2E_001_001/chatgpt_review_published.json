@@ -1,0 +1,8 @@
+{
+  "protocol": "web_fetch_bridge_v1",
+  "handoff_id": "WEB_FETCH_BRIDGE_V1_COMPOSER_LOCATOR_CORRECTION_AND_SINGLE_E2E_001_001",
+  "event": "chatgpt_review_published.json",
+  "review_state": "REVISIONS_REQUIRED",
+  "review_commit": "6fa5cb195c138a43a86593546480bb5f973d7638",
+  "timestamp": "2026-08-11T16:27:00+08:00"
+}
