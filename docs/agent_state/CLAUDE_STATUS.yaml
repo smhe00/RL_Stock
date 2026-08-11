@@ -1,20 +1,20 @@
 protocol_version: 3
 actor: claude
-handoff_id: WEB_FETCH_BRIDGE_V1_IMPLEMENTATION_AND_SINGLE_E2E_SMOKE_001
+handoff_id: WEB_FETCH_BRIDGE_V1_E2E_TRANSPORT_CORRECTION_001_001
 state: READY_FOR_REVIEW
 
 gate: LOCAL_PROTOCOL
-phase: WEB_FETCH_BRIDGE_V1_IMPLEMENTATION_AND_SINGLE_E2E_SMOKE
-code_commit: e343ab5
-packet: docs/review_packets/WEB_FETCH_BRIDGE_V1_IMPLEMENTATION_AND_SINGLE_E2E_SMOKE.md
+phase: WEB_FETCH_BRIDGE_V1_E2E_TRANSPORT_CORRECTION_001
+code_commit: c977265
+packet: docs/review_packets/WEB_FETCH_BRIDGE_V1_E2E_TRANSPORT_CORRECTION_001.md
 
 progress:
-  current_task: WEB_FETCH_BRIDGE_V1 implemented (LOCAL_PROTOCOL infrastructure only). User-authorized marker-driven Chrome CDP + Playwright wake-up bridge. Append-only markers docs/web_bridge/<handoff_id>/ (claude_review_ack/claude_work_complete/trigger_fetch_sent/chatgpt_fetch_ack/chatgpt_review_published); marker-only trigger state machine (never parses research states); CdpFetchSender via connect_over_cdp localhost-only, dedicated profile C:\ChatGPT_Automation_Profile, URL only in ignored local config; fail-closed 120s ack timeout no auto-resend, login/CAPTCHA/wrong-conversation/CDP gates; bridge writes only trigger_fetch_sent (append-only); default mode no codex exec. 18 unit tests + --check PASSED. E2E smoke FAIL_CLOSED (target_conversation_url missing in ignored local config); minimal manual prerequisite documented. Research/canonical artifacts and strategy logic unchanged; MaxDiv/M2/03110 STOP/RL untouched.
+  current_task: WEB_FETCH_BRIDGE_V1 E2E transport correction delivered. GitHub marker transport (fetch/ls-tree/publish origin/main, STOP-WRITE no force push, isolated bridge worktree); autonomous marker-only daemon (5-10s poll, no codex, no research-YAML parsing); Claude doorbell claude_work_complete pushed LAST; trigger_fetch_sent remote append-only publish; remote ACK observation; send-success/publish-failure durable dedup NO auto-resend; exact-one-open chatgpt.com/c/* tab discovery fallback + target URL in ignored local config; playwright Python package installed (connect_over_cdp); session_alive_after_disconnect probe. 27 tests + --check PASSED. CDP localhost:9222 live (Chrome 151); fresh E2E smoke via daemon auto-discovery in progress.
 
 last_consumed_review:
-  handoff_id: WEB_FETCH_BRIDGE_V1_USER_AUTH_20260811
-  decision: USER_AUTHORIZED_WEB_FETCH_BRIDGE_V1_IMPLEMENTATION_AND_SINGLE_E2E_SMOKE
-  state: REVIEW_COMPLETE
-  response: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_USER_AUTHORIZATION.md
+  handoff_id: WEB_FETCH_BRIDGE_V1_IMPLEMENTATION_AND_SINGLE_E2E_SMOKE_001
+  decision: WEB_FETCH_BRIDGE_V1_CORE_ACCEPTED_BUT_E2E_TRANSPORT_INCOMPLETE_CORRECTION_REQUIRED
+  state: REVISIONS_REQUIRED
+  response: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_IMPLEMENTATION_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-11T14:40:00+08:00
+updated_at: 2026-08-11T15:10:00+08:00
