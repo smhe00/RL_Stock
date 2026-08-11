@@ -131,6 +131,8 @@ class RemoteMarkerWatcher:
 
     def reconcile_missing_trigger(self, handoff_id: str) -> str:
         validate_handoff_id(handoff_id)
+        # Manual reconciliation must start from fresh remote state too.
+        self.transport.fetch()
         state = self._load_state()
         sent = state["fetch_sent"].get(handoff_id)
         if not isinstance(sent, dict) or not sent.get("marker"):
@@ -163,7 +165,7 @@ class RemoteMarkerWatcher:
             try:
                 self.transport.publish_bridge_marker(handoff_id, "trigger_fetch_sent.json", marker)
                 outcomes.append(f"{handoff_id}:FETCH_SENT")
-            except BridgeError as exc:
+            except Exception as exc:  # noqa: BLE001 - any transport failure is fail-closed
                 self.logger.warning("event=trigger_publish_failed handoff=%s reason=%s", handoff_id, exc)
                 outcomes.append(f"{handoff_id}:PUBLISH_FAILED_FAIL_CLOSED")
 
@@ -175,7 +177,7 @@ class RemoteMarkerWatcher:
                 continue
             try:
                 result = self.reconcile_missing_trigger(handoff_id)
-            except BridgeError as exc:
+            except Exception as exc:  # noqa: BLE001 - reconciliation also fails closed
                 self.logger.warning("event=reconcile_failed handoff=%s reason=%s", handoff_id, exc)
                 outcomes.append(f"{handoff_id}:RECONCILE_FAILED")
             else:
