@@ -45,6 +45,27 @@ def test_publish_marker_uses_isolated_worktree_and_is_append_only(tmp_path):
         transport.publish_bridge_marker(handoff, "trigger_fetch_sent.json", trigger(handoff))
 
 
+def test_malformed_or_mismatched_payload_is_rejected_before_publish(tmp_path):
+    repo = init_repo(tmp_path)
+    transport = GitTransport(repo, repo / ".runtime", Path("docs/web_bridge"), "origin", "main")
+    handoff = "DEMO_PAYLOAD"
+
+    with pytest.raises(BridgeError):
+        transport.publish_bridge_marker(handoff, "trigger_fetch_sent.json", "not-json")
+    with pytest.raises(BridgeError):
+        transport.publish_bridge_marker(handoff, "trigger_fetch_sent.json", trigger("OTHER_HANDOFF"))
+    wrong_event = json.dumps({
+        "protocol": "web_fetch_bridge_v1",
+        "handoff_id": handoff,
+        "event": "CHATGPT_FETCH_ACK",
+        "timestamp": "2026-08-11T09:18:39+00:00",
+    })
+    with pytest.raises(BridgeError):
+        transport.publish_bridge_marker(handoff, "trigger_fetch_sent.json", wrong_event)
+
+    assert not transport.marker_exists(handoff, "trigger_fetch_sent.json")
+
+
 def test_missing_remote_ref_is_error_not_marker_absence(tmp_path):
     repo = init_repo(tmp_path)
     transport = GitTransport(repo, repo / ".runtime_missing", Path("docs/web_bridge"), "origin", "missing")
