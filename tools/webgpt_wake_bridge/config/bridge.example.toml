@@ -7,6 +7,10 @@ remote = "origin"
 branch = "main"
 marker_root = "docs/web_bridge"
 
+[review]
+# REQUIRED for `once`/`daemon` and must match the configured github.com Git remote.
+repository = "owner/repo"
+
 [browser]
 cdp_endpoint = "http://127.0.0.1:9222"
 chrome_profile_path = "C:\\ChatGPT_Automation_Profile"
