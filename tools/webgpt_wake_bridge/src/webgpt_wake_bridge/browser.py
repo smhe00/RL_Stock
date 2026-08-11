@@ -5,6 +5,7 @@ import json
 import time
 import urllib.request
 
+from .config import validate_cdp_endpoint, validate_target_conversation_url
 from .errors import BridgeError
 from .markers import validate_handoff_id
 
@@ -27,15 +28,15 @@ class CdpFetchSender:
         playwright_module: str = "playwright.sync_api",
         page_timeout_ms: int = 30_000,
     ):
-        self.cdp_endpoint = cdp_endpoint
-        self.target_url = target_url.rstrip("/")
+        self.cdp_endpoint = validate_cdp_endpoint(cdp_endpoint)
+        validated_target = validate_target_conversation_url(target_url, required=True)
+        assert validated_target is not None
+        self.target_url = validated_target
         self.profile_path = profile_path
         self.playwright_module = playwright_module
         self.page_timeout_ms = page_timeout_ms
 
     def _resolve_page(self, browser):
-        if not self.target_url.startswith("https://chatgpt.com/c/"):
-            raise BridgeError("dedicated target conversation URL is required")
         for context in browser.contexts:
             for page in context.pages:
                 if page.url and page.url.rstrip("/") == self.target_url:
@@ -44,8 +45,9 @@ class CdpFetchSender:
 
     def send(self, handoff_id: str) -> None:
         validate_handoff_id(handoff_id)
-        if not self.cdp_endpoint.lower().startswith("http://127.0.0.1"):
-            raise BridgeError("CDP endpoint must be localhost only")
+        # Revalidate at the action boundary in case an instance was constructed or
+        # mutated outside the normal config loader.
+        validate_cdp_endpoint(self.cdp_endpoint)
         pw = import_playwright(self.playwright_module)
         driver = pw.sync_playwright().start()
         try:
@@ -103,7 +105,15 @@ class CdpFetchSender:
 
     def _locate_composer(self, page):
         candidate = self._choose_composer_candidate(self._composer_meta(page))
-        return page.locator(self._selector_for(candidate))
+        selector = self._selector_for(candidate)
+        locator = page.locator(selector)
+        try:
+            count = locator.count()
+        except Exception as exc:  # noqa: BLE001
+            raise BridgeError("composer locator evaluation failed") from exc
+        if count != 1:
+            raise BridgeError(f"composer selector is not unique ({count} matches); fail closed")
+        return locator
 
     @staticmethod
     def _composer_meta(page) -> list[dict]:
@@ -166,6 +176,8 @@ class CdpFetchSender:
             return f'[id="{safe_id}"]'
         tag = candidate.get("tag") or "div"
         ce = candidate.get("contenteditable")
+        if candidate.get("lexical") == "true" and ce in ("true", "plaintext-only"):
+            return f'{tag}[contenteditable="{ce}"][data-lexical-editor="true"]'
         if ce in ("true", "plaintext-only"):
             return f'{tag}[contenteditable="{ce}"]'
         return tag
@@ -173,7 +185,7 @@ class CdpFetchSender:
 
 class CdpTargetMetadata:
     def __init__(self, cdp_endpoint: str):
-        self.cdp_endpoint = cdp_endpoint
+        self.cdp_endpoint = validate_cdp_endpoint(cdp_endpoint)
 
     def list_targets(self) -> list[dict]:
         url = self.cdp_endpoint.rstrip("/") + "/json"
@@ -194,11 +206,10 @@ class CdpTargetMetadata:
 
 class NoopLifecycleDiagnostic:
     def __init__(self, cdp_endpoint: str, target_url: str, hold_seconds: float = 30.0, playwright_module: str = "playwright.sync_api"):
-        target_url = target_url.rstrip("/")
-        if not target_url.startswith("https://chatgpt.com/c/"):
-            raise BridgeError("no-op diagnostic requires a dedicated chatgpt.com/c/... target")
-        self.cdp_endpoint = cdp_endpoint
-        self.target_url = target_url
+        self.cdp_endpoint = validate_cdp_endpoint(cdp_endpoint)
+        validated_target = validate_target_conversation_url(target_url, required=True)
+        assert validated_target is not None
+        self.target_url = validated_target
         self.hold_seconds = max(1.0, hold_seconds)
         self.playwright_module = playwright_module
 
