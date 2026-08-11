@@ -91,8 +91,7 @@ def validate_marker(path: Path, marker: dict, expected_owner: str | None = None)
     if event_name is None:
         raise BridgeError(f"marker {path.name} has unknown event")
     # Backward-compatible semantic aliases are allowed, but they must still describe
-    # the marker file they are stored in. A chatgpt_fetch_ack payload inside a
-    # claude_work_complete filename is an integrity failure and must fail closed.
+    # the marker file they are stored in.
     if path.name in MARKER_OWNERS and event_name != path.name:
         raise BridgeError(f"marker {path.name} event does not match filename")
     if expected_owner is not None and MARKER_OWNERS.get(path.name) != expected_owner:
@@ -135,15 +134,18 @@ class MarkerStore:
     def ordered_markers(self, handoff_id: str) -> list[str]:
         directory = self.handoff_dir(handoff_id)
         present = [name for name in MARKER_ORDER if (directory / name).is_file()]
-        index = {name: i for i, name in enumerate(MARKER_ORDER)}
-        # A later marker may not exist without all protocol prerequisites that precede
-        # it, except claude_review_ack which is terminal acknowledgement after review.
-        for name in present:
-            if name == "claude_work_complete.json":
-                continue
-            required = MARKER_ORDER[: index[name]]
-            if any(req not in present for req in required):
-                raise BridgeError(f"marker order violated before {name}")
+        have = set(present)
+        # ACK may temporarily precede trigger_fetch_sent because Web ChatGPT must ACK
+        # immediately and Git commits can race. That transient is explicitly repaired
+        # marker-only, so do not reject it here. Terminal markers still require their
+        # durable prerequisites.
+        if "chatgpt_fetch_ack.json" in have and "claude_work_complete.json" not in have:
+            raise BridgeError("chatgpt_fetch_ack without claude_work_complete")
+        if "chatgpt_review_published.json" in have:
+            if "claude_work_complete.json" not in have or "chatgpt_fetch_ack.json" not in have:
+                raise BridgeError("chatgpt_review_published missing review-request/ACK prerequisite")
+        if "claude_review_ack.json" in have and "chatgpt_review_published.json" not in have:
+            raise BridgeError("claude_review_ack without chatgpt_review_published")
         return present
 
     def write_bridge_marker(self, handoff_id: str, name: str, extra: dict | None = None) -> Path:
