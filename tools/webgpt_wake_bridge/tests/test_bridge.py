@@ -4,6 +4,7 @@ from pathlib import Path
 
 from webgpt_wake_bridge.bridge import RemoteMarkerWatcher
 from webgpt_wake_bridge.config import BridgeConfig
+from webgpt_wake_bridge.errors import BridgeError
 
 
 class FakeTransport:
@@ -25,7 +26,7 @@ class FakeTransport:
         self.publish_calls.append((handoff, name))
         if self.fail_first_publish:
             self.fail_first_publish = False
-            raise Exception("simulated remote race")
+            raise BridgeError("simulated remote race")
         self.markers[(handoff, name)] = content
 
 
