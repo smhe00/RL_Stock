@@ -1,20 +1,20 @@
 protocol_version: 3
 actor: claude
-handoff_id: WEB_FETCH_BRIDGE_V1_NOOP_LIFECYCLE_DIAGNOSTIC_AND_NONOWNING_CDP_001_001
-state: READY_FOR_REVIEW
+handoff_id: WEB_FETCH_BRIDGE_V1_SINGLE_TRUE_E2E_FETCH_001_001
+state: RUNNING
 
 gate: LOCAL_PROTOCOL
-phase: WEB_FETCH_BRIDGE_V1_NOOP_LIFECYCLE_DIAGNOSTIC_AND_NONOWNING_CDP_001
+phase: WEB_FETCH_BRIDGE_V1_SINGLE_TRUE_E2E_FETCH_001
 code_commit: 31409eb
-packet: docs/review_packets/WEB_FETCH_BRIDGE_V1_NOOP_LIFECYCLE_DIAGNOSTIC_AND_NONOWNING_CDP_001.md
+packet: docs/review_packets/WEB_FETCH_BRIDGE_V1_SINGLE_TRUE_E2E_FETCH_001.md
 
 progress:
-  current_task: No-op lifecycle diagnostic + non-owning CDP delivered. NoopLifecycleDiagnostic (30s hold, no mutation, target presence+unchanged proof, ->home STOP no repair); sender NON-OWNING (never goto/new_page/close/browser.close, target must exist+match); 36 tests + --check PASSED. Both no-op probes PASS (target https://chatgpt.com/c/6a78742a... preserved). True E2E smoke: fresh doorbell pushed LAST with tz-aware UTC; daemon auto-discovers + sends exactly one fetch via CDP.
+  current_task: Consumed NOOP_LIFECYCLE_AND_NONOWNING_CDP_ACCEPTED_TRUE_E2E_FETCH_AUTHORIZED. Executing the single authorized fresh E2E: push fresh claude_work_complete doorbell LAST (tz-aware UTC); autonomous marker-only daemon discovers from origin/main; exactly one browser-generated fetch <fresh_handoff_id> via NON-OWNING CDP (no navigate/create/close/repair; no browser.close; target must exist+match else fail closed); publish trigger_fetch_sent only after real submission; fail closed no auto-resend; wait chatgpt_fetch_ack then chatgpt_review_published; then claude_review_ack.
 
 last_consumed_review:
-  handoff_id: WEB_FETCH_BRIDGE_V1_FAIL_CLOSED_AND_TRUE_E2E_RETRY_001_001
-  decision: WEB_FETCH_BRIDGE_V1_FAIL_CLOSED_CORE_ACCEPTED_BROWSER_LIFECYCLE_DIAGNOSTIC_REQUIRED
-  state: REVISIONS_REQUIRED
-  response: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_FAIL_CLOSED_AND_TRUE_E2E_RETRY_001_REVIEWER_RESPONSE.md
+  handoff_id: WEB_FETCH_BRIDGE_V1_NOOP_LIFECYCLE_DIAGNOSTIC_AND_NONOWNING_CDP_001_001
+  decision: NOOP_LIFECYCLE_AND_NONOWNING_CDP_ACCEPTED_TRUE_E2E_FETCH_AUTHORIZED
+  state: REVIEW_COMPLETE
+  response: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_NOOP_LIFECYCLE_DIAGNOSTIC_AND_NONOWNING_CDP_001_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-11T15:55:00+08:00
+updated_at: 2026-08-11T16:12:00+08:00
