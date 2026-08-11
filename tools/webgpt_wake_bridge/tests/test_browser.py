@@ -45,9 +45,9 @@ def test_same_rank_ambiguity_fails_closed():
 
 def test_submission_confirmation_requires_clear_and_same_url():
     fn = CdpFetchSender._submission_confirmed
-    assert fn("fetch H_001", "", True)
-    assert not fn("fetch H_001", "fetch H_001", True)
-    assert not fn("fetch H_001", "", False)
+    assert fn("fetch repo=owner/demo handoff=H_001", "", True)
+    assert not fn("fetch repo=owner/demo handoff=H_001", "still here", True)
+    assert not fn("fetch repo=owner/demo handoff=H_001", "", False)
     assert not fn(None, "", True)
 
 
@@ -56,9 +56,28 @@ def test_selector_is_semantic():
     assert CdpFetchSender._selector_for({"tag": "div", "contenteditable": "true"}) == 'div[contenteditable="true"]'
 
 
-def test_constructor_rejects_spoofed_cdp_endpoint():
+def test_wake_message_contains_repository_and_handoff():
+    sender = CdpFetchSender(
+        "http://127.0.0.1:9222",
+        "https://chatgpt.com/c/demo",
+        "owner/demo",
+    )
+    assert sender._wake_message("H_001") == "fetch repo=owner/demo handoff=H_001"
+
+
+def test_constructor_rejects_spoofed_cdp_or_invalid_repository():
     with pytest.raises(BridgeError):
-        CdpFetchSender("http://127.0.0.1.evil.example:9222", "https://chatgpt.com/c/demo")
+        CdpFetchSender(
+            "http://127.0.0.1.evil.example:9222",
+            "https://chatgpt.com/c/demo",
+            "owner/demo",
+        )
+    with pytest.raises(BridgeError):
+        CdpFetchSender(
+            "http://127.0.0.1:9222",
+            "https://chatgpt.com/c/demo",
+            "https://github.com/owner/demo",
+        )
 
 
 def test_normal_sender_ast_has_no_owning_browser_lifecycle_calls():
