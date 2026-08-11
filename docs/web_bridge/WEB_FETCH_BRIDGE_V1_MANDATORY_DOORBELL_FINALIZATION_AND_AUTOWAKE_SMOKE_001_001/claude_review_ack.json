@@ -1,0 +1,1 @@
+{"protocol": "web_fetch_bridge_v1", "handoff_id": "WEB_FETCH_BRIDGE_V1_MANDATORY_DOORBELL_FINALIZATION_AND_AUTOWAKE_SMOKE_001_001", "event": "claude_review_ack.json", "review_commit": "5060afca47a329e3afa92006d6c6fcd78d5beb86", "decision": "CLAUDE_TO_WEB_AUTOWAKE_ACCEPTED_WEB_FETCH_BRIDGE_V1_COMPLETE", "timestamp": "2026-08-11T09:25:24.287636+00:00"}
