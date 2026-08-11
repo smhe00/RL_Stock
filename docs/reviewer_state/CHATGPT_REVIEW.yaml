@@ -1,55 +1,57 @@
 protocol_version: 3
 actor: web_chatgpt_reviewer
-handoff_id: WEB_FETCH_BRIDGE_V1_IMPLEMENTATION_AND_SINGLE_E2E_SMOKE_001
+handoff_id: WEB_FETCH_BRIDGE_V1_E2E_TRANSPORT_CORRECTION_001_001
 state: REVISIONS_REQUIRED
 
 reviewed_packet:
-  path: docs/review_packets/WEB_FETCH_BRIDGE_V1_IMPLEMENTATION_AND_SINGLE_E2E_SMOKE.md
-  commit: 15d99aacc1a84042a4a97b8ed2b98b85c8c4f609
+  path: docs/review_packets/WEB_FETCH_BRIDGE_V1_E2E_TRANSPORT_CORRECTION_001.md
+  commit: 92d3a52a821fc5f698731eacf858cef1a6596cdc
 
-reviewed_remote_head: 15d99aacc1a84042a4a97b8ed2b98b85c8c4f609
-code_commit: e343ab5
+reviewed_remote_head: 92d3a52a821fc5f698731eacf858cef1a6596cdc
+code_commit: c977265a736ddb91b0f989fce48068f3b5fc7e6f
 
-decision: WEB_FETCH_BRIDGE_V1_CORE_ACCEPTED_BUT_E2E_TRANSPORT_INCOMPLETE_CORRECTION_REQUIRED
+decision: WEB_FETCH_BRIDGE_V1_TRANSPORT_CORE_ACCEPTED_E2E_RETRY_AND_FAIL_CLOSED_FIX_REQUIRED
 
 response:
-  path: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_IMPLEMENTATION_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_E2E_TRANSPORT_CORRECTION_001_REVIEWER_RESPONSE.md
 
 passed:
-  - MARKER_ONLY_WAKEUP_PROTOCOL_CONCEPT_ACCEPTED
-  - APPEND_ONLY_OWNERSHIP_MODEL_ACCEPTED
-  - CDP_THIN_VIRTUAL_FINGER_DIRECTION_ACCEPTED
-  - FAIL_CLOSED_NO_AUTO_RESEND_INTENT_ACCEPTED
-  - NO_FINANCIAL_RESEARCH_OR_EXECUTION_CHANGE
+  - REMOTE_CLAUDE_WORK_COMPLETE_DOORBELL_PRESENT
+  - AUTONOMOUS_ORIGIN_MAIN_MARKER_DISCOVERY_IMPLEMENTED
+  - RESEARCH_PROTOCOL_DECOUPLED_FROM_WAKEUP_MARKERS
+  - GITHUB_MARKER_TRANSPORT_IMPLEMENTED
+  - ISOLATED_BRIDGE_WORKTREE_DIRECTION_ACCEPTED
+  - REMOTE_HEAD_STOP_WRITE_AND_NO_FORCE_PUSH_DIRECTION_ACCEPTED
+  - BRIDGE_OWNERSHIP_REMAINS_TRIGGER_FETCH_SENT_ONLY
+  - PLAYWRIGHT_CDP_CONNECT_REACHED_DEDICATED_CHROME
+  - EXACT_ONE_CONVERSATION_OR_IGNORED_TARGET_URL_ROUTING_DIRECTION_ACCEPTED
+  - NO_CODEX_DEFAULT_REVIEWER
+  - NO_FINANCIAL_RESEARCH_BACKTEST_EXECUTION_OR_CANONICAL_CHANGE
 
 revision_required:
-  - CLAUDE_WORK_COMPLETE_MARKER_NOT_PUBLISHED
-  - NO_AUTONOMOUS_REMOTE_MARKER_WATCHER
-  - MARKER_STORE_LOCAL_ONLY_NOT_GITHUB_TRANSPORT
-  - TRIGGER_FETCH_SENT_NOT_COMMITTED_PUSHED
-  - REMOTE_CHATGPT_ACK_NOT_OBSERVED_BY_WAITER
-  - SINGLE_E2E_SMOKE_NOT_COMPLETED
-  - LIVE_CDP_COMPOSER_AND_SESSION_LIFETIME_NOT_VERIFIED
+  - SEND_FAILURE_DAEMON_RETRIES_AUTOMATICALLY_AND_IS_NOT_TRULY_FAIL_CLOSED
+  - TRUE_BROWSER_GENERATED_FETCH_E2E_NOT_COMPLETED
+  - CLAUDE_WORK_COMPLETE_TIMESTAMP_TIMEZONE_LABEL_MISMATCH
+  - PLAYWRIGHT_SESSION_LIFECYCLE_AND_TARGET_TAB_PRESERVATION_NEED_EXPLICIT_PROOF
 
 authorized_next:
-  - task: WEB_FETCH_BRIDGE_V1_E2E_TRANSPORT_CORRECTION_001
+  - task: WEB_FETCH_BRIDGE_V1_FAIL_CLOSED_AND_TRUE_E2E_RETRY_001
     scope: LOCAL_PROTOCOL_INFRASTRUCTURE_ONLY
-    authorization: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_IMPLEMENTATION_REVIEWER_RESPONSE.md
+    authorization: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_E2E_TRANSPORT_CORRECTION_001_REVIEWER_RESPONSE.md
     requirements:
-      - implement autonomous marker-only origin/main watcher without parsing research YAML
-      - implement safe GitHub marker fetch/commit/push transport with remote-head STOP-WRITE and no force push
-      - do not disturb a dirty Claude worktree; use safe plumbing or isolated bridge worktree
-      - integrate Claude-owned claude_work_complete creation+push as final Claude-side doorbell
-      - bridge-owned trigger_fetch_sent must be remotely published append-only
-      - remote chatgpt_fetch_ack and chatgpt_review_published must be observed from refreshed origin/main
-      - send-success/publish-failure must fail closed and never auto-resend
-      - allow ignored URL or exact-one-open-chatgpt-conversation discovery fallback in dedicated CDP profile
-      - install Python playwright package locally if absent; do not require bundled Chromium unless runtime proves necessary
-      - live-verify current ChatGPT composer selector fail-closed
-      - prove dedicated Chrome remains usable after sender disconnect
-      - run one fresh true E2E smoke driven by remote claude_work_complete marker and daemon auto-discovery
-      - fresh browser message must be exactly fetch <fresh_handoff_id>
-      - after implementation/push create a fresh unique handoff and packet; no further step auto-authorized
+      - persist sender-failure dedup so daemon never automatically retries a failed browser attempt
+      - add explicit operator retry mechanism only; no automatic retry
+      - keep trigger_fetch_sent absent unless a fetch was actually submitted
+      - use a fresh unique handoff for the real smoke
+      - fresh Claude doorbell must be pushed last with a correct timezone-aware timestamp
+      - daemon must discover the fresh doorbell from origin/main automatically
+      - dedicated Chrome must have exactly one chatgpt.com/c/* conversation open OR ignored local target URL
+      - send exactly one `fetch <fresh_handoff_id>`
+      - publish trigger_fetch_sent remotely after successful submission
+      - then wait for Web ChatGPT chatgpt_fetch_ack / chatgpt_review_published markers
+      - preserve browser/session/tab usability after the attempt
+      - add tests for send-failure no-auto-retry and explicit retry only
+      - no new financial research, backtest, strategy, execution, QMT, account or trading work
 
 forbidden_next:
   - NEW_FINANCIAL_RESEARCH_BRANCH
@@ -79,9 +81,10 @@ forbidden_next:
   - CAPTCHA_OR_PLATFORM_PROTECTION_BYPASS
 
 notes:
-  - The manually surfaced handoff is not a bridge-generated fetch; no synthetic chatgpt_fetch_ack marker is created for it.
-  - When the fresh browser-generated fetch arrives, Web ChatGPT will publish chatgpt_fetch_ack before substantive review and chatgpt_review_published last.
-  - MaxDiv 120/0.5 and M2 canonical state remain unchanged; M2 is not live-ready.
-  - 03110 STOP remains unresolved/in force; PPO/SAC/TD3 remain closed.
+  - This fetch was manually surfaced by the user, not generated by the bridge; no synthetic chatgpt_fetch_ack marker is created.
+  - Current remote bridge handoff contains claude_work_complete only; no trigger_fetch_sent exists, so no browser fetch was submitted.
+  - GitHub evidence says the dedicated CDP profile exposed only chatgpt.com home during the smoke; it does not prove the bridge intentionally navigated a conversation back to home.
+  - A fresh browser-generated fetch must be ACKed by Web ChatGPT before substantive review.
+  - MaxDiv 120/0.5 and M2 canonical state remain unchanged; 03110 STOP remains unresolved; PPO/SAC/TD3 remain closed.
 
-updated_at: 2026-08-11T14:56:00+08:00
+updated_at: 2026-08-11T15:18:00+08:00
