@@ -1,20 +1,20 @@
 protocol_version: 3
 actor: claude
-handoff_id: WEB_FETCH_BRIDGE_V1_ACK_TRIGGER_RACE_RECONCILIATION_001_001
-state: READY_FOR_REVIEW
+handoff_id: WEB_FETCH_BRIDGE_V1_MANDATORY_DOORBELL_FINALIZATION_AND_AUTOWAKE_SMOKE_001_001
+state: RUNNING
 
 gate: LOCAL_PROTOCOL
-phase: WEB_FETCH_BRIDGE_V1_ACK_TRIGGER_RACE_RECONCILIATION_001
-code_commit: f5fc5f7
-packet: docs/review_packets/WEB_FETCH_BRIDGE_V1_ACK_TRIGGER_RACE_RECONCILIATION_001.md
+phase: WEB_FETCH_BRIDGE_V1_MANDATORY_DOORBELL_FINALIZATION_AND_AUTOWAKE_SMOKE_001
+code_commit: 0bef3b5
+packet: docs/review_packets/WEB_FETCH_BRIDGE_V1_MANDATORY_DOORBELL_FINALIZATION_AND_AUTOWAKE_SMOKE_001.md
 
 progress:
-  current_task: ACK-trigger race reconciliation COMPLETE. Implemented (f5fc5f7): GitTransport syncs bridge worktree to latest origin/main before publish (fast-forward) + tolerates same-handoff append-only reviewer marker (retry limited, never force-push); marker-only reconcile_missing_fetch_sent publishes missing trigger_fetch_sent only when durable local send-success + matching chatgpt_fetch_ack exist, never touches browser; event-field validation backward-compatible (filename-style + semantic aliases). 52 tests + --check PASSED. Reconciliation executed: trigger_fetch_sent for WEB_FETCH_BRIDGE_V1_COMPOSER_LOCATOR_CORRECTION_AND_SINGLE_E2E_001_001 published (RECONCILE_PUBLISHED, commit ef962f2) — marker sequence now complete (work_complete -> fetch_ack -> trigger_fetch_sent); no browser interaction, no resend. Consumed matching COMPOSER review; claude_review_ack published (commit 9f990e9).
+  current_task: Consumed ACK_TRIGGER_RACE_RECONCILIATION_ACCEPTED_MANDATORY_DOORBELL_FINALIZATION_REQUIRED. Implemented (0bef3b5): Claude-side finalization helper (scripts/finalize_handoff.py — explicit handoff+commit, tz-aware UTC, append-only, remote-confirmation fail-closed); documented mandatory finalization invariant in HANDOFF_PROTOCOL (packet/status -> push -> remote confirm -> claude_work_complete LAST; no late doorbell for already-surfaced handoffs); hardened publish_bridge_marker retry (raced chatgpt_review_published before trigger fails closed). 58 tests + --check PASSED. Executing fresh infrastructure-only autowake smoke: create fresh handoff, publish claude_work_complete doorbell LAST via helper, daemon auto-discovers from origin/main and delivers exactly one browser-generated fetch to Web ChatGPT (no user typing fetch).
 
 last_consumed_review:
-  handoff_id: WEB_FETCH_BRIDGE_V1_COMPOSER_LOCATOR_CORRECTION_AND_SINGLE_E2E_001_001
-  decision: E2E_BROWSER_FETCH_SUCCEEDED_COMPOSER_FIX_ACCEPTED_ACK_TRIGGER_RACE_CORRECTION_REQUIRED
+  handoff_id: WEB_FETCH_BRIDGE_V1_ACK_TRIGGER_RACE_RECONCILIATION_001_001
+  decision: ACK_TRIGGER_RACE_RECONCILIATION_ACCEPTED_MANDATORY_DOORBELL_FINALIZATION_REQUIRED
   state: REVISIONS_REQUIRED
-  response: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_COMPOSER_LOCATOR_CORRECTION_AND_SINGLE_E2E_001_REVIEWER_RESPONSE.md
+  response: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_ACK_TRIGGER_RACE_RECONCILIATION_001_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-11T16:58:00+08:00
+updated_at: 2026-08-11T17:18:00+08:00
