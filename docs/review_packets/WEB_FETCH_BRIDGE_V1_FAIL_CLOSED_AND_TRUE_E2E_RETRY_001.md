@@ -46,7 +46,14 @@ python scripts/web_fetch_bridge.py --config config/web_fetch_bridge.example.toml
   Web ChatGPT 发布评审 + chatgpt_review_published（最后）
   Claude 消费评审并发布 claude_review_ack
 
-结果：<SMOKE_RESULT>
+结果：SEND_FAILED_FAIL_CLOSED_NO_AUTO_RETRY（daemon 从 origin/main 自动发现 fresh doorbell
+`WEB_FETCH_BRIDGE_V1_FAIL_CLOSED_AND_TRUE_E2E_RETRY_001_001` 并连接 CDP localhost:9222
+（Chrome 151）；专用 profile 仅 chatgpt.com/ 首页、无任何已打开 /c/* 会话页 → tab 发现
+0 匹配 → fail-closed。随后终态持久化：同一 handoff 不再自动重试）。
+
+最小手动前置（单一）：在专用 profile C:\ChatGPT_Automation_Profile 打开恰好一个 ChatGPT
+会话（https://chatgpt.com/c/...），然后显式 `--retry-handoff WEB_FETCH_BRIDGE_V1_FAIL_CLOSED_
+AND_TRUE_E2E_RETRY_001_001` 清除终态失败并重跑 `--daemon`（或填本地 target_conversation_url）。
 ```
 
 ## 4. 所有权 / 边界
@@ -101,9 +108,13 @@ playwright_lifecycle:
   target_tab_preserved_probe: true # target_tab_preserved_after_failed_attempt
 
 e2e_smoke:
-  ran: <SMOKE_RAN>
-  result: <SMOKE_RESULT>
-  minimal_manual_prerequisite: <SMOKE_PREREQ>
+  ran: true (daemon auto-discovery from origin/main fresh doorbell + CDP connect; send FAIL_CLOSED)
+  result: SEND_FAILED_FAIL_CLOSED_NO_AUTO_RETRY — no open chatgpt.com/c/* conversation tab in
+          dedicated CDP profile (only chatgpt.com/ home); terminal failure persisted (no auto-retry)
+  minimal_manual_prerequisite: open exactly one ChatGPT conversation (https://chatgpt.com/c/...)
+          in dedicated profile C:\ChatGPT_Automation_Profile, then explicit
+          --retry-handoff WEB_FETCH_BRIDGE_V1_FAIL_CLOSED_AND_TRUE_E2E_RETRY_001_001 and rerun
+          --daemon (or fill local target_conversation_url)
 
 no_new_research: true
 canonical_artifacts_unchanged: true

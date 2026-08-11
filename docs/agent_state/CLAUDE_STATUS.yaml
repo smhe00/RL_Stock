@@ -9,7 +9,7 @@ code_commit: 90264e3
 packet: docs/review_packets/WEB_FETCH_BRIDGE_V1_FAIL_CLOSED_AND_TRUE_E2E_RETRY_001.md
 
 progress:
-  current_task: WEB_FETCH_BRIDGE_V1 fail-closed + true E2E retry delivered. send-failure TERMINAL (daemon never auto-retries; explicit --retry-handoff clears exactly once; trigger_fetch_sent only after real submission); timezone-aware marker timestamp validation; explicit Playwright lifecycle (driver stop, no unrelated-tab navigation, session/tab probes). 33 tests + --check PASSED. True E2E smoke in progress: fresh doorbell pushed LAST with tz-aware UTC timestamp; daemon auto-discovers from origin/main.
+  current_task: WEB_FETCH_BRIDGE_V1 fail-closed + true E2E retry delivered. send-failure TERMINAL (daemon never auto-retries; explicit --retry-handoff clears exactly once; trigger_fetch_sent only after real submission); timezone-aware marker timestamp validation; explicit Playwright lifecycle (driver stop, no unrelated-tab navigation, session/tab probes). 33 tests + --check PASSED. True E2E smoke: daemon auto-discovered fresh doorbell WEB_FETCH_BRIDGE_V1_FAIL_CLOSED_AND_TRUE_E2E_RETRY_001_001 from origin/main + connected CDP (Chrome 151); SEND_FAILED_FAIL_CLOSED_NO_AUTO_RETRY (no open /c/* conversation tab in dedicated profile; only chatgpt.com/ home; terminal failure persisted). Minimal manual prerequisite: open exactly one /c/ conversation in C:\ChatGPT_Automation_Profile, then explicit --retry-handoff + --daemon.
 
 last_consumed_review:
   handoff_id: WEB_FETCH_BRIDGE_V1_E2E_TRANSPORT_CORRECTION_001_001
