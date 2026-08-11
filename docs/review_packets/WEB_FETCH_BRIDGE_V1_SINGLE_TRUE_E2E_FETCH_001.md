@@ -53,6 +53,30 @@ claude_review_ack.json (Claude)
 append-only；bridge 只写/发布 trigger_fetch_sent.json；其余只读观察
 ```
 
+## 4b. E2E 执行结果 — FAIL CLOSED, NEW BLOCKER
+
+```text
+状态: 授权执行一次，已 fail-closed（未自动重发，无 trigger_fetch_sent）
+序列:
+  doorbell WEB_FETCH_BRIDGE_V1_SINGLE_TRUE_E2E_FETCH_001_001 pushed LAST (tz-aware UTC, commit e69fbd9)
+  daemon 从 origin/main 自动发现 -> fetch_send_start 16:10:47
+  恰好一次 CDP 提交尝试 -> SEND_FAILED (16:11:18)
+失败原因: Locator.click: Timeout 30000ms exceeded
+  - sender 定位到 <textarea class="wcDTda_fallbackTextarea" name="prompt-textarea">
+  - 该 textarea 为 ChatGPT 隐藏 fallback（display:none, w=0 h=0, 不可见）
+  - click 等待 "element is not visible" 30s 后超时
+只读 DOM 诊断（无点击/输入/导航/关闭）:
+  - 页面仅 1 个 textarea = wcDTda_fallbackTextarea (hidden fallback)
+  - 真实可交互 composer 在页面当前布局下不是可见 textarea
+  - target URL https://chatgpt.com/c/6a78742a... 精确匹配; title "L1结果通过但需修正文案"; readyState=complete
+  - 非 login/CAPTCHA（未触发 login/challenge 检测）
+NEW BLOCKER: CdpFetchSender._find_composer 只按 tag <textarea> 定位；真实 ChatGPT
+  composer（页面当前布局）不是可见 textarea，仅隐藏 fallback。composer 定位策略与实际
+  页面不匹配。未作任何导航/创建/关闭/修复; 未调用 browser.close; 未发布 trigger_fetch_sent;
+  dedup.json 记录 SEND_FAILED 终态 -> daemon 不自动重试; daemon 已由 operator 停止。
+恢复点: 需 reviewer 授权修正 composer 定位逻辑后再重跑（不得自动改代码并重发）。
+```
+
 ## 5. 明确声明
 
 ```text
@@ -83,13 +107,23 @@ authorization:
 fresh_handoff: true            # no reuse of prior SEND_FAILED handoffs
 doorbell_pushed_last: true
 daemon_discovers_from_origin_main: true
-exactly_one_browser_fetch: true
+exactly_one_browser_fetch: true   # attempted exactly once; fail-closed on error
 nonowning_no_navigation_close_repair: true
 no_browser_close: true
-trigger_fetch_sent_only_after_real_submission: true
-fail_closed_no_auto_resend: true
-wait_chatgpt_fetch_ack_then_review_published: true
-claude_review_ack_after_consuming_review: true
+trigger_fetch_sent_only_after_real_submission: true   # not published (send failed)
+fail_closed_no_auto_resend: true   # dedup.json SEND_FAILED terminal; no auto-retry
+wait_chatgpt_fetch_ack_then_review_published: true    # not reached (send failed)
+claude_review_ack_after_consuming_review: true        # not reached
+
+e2e_smoke:
+  outcome: FAIL_CLOSED_NEW_BLOCKER
+  send_attempted: true
+  send_succeeded: false
+  failure: Locator.click Timeout 30000ms — ChatGPT fallback textarea (wcDTda_fallbackTextarea) display:none not visible
+  blocker: CdpFetchSender._find_composer locates only <textarea>; real composer not a visible textarea on current page layout
+  trigger_fetch_sent_published: false
+  auto_resend: false
+  target_preserved: true   # URL/title unchanged after failed attempt (read-only probe)
 
 no_new_research: true
 canonical_artifacts_unchanged: true
