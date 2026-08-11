@@ -37,14 +37,20 @@ def test_write_initial_config_round_trips_and_refuses_overwrite(tmp_path):
     repo = make_repo(tmp_path)
     config_path = tmp_path / "local" / "consumer.local.toml"
     runtime = tmp_path / "runtime"
-    created = write_initial_config(repo, config_path=config_path, runtime_dir=runtime)
+    created = write_initial_config(
+        repo,
+        config_path=config_path,
+        runtime_dir=runtime,
+        review_repository="owner/demo",
+    )
     assert created == config_path.resolve()
-    assert not (repo / "docs").exists()  # bootstrap does not mutate consumer repo
+    assert not (repo / "docs").exists()
 
     cfg = load_config(created)
     assert cfg.repo_root == repo.resolve()
     assert cfg.marker_root == Path("docs/web_bridge")
     assert cfg.runtime_dir == runtime.resolve()
+    assert cfg.review_repository == "owner/demo"
     assert cfg.target_conversation_url is None
 
     with pytest.raises(BridgeError):
