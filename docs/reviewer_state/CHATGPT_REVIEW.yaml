@@ -1,51 +1,68 @@
 protocol_version: 3
 actor: web_chatgpt_reviewer
-handoff_id: WEBGPT_WAKE_BRIDGE_STANDALONE_0_9_RC1_REVISIONS_REQUIRED_001_001
-state: REVISIONS_REQUIRED
+handoff_id: WEBGPT_WAKE_BRIDGE_STANDALONE_0_9_RC2_RETEST_AUTHORIZATION
+state: REVIEW_COMPLETE
 
 reviewed_packet:
-  path: tools/webgpt_wake_bridge/docs/validation_reports/VALIDATION_REPORT_0_9_0RC1.md
-  commit: b23414c138c591b4209eea81dc239bf4f3a63a75
+  path: tools/webgpt_wake_bridge/docs/FINAL_CLAUDE_TEST_PLAN.md
+  commit: d206699763e68e992e9aa63f1774948ae1197bf2
 
-reviewed_remote_head: ef6bd008dacb0a41bd3f9970291491228c2caf38
-code_commit: 2844ddd4750265321136b866d2ecb973d3eb9011
+reviewed_remote_head: ca46798886ef61a16e8c96b19a7d154befefed14
+code_commit: ca46798886ef61a16e8c96b19a7d154befefed14
 
-decision: STANDALONE_0_9_RC1_VALIDATION_ACCEPTED_REPOSITORY_ROUTING_CORRECTION_REQUIRED
+decision: STANDALONE_0_9_RC2_ROUTING_CORRECTION_READY_FOR_INDEPENDENT_RETEST
 
 response:
-  path: docs/reviewer_responses/WEBGPT_WAKE_BRIDGE_STANDALONE_0_9_RC1_REVISIONS_REQUIRED_001_001_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/WEBGPT_WAKE_BRIDGE_STANDALONE_0_9_RC2_RETEST_AUTHORIZATION.md
 
 passed:
-  - INDEPENDENT_VALIDATOR_DID_NOT_MODIFY_STANDALONE_IMPLEMENTATION
-  - FRESH_ENVIRONMENT_38_TESTS_PASS
-  - INIT_CHECK_NOOP_PASS
-  - NONOWNING_CDP_AND_TARGET_PRESERVATION_PASS
-  - FINALIZE_DOORBELL_LAST_PASS
-  - MARKER_ONLY_AUTODISCOVERY_PASS
-  - EXACTLY_ONE_BROWSER_FETCH_PASS
-  - TRIGGER_FETCH_SENT_PASS
-  - DUPLICATE_NO_RESEND_PASS
-  - DUPLICATE_FINALIZE_FAIL_CLOSED_PASS
-  - NO_FORCE_PUSH_PASS
-  - BLANK_CONSUMER_HAS_NO_RL_STOCK_STATE
-  - NO_USER_MANUAL_FETCH_DURING_BLANK_SMOKE
+  - RC1_VALIDATION_DEFECT_ACCEPTED
+  - EXPLICIT_REVIEW_REPOSITORY_LOCATOR_IMPLEMENTED
+  - ROUTED_WAKE_PAYLOAD_IMPLEMENTED
+  - GITHUB_REMOTE_IDENTITY_GUARD_IMPLEMENTED
+  - LOCAL_ONLY_REMOTE_FAILS_BEFORE_BROWSER_CONSTRUCTION
+  - RC1_CORE_SAFETY_INVARIANTS_PRESERVED_BY_STATIC_REVIEW
+  - STANDALONE_VERSION_BUMPED_TO_0_9_0RC2
+  - EMBEDDED_ACCEPTED_V1_UNCHANGED
 
-revision_required:
-  - STANDALONE_WAKE_PAYLOAD_LACKS_EXPLICIT_WEB_REVIEW_REPOSITORY_LOCATOR
-  - LOCAL_ONLY_CONSUMER_REMOTE_CANNOT_RECEIVE_WEB_OWNED_ACK_REVIEW_MARKERS
-  - FULL_WEB_E2E_REQUIRES_WEB_ACCESSIBLE_REPOSITORY_OR_SEPARATE_HUB_MIRROR_TRANSPORT
+revision_required: []
 
-authorized_next: []
-
-implementation_owner:
-  actor: web_chatgpt_reviewer
-  note: Web ChatGPT will implement the next standalone correction; Claude remains test-only until a fresh validation authorization is published.
+authorized_next:
+  - task: WEBGPT_WAKE_BRIDGE_STANDALONE_FINAL_VALIDATION_RC2_001
+    scope: LOCAL_PROTOCOL_INFRASTRUCTURE_VALIDATION_ONLY
+    authorization: docs/reviewer_responses/WEBGPT_WAKE_BRIDGE_STANDALONE_0_9_RC2_RETEST_AUTHORIZATION.md
+    requirements:
+      - fetch origin/main and start from clean synchronized repository
+      - test exact standalone candidate commit ca46798886ef61a16e8c96b19a7d154befefed14
+      - follow tools/webgpt_wake_bridge/docs/FINAL_CLAUDE_TEST_PLAN.md exactly
+      - act as test-only validator; do not modify tools/webgpt_wake_bridge implementation code
+      - require webgpt-bridge --version == 0.9.0rc2
+      - run full standalone pytest and record exact count
+      - independently verify routed payload repo+handoff and GitHub-remote identity guard
+      - verify local-only/non-GitHub remote fails before browser construction
+      - create one fresh disposable private GitHub demo repository under authenticated user account if gh CLI is available
+      - demo repository must contain no RL_Stock reviewer/research state
+      - keep demo GitHub repository alive until Web ChatGPT ACK/review completes
+      - bootstrap with standalone init --review-repository <owner/repo>
+      - use the already-open dedicated Web ChatGPT reviewer conversation
+      - run check and >=30 second noop before live send
+      - create one fresh unique routed E2E handoff
+      - publish standalone claude_work_complete LAST with a real remote-contained demo code commit
+      - user must not type fetch during E2E
+      - expected browser message is exactly fetch repo=<owner/repo> handoff=<handoff_id>
+      - Web ChatGPT must resolve that repo from payload and publish ACK/review markers there
+      - verify duplicate scan/restart no-resend and duplicate finalize fail-closed
+      - write new validation report with ACCEPT_1_0_0 or REVISIONS_REQUIRED
+      - on any defect do not fix candidate code; report and stop
+      - on success do not bump to 1.0.0 and do not migrate RL_Stock
+      - after validation report/status are pushed to RL_Stock, use accepted embedded V1 only to return the validation result to Web ChatGPT
+      - no financial/research/backtest/QMT/account/order/paper/live/RL work
 
 forbidden_next:
   - STANDALONE_IMPLEMENTATION_CODE_FIX_BY_CLAUDE
-  - PACKAGE_1_0_0_PROMOTION
+  - PACKAGE_1_0_0_SELF_PROMOTION
   - RL_STOCK_CONSUMER_MIGRATION
-  - USER_MANUAL_FETCH_DURING_NEXT_BLANK_E2E
+  - USER_MANUAL_FETCH_DURING_ROUTED_E2E
   - BROWSER_SELF_REPAIR_OR_AUTO_NAVIGATION
   - PAGE_GOTO_IN_NORMAL_BRIDGE_OPERATION
   - PAGE_OR_CONTEXT_CLOSE_IN_NORMAL_BRIDGE_OPERATION
@@ -75,10 +92,9 @@ forbidden_next:
   - RL_RETRAINING
 
 notes:
-  - The rc1 validation report is accepted.
-  - The defect is a real single-project-to-multi-project routing gap, not a CDP/composer/daemon/finalize regression.
-  - Historical web_fetch_bridge_v1 markers remain valid and must not be rewritten.
-  - The next full blank-repository E2E must use a Web-accessible repository unless a separately designed Web-accessible hub/mirror is implemented.
-  - Claude has no authorized implementation work from this state.
+  - rc1 failed only at multi-project Web repository routing; core standalone mechanics passed independent validation.
+  - rc2 is intentionally limited to Web-accessible GitHub consumer repositories; hub/mirror support for local-only projects is future scope.
+  - Static review of rc2 is complete; runtime pytest and routed E2E remain unclaimed until Claude validates them.
+  - Claude remains independent test-only validator.
 
-updated_at: 2026-08-11T22:32:00+08:00
+updated_at: 2026-08-11T23:08:00+08:00
