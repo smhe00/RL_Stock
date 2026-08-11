@@ -1,53 +1,58 @@
 protocol_version: 3
 actor: web_chatgpt_reviewer
-handoff_id: WEB_FETCH_BRIDGE_V1_NOOP_LIFECYCLE_DIAGNOSTIC_AND_NONOWNING_CDP_001_001
-state: REVIEW_COMPLETE
+handoff_id: WEB_FETCH_BRIDGE_V1_SINGLE_TRUE_E2E_FETCH_001_001
+state: REVISIONS_REQUIRED
 
 reviewed_packet:
-  path: docs/review_packets/WEB_FETCH_BRIDGE_V1_NOOP_LIFECYCLE_DIAGNOSTIC_AND_NONOWNING_CDP_001.md
-  commit: c6f51935302a64b3da3df73611b22731685c5407
+  path: docs/review_packets/WEB_FETCH_BRIDGE_V1_SINGLE_TRUE_E2E_FETCH_001.md
+  commit: 411e1cc2551371acfab20b8108712b458d90951e
 
-reviewed_remote_head: c6f51935302a64b3da3df73611b22731685c5407
+reviewed_remote_head: 411e1cc2551371acfab20b8108712b458d90951e
 code_commit: 31409ebbaf0b160db37bc28c2cefabe95a745450
 
-decision: NOOP_LIFECYCLE_AND_NONOWNING_CDP_ACCEPTED_TRUE_E2E_FETCH_AUTHORIZED
+decision: E2E_FAIL_CLOSED_ACCEPTED_COMPOSER_LOCATOR_CORRECTION_AUTHORIZED
 
 response:
-  path: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_NOOP_LIFECYCLE_DIAGNOSTIC_AND_NONOWNING_CDP_001_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_SINGLE_TRUE_E2E_FETCH_001_REVIEWER_RESPONSE.md
 
 passed:
-  - TWO_30S_NOOP_PROBES_PRESERVED_TARGET
-  - CONFIGURED_DEDICATED_TARGET_URL_PRESENT_AND_UNCHANGED
-  - SENDER_NONOWNING_NO_GOTO
-  - SENDER_NONOWNING_NO_NEW_PAGE
-  - SENDER_NONOWNING_NO_PAGE_OR_CONTEXT_CLOSE
-  - SENDER_NONOWNING_NO_BROWSER_CLOSE
-  - MISSING_OR_MISMATCH_TARGET_FAILS_CLOSED_WITHOUT_REPAIR
-  - TERMINAL_SEND_FAILURE_AND_EXPLICIT_RETRY_ONLY_PRESERVED
-  - TIMEZONE_AWARE_MARKERS_PRESERVED
-  - GITHUB_MARKER_TRANSPORT_AND_PROTOCOL_SEPARATION_PRESERVED
-  - TESTS_36_AND_CHECK_REPORTED_PASS
+  - FRESH_E2E_HANDOFF_USED
+  - CLAUDE_WORK_COMPLETE_DOORBELL_PUBLISHED_LAST
+  - DAEMON_AUTO_DISCOVERED_FROM_ORIGIN_MAIN
+  - EXACTLY_ONE_BROWSER_SEND_ATTEMPT
+  - NONOWNING_CDP_BROWSER_LIFECYCLE_PRESERVED
+  - TARGET_CONVERSATION_PRESERVED
+  - FAILURE_OCCURRED_BEFORE_REAL_CHATGPT_SUBMISSION
+  - TRIGGER_FETCH_SENT_CORRECTLY_NOT_PUBLISHED
+  - TERMINAL_FAIL_CLOSED_NO_AUTO_RESEND
+  - BLOCKER_IS_NARROW_COMPOSER_LOCATOR_UI_ADAPTATION
   - NO_FINANCIAL_RESEARCH_BACKTEST_EXECUTION_OR_CANONICAL_CHANGE
 
-revision_required: []
+revision_required:
+  - TEXTAREA_ONLY_COMPOSER_LOCATOR_SELECTS_HIDDEN_FALLBACK
+  - VISIBLE_EDITABLE_COMPOSER_MUST_BE_IDENTIFIED_SEMANTICALLY
+  - SUCCESSFUL_SUBMISSION_MUST_BE_CONFIRMED_WITHOUT_READING_ASSISTANT_OUTPUT
+  - TRUE_BROWSER_GENERATED_FETCH_E2E_NOT_YET_COMPLETED
 
 authorized_next:
-  - task: WEB_FETCH_BRIDGE_V1_SINGLE_TRUE_E2E_FETCH_001
+  - task: WEB_FETCH_BRIDGE_V1_COMPOSER_LOCATOR_CORRECTION_AND_SINGLE_E2E_001
     scope: LOCAL_PROTOCOL_INFRASTRUCTURE_ONLY
-    authorization: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_NOOP_LIFECYCLE_DIAGNOSTIC_AND_NONOWNING_CDP_001_REVIEWER_RESPONSE.md
+    authorization: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_SINGLE_TRUE_E2E_FETCH_001_REVIEWER_RESPONSE.md
     requirements:
-      - create a fresh unique E2E handoff; do not reuse prior failed handoffs
-      - push fresh Claude-owned claude_work_complete.json LAST with timezone-aware timestamp
-      - autonomous marker-only daemon must discover it from origin/main
-      - configured dedicated target conversation must already be open and match exactly
-      - submit exactly one browser-generated `fetch <fresh_handoff_id>`
-      - do not navigate, create, close, or repair any browser/page/context
-      - do not call browser.close
-      - publish trigger_fetch_sent.json only after actual successful browser submission
-      - never auto-resend on any failure; fail closed and stop
-      - wait for matching Web ChatGPT chatgpt_fetch_ack.json and chatgpt_review_published.json
-      - consume matching review and publish Claude-owned claude_review_ack.json
-      - no redesign or unrelated code changes unless E2E exposes a new blocker
+      - perform read-only DOM metadata probe limited to candidate composer/input elements; do not read assistant output/content
+      - replace textarea-only lookup with semantic visibility-aware editable-composer lookup
+      - prefer visible #prompt-textarea[contenteditable=true], then visible [contenteditable=true][data-lexical-editor=true], then uniquely composer-scoped visible [contenteditable=true]
+      - require exactly one visible editable candidate and fail closed on ambiguity
+      - explicitly exclude hidden fallback textarea including wcDTda_fallbackTextarea, display:none, zero-size, disabled, or non-editable nodes
+      - do not rely on opaque generated CSS class alone
+      - inject exact text `fetch <fresh_handoff_id>` into chosen visible contenteditable; fill may be used without click if reliable
+      - after Enter positively confirm submission using composer clear/reset or equivalent local submit-state transition while URL remains unchanged; do not read assistant output
+      - if submission cannot be confirmed, fail closed and do not publish trigger_fetch_sent
+      - preserve non-owning rules: no goto, new_page, page/context/browser close, browser repair, or unrelated tab mutation
+      - preserve terminal fail-closed and no automatic resend
+      - add focused tests for hidden fallback exclusion, unique visible contenteditable selection, ambiguity fail-closed, and unconfirmed submission withholding trigger_fetch_sent
+      - use a fresh unique E2E handoff; do not reuse WEB_FETCH_BRIDGE_V1_SINGLE_TRUE_E2E_FETCH_001_001
+      - run exactly one fresh E2E after correction; success publishes trigger_fetch_sent and waits for Web ChatGPT ACK/review markers; any new blocker stops without retry
 
 forbidden_next:
   - BROWSER_SELF_REPAIR_OR_AUTO_NAVIGATION
@@ -55,6 +60,8 @@ forbidden_next:
   - PAGE_OR_CONTEXT_CLOSE_IN_NORMAL_BRIDGE_OPERATION
   - BROWSER_CLOSE_IN_NORMAL_BRIDGE_OPERATION
   - AUTOMATIC_RESEND
+  - CHATGPT_OUTPUT_SCRAPING
+  - CAPTCHA_OR_PLATFORM_PROTECTION_BYPASS
   - NEW_FINANCIAL_RESEARCH_BRANCH
   - FINANCIAL_BACKTEST
   - DATA_REFRESH
@@ -78,13 +85,11 @@ forbidden_next:
   - RL_RETRAINING
   - DEFAULT_LOCAL_CODEX_REVIEWER
   - AUTOMATIC_CLAUDE_LAUNCH
-  - CHATGPT_OUTPUT_SCRAPING
-  - CAPTCHA_OR_PLATFORM_PROTECTION_BYPASS
 
 notes:
-  - The repeated ChatGPT-home fallback blocker is cleared by two pure no-op preservation probes after the non-owning refactor.
-  - This authorization is limited to exactly one fresh browser-generated E2E fetch cycle.
-  - When the browser-generated fetch arrives, Web ChatGPT must publish chatgpt_fetch_ack before substantive review and chatgpt_review_published last.
+  - This handoff was manually surfaced by the user after the browser send failed; no synthetic chatgpt_fetch_ack marker is created because no browser-generated fetch reached Web ChatGPT.
+  - Remote bridge handoff contains claude_work_complete only; trigger_fetch_sent is absent as required.
+  - The marker/GitHub transport and non-owning lifecycle design remain accepted; only composer targeting/submission confirmation is reopened.
   - MaxDiv 120/0.5 and M2 canonical state remain unchanged; 03110 STOP remains unresolved/in force; PPO/SAC/TD3 remain closed.
 
-updated_at: 2026-08-11T16:04:00+08:00
+updated_at: 2026-08-11T16:16:00+08:00
