@@ -1,61 +1,60 @@
 protocol_version: 3
 actor: web_chatgpt_reviewer
-handoff_id: WEB_FETCH_BRIDGE_V1_FAIL_CLOSED_AND_TRUE_E2E_RETRY_001_001
-state: REVISIONS_REQUIRED
+handoff_id: WEB_FETCH_BRIDGE_V1_NOOP_LIFECYCLE_DIAGNOSTIC_AND_NONOWNING_CDP_001_001
+state: REVIEW_COMPLETE
 
 reviewed_packet:
-  path: docs/review_packets/WEB_FETCH_BRIDGE_V1_FAIL_CLOSED_AND_TRUE_E2E_RETRY_001.md
-  commit: be696af4e12dc6acaeea369f2bb289ba6d2b6e73
+  path: docs/review_packets/WEB_FETCH_BRIDGE_V1_NOOP_LIFECYCLE_DIAGNOSTIC_AND_NONOWNING_CDP_001.md
+  commit: c6f51935302a64b3da3df73611b22731685c5407
 
-reviewed_remote_head: be696af4e12dc6acaeea369f2bb289ba6d2b6e73
-code_commit: 90264e3
+reviewed_remote_head: c6f51935302a64b3da3df73611b22731685c5407
+code_commit: 31409ebbaf0b160db37bc28c2cefabe95a745450
 
-decision: WEB_FETCH_BRIDGE_V1_FAIL_CLOSED_CORE_ACCEPTED_BROWSER_LIFECYCLE_DIAGNOSTIC_REQUIRED
+decision: NOOP_LIFECYCLE_AND_NONOWNING_CDP_ACCEPTED_TRUE_E2E_FETCH_AUTHORIZED
 
 response:
-  path: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_FAIL_CLOSED_AND_TRUE_E2E_RETRY_001_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_NOOP_LIFECYCLE_DIAGNOSTIC_AND_NONOWNING_CDP_001_REVIEWER_RESPONSE.md
 
 passed:
-  - SEND_FAILURE_IS_NOW_TERMINAL_NO_AUTO_RETRY
-  - EXPLICIT_OPERATOR_RETRY_ONLY
-  - TRIGGER_FETCH_SENT_ABSENT_ON_FAILED_SUBMISSION
-  - TIMEZONE_AWARE_MARKER_VALIDATION
-  - ORIGIN_MAIN_MARKER_WATCHER_REMAINS_ACCEPTED
-  - GITHUB_MARKER_TRANSPORT_REMAINS_ACCEPTED
+  - TWO_30S_NOOP_PROBES_PRESERVED_TARGET
+  - CONFIGURED_DEDICATED_TARGET_URL_PRESENT_AND_UNCHANGED
+  - SENDER_NONOWNING_NO_GOTO
+  - SENDER_NONOWNING_NO_NEW_PAGE
+  - SENDER_NONOWNING_NO_PAGE_OR_CONTEXT_CLOSE
+  - SENDER_NONOWNING_NO_BROWSER_CLOSE
+  - MISSING_OR_MISMATCH_TARGET_FAILS_CLOSED_WITHOUT_REPAIR
+  - TERMINAL_SEND_FAILURE_AND_EXPLICIT_RETRY_ONLY_PRESERVED
+  - TIMEZONE_AWARE_MARKERS_PRESERVED
+  - GITHUB_MARKER_TRANSPORT_AND_PROTOCOL_SEPARATION_PRESERVED
+  - TESTS_36_AND_CHECK_REPORTED_PASS
   - NO_FINANCIAL_RESEARCH_BACKTEST_EXECUTION_OR_CANONICAL_CHANGE
 
-revision_required:
-  - DEDICATED_CHATGPT_CONVERSATION_FELL_BACK_TO_HOME_REPEATEDLY_DURING_BRIDGE_TESTING
-  - BROWSER_LIFECYCLE_NEUTRALITY_NOT_PROVEN
-  - NORMAL_PATH_STILL_CALLS_BROWSER_CLOSE_AFTER_CONNECT_OVER_CDP
-  - TARGET_URL_ROUTING_MUST_BECOME_OBSERVE_ONLY_NO_NAVIGATION
-  - TRUE_BROWSER_GENERATED_FETCH_E2E_NOT_COMPLETED
+revision_required: []
 
 authorized_next:
-  - task: WEB_FETCH_BRIDGE_V1_NOOP_LIFECYCLE_DIAGNOSTIC_AND_NONOWNING_CDP_001
+  - task: WEB_FETCH_BRIDGE_V1_SINGLE_TRUE_E2E_FETCH_001
     scope: LOCAL_PROTOCOL_INFRASTRUCTURE_ONLY
-    authorization: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_FAIL_CLOSED_AND_TRUE_E2E_RETRY_001_REVIEWER_RESPONSE.md
+    authorization: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_NOOP_LIFECYCLE_DIAGNOSTIC_AND_NONOWNING_CDP_001_REVIEWER_RESPONSE.md
     requirements:
-      - require the dedicated target conversation URL in ignored local config for this diagnostic
-      - add a no-op lifecycle diagnostic that performs no click, typing, navigation, page creation, page close, context close, or browser close
-      - record only Chrome DevTools target URL/title metadata needed for diagnosis; never read ChatGPT output/content
-      - attach connect_over_cdp and hold at least 30 seconds without page mutation
-      - do not call browser.close in no-op diagnostic or normal long-running daemon path
-      - prefer one long-lived Playwright/CDP connection owned by daemon; stop only Playwright driver/process connection when daemon exits
-      - before and after no-op attachment prove configured chatgpt.com/c/... target remains present and unchanged
-      - if target becomes chatgpt.com home during pure no-op probe, STOP and report environment/CDP/session issue; do not navigate repair
-      - if no-op passes, refactor sender normal operation to never call page.goto, new_page, page.close, context.close, or browser.close
-      - configured target URL must already exist and match exactly; missing/mismatch is terminal fail closed
-      - run a second no-op preservation probe after refactor
-      - only if both no-op probes pass, create one fresh unique handoff and attempt exactly one fetch <handoff_id>
-      - after successful submission publish trigger_fetch_sent and wait for Web ChatGPT ACK/review markers as before
-      - no new financial research, backtest, data refresh, strategy, execution, QMT, account or trading work
+      - create a fresh unique E2E handoff; do not reuse prior failed handoffs
+      - push fresh Claude-owned claude_work_complete.json LAST with timezone-aware timestamp
+      - autonomous marker-only daemon must discover it from origin/main
+      - configured dedicated target conversation must already be open and match exactly
+      - submit exactly one browser-generated `fetch <fresh_handoff_id>`
+      - do not navigate, create, close, or repair any browser/page/context
+      - do not call browser.close
+      - publish trigger_fetch_sent.json only after actual successful browser submission
+      - never auto-resend on any failure; fail closed and stop
+      - wait for matching Web ChatGPT chatgpt_fetch_ack.json and chatgpt_review_published.json
+      - consume matching review and publish Claude-owned claude_review_ack.json
+      - no redesign or unrelated code changes unless E2E exposes a new blocker
 
 forbidden_next:
   - BROWSER_SELF_REPAIR_OR_AUTO_NAVIGATION
   - PAGE_GOTO_IN_NORMAL_BRIDGE_OPERATION
   - PAGE_OR_CONTEXT_CLOSE_IN_NORMAL_BRIDGE_OPERATION
   - BROWSER_CLOSE_IN_NORMAL_BRIDGE_OPERATION
+  - AUTOMATIC_RESEND
   - NEW_FINANCIAL_RESEARCH_BRANCH
   - FINANCIAL_BACKTEST
   - DATA_REFRESH
@@ -83,10 +82,9 @@ forbidden_next:
   - CAPTCHA_OR_PLATFORM_PROTECTION_BYPASS
 
 notes:
-  - User reported the dedicated conversation fell back to ChatGPT home again after the latest bridge test; this repeated symptom is now treated as a blocking lifecycle issue rather than an incidental browser state.
-  - Repository search found no explicit Chrome launch/restart automation path in the bridge code.
-  - Current sender still calls browser.close after connect_over_cdp; official Playwright documentation treats this as a browser-level disconnect/cleanup operation for connected browsers, so lifecycle neutrality must be proven on this environment before another send attempt.
-  - No browser-generated fetch has been received yet; therefore no chatgpt_fetch_ack marker is created for the current handoff.
-  - MaxDiv 120/0.5 and M2 canonical state remain unchanged; 03110 STOP remains unresolved; PPO/SAC/TD3 remain closed.
+  - The repeated ChatGPT-home fallback blocker is cleared by two pure no-op preservation probes after the non-owning refactor.
+  - This authorization is limited to exactly one fresh browser-generated E2E fetch cycle.
+  - When the browser-generated fetch arrives, Web ChatGPT must publish chatgpt_fetch_ack before substantive review and chatgpt_review_published last.
+  - MaxDiv 120/0.5 and M2 canonical state remain unchanged; 03110 STOP remains unresolved/in force; PPO/SAC/TD3 remain closed.
 
-updated_at: 2026-08-11T15:39:00+08:00
+updated_at: 2026-08-11T16:04:00+08:00
