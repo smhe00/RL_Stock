@@ -63,10 +63,14 @@ python scripts/web_fetch_bridge.py --config config/web_fetch_bridge.example.toml
   running daemon 从 origin/main 自动发现 doorbell（marker-only）   <- 用户未输入 fetch
   daemon 经 CDP 提交恰好一次 fetch <handoff>（NON-OWNING）          <- fetch_sent 17:18:58
   daemon 发布 trigger_fetch_sent to origin/main (3cb5978)          <- 无 publish 竞态失败（硬化生效）
-  等待 Web ChatGPT chatgpt_fetch_ack -> chatgpt_review_published    <- 进行中
+  等待 Web ChatGPT chatgpt_fetch_ack -> chatgpt_review_published    <- ACK 已收到
+
+结果: chatgpt_fetch_ack RECEIVED (a69d3a2, 09:19:30+00:00) — Web ChatGPT 自动确认收到 fetch
+      （含 trigger_commit 3cb5978）。实质评审 chatgpt_review_published 待发布。
 
 结论: 自动唤醒链路（Claude doorbell LAST -> daemon marker-only 自动发现 -> 恰好一次
-      browser-generated fetch -> trigger_fetch_sent 发布）已完整走通，无需用户输入 fetch。
+      browser-generated fetch -> trigger_fetch_sent 发布 -> Web ChatGPT 自动 ACK）已完整
+      走通，无需用户输入 fetch。
 ```
 
 
