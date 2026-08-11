@@ -1,3 +1,5 @@
+import inspect
+
 import pytest
 
 from webgpt_wake_bridge.browser import CdpFetchSender
@@ -48,3 +50,9 @@ def test_submission_confirmation_requires_clear_and_same_url():
 def test_selector_is_semantic():
     assert CdpFetchSender._selector_for({"id": "prompt-textarea"}) == '[id="prompt-textarea"]'
     assert CdpFetchSender._selector_for({"tag": "div", "contenteditable": "true"}) == 'div[contenteditable="true"]'
+
+
+def test_normal_sender_source_is_non_owning():
+    src = inspect.getsource(CdpFetchSender.send)
+    for forbidden in ("browser.close(", "page.goto(", "new_page(", "page.close(", "context.close("):
+        assert forbidden not in src
