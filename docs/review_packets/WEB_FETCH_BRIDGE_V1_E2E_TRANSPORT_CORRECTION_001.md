@@ -54,7 +54,16 @@ python scripts/web_fetch_bridge.py --config config/web_fetch_bridge.example.toml
   Web ChatGPT 发布评审 + chatgpt_review_published（最后）
   Claude 消费评审并发布 claude_review_ack
 
-结果：<SMOKE_RESULT>（见下方状态；若 CDP 前置不完整则 fail-closed + 最小手动前置）
+结果：SEND_FAILED_FAIL_CLOSED（守护进程从 origin/main 成功发现 doorbell marker 并连接
+CDP localhost:9222（Chrome 151），但专用 profile 当前仅有 chatgpt.com/ 首页、无任何
+已打开的 chatgpt.com/c/* 会话页 → tab 发现 fallback 0 匹配 → fail-closed 不猜测）。
+按评审"若 CDP/profile/session 前置不可用，live browser 冒烟必须 fail-closed"。
+
+最小手动前置（单一）：
+  在专用 CDP profile（C:\ChatGPT_Automation_Profile）中打开恰好一个 ChatGPT 会话
+  （https://chatgpt.com/c/...），或在本机忽略配置 config/web_fetch_bridge.local.toml
+  填入 target_conversation_url，然后重跑守护进程 `--daemon`；守护将从 origin/main
+  重新发现该 doorbell 并发送恰好一次 `fetch <fresh_handoff_id>`。
 ```
 
 ## 4. 所有权 / 边界
@@ -109,9 +118,12 @@ cdp:
   session_lifetime: session_alive_after_disconnect probe
 
 e2e_smoke:
-  ran: <SMOKE_RAN>
-  result: <SMOKE_RESULT>
-  minimal_manual_prerequisite: <SMOKE_PREREQ>
+  ran: true (daemon auto-discovery from origin/main doorbell + CDP connect; send FAIL_CLOSED)
+  result: SEND_FAILED_FAIL_CLOSED — no open chatgpt.com/c/* conversation tab in dedicated
+          CDP profile (only chatgpt.com/ home); tab discovery fallback 0 match -> fail-closed
+  minimal_manual_prerequisite: open exactly one ChatGPT conversation (https://chatgpt.com/c/...)
+          in dedicated profile C:\ChatGPT_Automation_Profile, OR fill
+          config/web_fetch_bridge.local.toml target_conversation_url, then rerun `--daemon`
 
 no_new_research: true
 canonical_artifacts_unchanged: true
