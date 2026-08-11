@@ -2,7 +2,7 @@ import json
 import logging
 from pathlib import Path
 
-from webgpt_wake_bridge.bridge import RemoteMarkerWatcher
+from webgpt_wake_bridge.bridge import RemoteMarkerWatcher, trigger_marker_text
 from webgpt_wake_bridge.config import BridgeConfig
 from webgpt_wake_bridge.errors import BridgeError
 
@@ -12,6 +12,9 @@ class FakeTransport:
         self.markers = {}
         self.publish_calls = []
         self.fail_first_publish = False
+
+    def fetch(self):
+        return None
 
     def list_handoff_dirs(self):
         return {handoff for handoff, _ in self.markers}
@@ -103,6 +106,45 @@ def test_ack_before_trigger_reconciles_without_resend(tmp_path):
     watcher = RemoteMarkerWatcher(config(tmp_path), t, sender, logging.getLogger("test"))
     outcomes = watcher.scan_once()
     assert f"{h}:PUBLISH_FAILED_FAIL_CLOSED" in outcomes
+    assert f"{h}:RECONCILE_PUBLISHED" in outcomes
+    assert sender.calls == 1
+    assert t.marker_exists(h, "trigger_fetch_sent.json")
+
+
+def test_crash_window_attempt_started_blocks_resend_and_ack_reconciles(tmp_path):
+    t = FakeTransport()
+    h = "H_004"
+    t.markers[(h, "claude_work_complete.json")] = marker(h, "claude_work_complete.json")
+    sender = Sender()
+    watcher = RemoteMarkerWatcher(config(tmp_path), t, sender, logging.getLogger("test"))
+
+    # Simulate process death after durable attempt_started but before completion was
+    # recorded. A restarted watcher must not touch the browser automatically.
+    watcher._mark_started(h, trigger_marker_text(h, timestamp="2026-08-11T09:18:39+00:00"))
+    restarted = RemoteMarkerWatcher(config(tmp_path), t, sender, logging.getLogger("test"))
+    assert restarted.scan_once() == []
+    assert sender.calls == 0
+
+    # If Web ACK later proves the browser submission actually arrived, recover by
+    # publishing only the missing trigger marker; still no browser resend.
+    t.markers[(h, "chatgpt_fetch_ack.json")] = marker(h, "CHATGPT_FETCH_ACK")
+    assert restarted.scan_once() == [f"{h}:RECONCILE_PUBLISHED"]
+    assert sender.calls == 0
+    assert t.marker_exists(h, "trigger_fetch_sent.json")
+
+
+def test_uncertain_sender_failure_with_late_ack_reconciles_marker_only(tmp_path):
+    t = FakeTransport()
+    h = "H_005"
+    t.markers[(h, "claude_work_complete.json")] = marker(h, "claude_work_complete.json")
+
+    def ack_then_fail(handoff):
+        t.markers[(handoff, "chatgpt_fetch_ack.json")] = marker(handoff, "CHATGPT_FETCH_ACK")
+
+    sender = Sender(fail=True, on_send=ack_then_fail)
+    watcher = RemoteMarkerWatcher(config(tmp_path), t, sender, logging.getLogger("test"))
+    outcomes = watcher.scan_once()
+    assert f"{h}:SEND_FAILED_FAIL_CLOSED" in outcomes
     assert f"{h}:RECONCILE_PUBLISHED" in outcomes
     assert sender.calls == 1
     assert t.marker_exists(h, "trigger_fetch_sent.json")
