@@ -1,4 +1,5 @@
-# Copy to bridge.local.toml and keep the local file ignored by Git.
+# Copy to a LOCAL untracked file (preferably outside the consumer repository).
+# Never commit the real target_conversation_url.
 
 [project]
 repo_root = "C:\\path\\to\\your_project"
@@ -14,6 +15,8 @@ target_conversation_url = ""
 [runtime]
 poll_interval_s = 5
 fetch_ack_timeout_s = 120
-runtime_dir = ".runtime/webgpt_wake_bridge"
+# Runtime/log/dedup/isolated-worktree state is local infrastructure, not project data.
+# An external directory keeps the consumer repository clean.
+runtime_dir = "C:\\WebGPT_Wake_Bridge_Runtime\\your_project"
 max_log_bytes = 1048576
 log_backups = 3
