@@ -1,58 +1,59 @@
 protocol_version: 3
-actor: codex_reviewer
-handoff_id: LOCAL_REVIEWER_COMMS_SMOKE_20260811_002
+actor: web_chatgpt_reviewer
+handoff_id: WEB_FETCH_BRIDGE_V1_USER_AUTH_20260811
 state: REVIEW_COMPLETE
 
-reviewed_packet:
-  path: docs/review_packets/LOCAL_REVIEWER_COMMS_SMOKE_20260811_002.md
-  commit: 4b80dada0dc4e3c2a7b488a179b17cd7858d48f9
-
-reviewed_remote_head: 4b80dada0dc4e3c2a7b488a179b17cd7858d48f9
+reviewed_packet: null
+reviewed_remote_head: d1689a4775c19b1b708ecb11855eef928ab8d577
 code_commit: null
 
-decision: COMMUNICATION_SMOKE_TWO_ROUNDS_COMPLETE
+decision: USER_AUTHORIZED_WEB_FETCH_BRIDGE_V1_IMPLEMENTATION_AND_SINGLE_E2E_SMOKE
 
 response:
-  path: docs/reviewer_responses/LOCAL_REVIEWER_COMMS_SMOKE_20260811_002_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_USER_AUTHORIZATION.md
 
 passed:
-  - EXPECTED_ROUND_2_HANDOFF_ID
-  - READY_FOR_REVIEW_PACKET_PRESENT
-  - ROUND_1_REVIEWER_RESPONSE_CONSUMED
-  - ROUND_2_CLAUDE_OWNERSHIP_BOUNDARY_PRESERVED
-  - EXACT_TWO_CLAUDE_OWNED_PATHS_CHANGED
-  - ROUND_2_PACKET_COMMIT_SHA_BOUND
-  - TWO_ROUND_GITHUB_FILE_TRANSPORT_COMPLETE
-  - UNIQUE_HANDOFF_AND_MATCHING_CONSUMPTION_COMPLETE
-  - HEARTBEAT_PAUSE_DURING_REVIEW_CONFIRMED
-  - NO_RESEARCH_BACKTEST_OR_DATA_REFRESH
-  - NO_STRATEGY_CANONICAL_ARTIFACT_OR_RESULT_CHANGE
-  - NO_EXECUTION_QMT_ACCOUNT_ORDER_OR_MARKET_DATA_ACTION
-  - MAXDIV_120_0P5_AND_M2_STATE_PRESERVED
-  - CAPITAL_EFFICIENCY_RESEARCH_REMAINS_COMPLETE
-  - STOPPED_03110_MAPPING_REMAINS_UNRESOLVED
-  - PPO_SAC_TD3_REMAIN_CLOSED
+  - USER_EXPLICITLY_SELECTED_WEB_FETCH_BRIDGE_V1
+  - WEB_CHATGPT_REMAINS_DEFAULT_PLANNER_AND_REVIEWER
+  - BRIDGE_MARKER_PROTOCOL_DECOUPLED_FROM_RESEARCH_PROTOCOL
+  - DEFAULT_LOCAL_CODEX_REVIEWER_DISABLED_FOR_THIS_PATH
+  - ONE_E2E_COMMUNICATION_SMOKE_AUTHORIZED
+  - NO_FINANCIAL_RESEARCH_OR_EXECUTION_AUTHORIZED
 
 revision_required: []
 
-authorized_next: []
+authorized_next:
+  - task: WEB_FETCH_BRIDGE_V1_IMPLEMENTATION_AND_SINGLE_E2E_SMOKE
+    scope: LOCAL_PROTOCOL_INFRASTRUCTURE_ONLY
+    authorization: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_USER_AUTHORIZATION.md
+    requirements:
+      - implement append-only docs/web_bridge/<handoff_id>/ marker protocol
+      - trigger decisions must depend only on bridge markers, not research-state semantics
+      - send exactly one `fetch <handoff_id>` to the dedicated Web ChatGPT thread
+      - Web ChatGPT ACK and REVIEW_PUBLISHED markers remain reviewer-owned
+      - Claude WORK_COMPLETE and REVIEW_ACK markers remain Claude-owned
+      - no automatic resend after FETCH_SENT; timeout fail-closed
+      - use Playwright/Python CDP as thin input-only virtual finger
+      - default mode must not invoke local codex exec
+      - dedicated ChatGPT thread URL must stay in ignored local config only
+      - user CDP endpoint is http://127.0.0.1:9222
+      - dedicated Chrome profile path is C:\ChatGPT_Automation_Profile
+      - user Chrome executable is C:\Program Files\Google\Chrome\Application\chrome.exe
+      - perform one E2E smoke if the dedicated CDP session is available; otherwise fail closed with exact minimal prerequisite
+      - after implementation create a new unique Claude handoff and review packet; no further step auto-authorized
 
 forbidden_next:
-  - FURTHER_COMMUNICATION_SMOKE_ECHO
-  - NEW_RESEARCH_BRANCH
+  - NEW_FINANCIAL_RESEARCH_BRANCH
   - FINANCIAL_BACKTEST
-  - EXPERIMENT
   - DATA_REFRESH
   - STRATEGY_CHANGE
   - CANONICAL_ARTIFACT_CHANGE
   - ACCEPTED_RESULT_CHANGE
-  - EXECUTION_LOGIC_CHANGE
   - TRADING_PROTOTYPE
   - FORWARD_PAPER_VALIDATION
   - PAPER
   - LIVE
   - QMT
-  - QMT_LIVE
   - ACCOUNT_ACCESS
   - ORDER_ACTION
   - MARKET_DATA_ACTION
@@ -63,16 +64,17 @@ forbidden_next:
   - SAC
   - TD3
   - RL_RETRAINING
-  - RL_HYPERPARAMETER_TUNING
-  - RL_COMPARISON
+  - DEFAULT_LOCAL_CODEX_REVIEWER
+  - AUTOMATIC_CLAUDE_LAUNCH
+  - CHATGPT_OUTPUT_SCRAPING
+  - CAPTCHA_OR_PLATFORM_PROTECTION_BYPASS
 
 notes:
-  - The user-requested two-round reviewer-to-Claude communication smoke test is complete.
-  - Round 1 and round 2 both preserved file ownership and exact handoff matching.
-  - GitHub gate/checkpoint transport worked in both directions.
-  - No further protocol echo is authorized.
-  - No research, execution, QMT, account, or trading step is authorized.
-  - Heartbeat remains paused after final completion.
-  - MaxDiv 120/0.5, M2 canonical state, completed capital-efficiency research, unresolved 03110 STOP, and closed PPO/SAC/TD3 remain unchanged.
+  - This is an explicit user-selected infrastructure authorization, not a research result review.
+  - The dedicated ChatGPT conversation URL supplied by the user MUST NOT be committed; store it only in ignored local configuration.
+  - User launches dedicated Chrome with remote debugging on port 9222 and profile C:\ChatGPT_Automation_Profile.
+  - Existing MaxDiv 120/0.5 and M2 canonical state remain unchanged; M2 is not live-ready.
+  - The unresolved 03110 execution STOP remains in force.
+  - PPO/SAC/TD3 remain closed.
 
-updated_at: 2026-08-11T04:50:00+08:00
+updated_at: 2026-08-11T14:30:00+08:00
