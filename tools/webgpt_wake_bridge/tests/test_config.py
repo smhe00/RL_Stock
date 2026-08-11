@@ -12,9 +12,18 @@ def init_git_repo(tmp_path: Path) -> Path:
     return repo
 
 
-def write_config(tmp_path: Path, repo: Path, *, url: str = "", marker_root: str = "docs/web_bridge") -> Path:
+def write_config(
+    tmp_path: Path,
+    repo: Path,
+    *,
+    url: str = "",
+    marker_root: str = "docs/web_bridge",
+    runtime_dir: str = ".runtime/webgpt_wake_bridge",
+    remote: str = "origin",
+    branch: str = "main",
+) -> Path:
     path = tmp_path / "bridge.local.toml"
-    path.write_text(f'''[project]\nrepo_root = "{repo.as_posix()}"\nremote = "origin"\nbranch = "main"\nmarker_root = "{marker_root}"\n\n[browser]\ncdp_endpoint = "http://127.0.0.1:9222"\ntarget_conversation_url = "{url}"\n\n[runtime]\nruntime_dir = ".runtime/webgpt_wake_bridge"\n''', encoding="utf-8")
+    path.write_text(f'''[project]\nrepo_root = "{repo.as_posix()}"\nremote = "{remote}"\nbranch = "{branch}"\nmarker_root = "{marker_root}"\n\n[browser]\ncdp_endpoint = "http://127.0.0.1:9222"\ntarget_conversation_url = "{url}"\n\n[runtime]\nruntime_dir = "{runtime_dir}"\n''', encoding="utf-8")
     return path
 
 
@@ -49,9 +58,27 @@ def test_non_localhost_or_spoofed_cdp_fails_closed(tmp_path):
         validate_cdp_endpoint("https://127.0.0.1:9222")
 
 
-def test_marker_root_cannot_escape_or_be_repo_root(tmp_path):
+def test_marker_and_runtime_paths_cannot_escape_overlap_or_use_git_metadata(tmp_path):
     repo = init_git_repo(tmp_path)
     with pytest.raises(BridgeError):
         load_config(write_config(tmp_path, repo, marker_root="../outside"))
     with pytest.raises(BridgeError):
         load_config(write_config(tmp_path, repo, marker_root="."))
+    with pytest.raises(BridgeError):
+        load_config(write_config(tmp_path, repo, marker_root=".git/bridge"))
+    with pytest.raises(BridgeError):
+        load_config(write_config(tmp_path, repo, runtime_dir="."))
+    with pytest.raises(BridgeError):
+        load_config(write_config(tmp_path, repo, runtime_dir="docs/web_bridge/runtime"))
+
+
+def test_remote_and_branch_names_are_conservative_git_arguments(tmp_path):
+    repo = init_git_repo(tmp_path)
+    with pytest.raises(BridgeError):
+        load_config(write_config(tmp_path, repo, remote="--upload-pack=bad"))
+    with pytest.raises(BridgeError):
+        load_config(write_config(tmp_path, repo, branch="--help"))
+    with pytest.raises(BridgeError):
+        load_config(write_config(tmp_path, repo, branch="bad..branch"))
+    cfg = load_config(write_config(tmp_path, repo, branch="feature/wake-bridge"))
+    assert cfg.branch == "feature/wake-bridge"
