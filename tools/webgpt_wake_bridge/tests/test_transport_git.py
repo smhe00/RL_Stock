@@ -37,11 +37,19 @@ def test_publish_marker_uses_isolated_worktree_and_is_append_only(tmp_path):
     repo = init_repo(tmp_path)
     transport = GitTransport(repo, repo / ".runtime", Path("docs/web_bridge"), "origin", "main")
     handoff = "DEMO_001"
+    assert not transport.marker_exists(handoff, "trigger_fetch_sent.json")
     transport.publish_bridge_marker(handoff, "trigger_fetch_sent.json", trigger(handoff))
     assert transport.marker_exists(handoff, "trigger_fetch_sent.json")
     assert not (repo / "docs/web_bridge" / handoff / "trigger_fetch_sent.json").exists()
     with pytest.raises(BridgeError):
         transport.publish_bridge_marker(handoff, "trigger_fetch_sent.json", trigger(handoff))
+
+
+def test_missing_remote_ref_is_error_not_marker_absence(tmp_path):
+    repo = init_repo(tmp_path)
+    transport = GitTransport(repo, repo / ".runtime_missing", Path("docs/web_bridge"), "origin", "missing")
+    with pytest.raises(BridgeError):
+        transport.marker_exists("DEMO_404", "trigger_fetch_sent.json")
 
 
 def test_review_published_blocks_late_trigger(tmp_path):
