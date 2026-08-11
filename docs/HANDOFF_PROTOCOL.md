@@ -155,6 +155,40 @@ For `BLOCKED` or `TEST_FAILED`, record failure reason, failed command/test, last
 successful commit, working-tree state, and recommended recovery point. A packet
 is recommended; `READY_FOR_REVIEW` requires one.
 
+## 6a. Mandatory Claude handoff finalization — wake-up doorbell invariant
+
+Every fresh handoff that requests Web ChatGPT review (`READY_FOR_REVIEW`,
+`BLOCKED`, or `TEST_FAILED`) MUST end with a Claude-owned wake-up doorbell
+`docs/web_bridge/<handoff_id>/claude_work_complete.json` published on
+`origin/main`. The Web Fetch Bridge daemon is marker-only and research-state
+agnostic: it never parses `CLAUDE_STATUS.yaml`, so a state transition without the
+doorbell can never wake Web ChatGPT automatically. This invariant is MANDATORY;
+a fresh Claude session must not omit it.
+
+Finalization order (LAST is load-bearing):
+
+```text
+1. packet/status complete (docs/review_packets/<PACKET>.md + CLAUDE_STATUS.yaml)
+2. commit/push packet/status; confirm origin/main HEAD
+3. remote confirmation (local HEAD == origin/main; pull --ff-only if needed)
+4. claude_work_complete.json doorbell for the exact handoff  <- MUST be LAST push
+```
+
+Use the deterministic helper rather than hand-creating the marker:
+
+```text
+.venv/Scripts/python.exe scripts/finalize_handoff.py \
+    --handoff <HANDOFF_ID> --code-commit <SHA> [--expect-head <SHA>]
+```
+
+The helper requires an explicit handoff id and code commit, creates only the
+Claude-owned doorbell, stamps a timezone-aware UTC timestamp, and fails closed on
+duplicate/append-only violation or unexpected remote state. After it prints the
+marker path, commit and push that single marker as the FINAL push of the gate.
+
+Do NOT retrofit a doorbell to a handoff that has already been manually surfaced
+and reviewed — that could trigger a duplicate browser fetch.
+
 ## 7. Local fetch monitor
 
 The watcher performs one bounded scan every 60 seconds:

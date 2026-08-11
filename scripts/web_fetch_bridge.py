@@ -760,20 +760,29 @@ class GitTransport:
         """Append-only publish of a bridge-owned marker to origin/main.
 
         The worktree is synced to the latest remote branch before each attempt so the
-        marker commit is a fast-forward. An expected concurrent append-only reviewer
-        marker for the same handoff (e.g. chatgpt_fetch_ack) does NOT fail the publish:
-        we re-fetch, verify the bridge marker is still absent, and retry on the latest
-        remote state. Unexpected/conflicting remote changes or repeated push rejection
-        fail closed. Never force-push.
+        marker commit is a fast-forward. A concurrent expected append-only reviewer
+        marker for the SAME handoff (e.g. chatgpt_fetch_ack) does NOT fail the publish:
+        we re-fetch, verify the bridge marker is still absent, retry on the latest
+        remote state. But if the concurrent remote change violates marker ordering for
+        this handoff (e.g. chatgpt_review_published arrives before trigger_fetch_sent,
+        which would make a later trigger a stale/order-violating append), fail closed.
+        Unrelated append-only commits on other paths are safe (worktree reset + only the
+        immutable bridge-owned marker is added). Never force-push.
         """
         if name not in BRIDGE_OWNED_MARKERS:
             raise BridgeError(f"bridge may only publish {sorted(BRIDGE_OWNED_MARKERS)}")
         rel = Path("docs") / "web_bridge" / handoff_id / name
+        last_err: BridgeError | None = None
         for _attempt in range(3):
             self._sync_worktree()
             target = self.worktree / rel
             if target.exists() or self.marker_exists(handoff_id, name):
                 raise BridgeError(f"bridge marker {name} already exists on origin/main; append-only")
+            if self.marker_exists(handoff_id, "chatgpt_review_published.json"):
+                raise BridgeError(
+                    f"marker order violated: chatgpt_review_published exists before {name}; "
+                    "STOP-WRITE (would publish a stale/order-breaking marker)"
+                )
             target.parent.mkdir(parents=True, exist_ok=True)
             _atomic_write_text(target, content)
             try:
@@ -788,11 +797,12 @@ class GitTransport:
             try:
                 self._git("push", self.remote, f"HEAD:{self.branch}")
                 return
-            except BridgeError:
+            except BridgeError as exc:
+                last_err = exc
                 continue
         raise BridgeError(
-            f"bridge marker {name} publish failed after concurrent remote changes; "
-            "STOP-WRITE (no force push)"
+            f"bridge marker {name} publish failed after concurrent remote changes "
+            f"(last: {last_err}); STOP-WRITE (no force push)"
         )
 
 

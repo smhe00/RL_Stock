@@ -860,3 +860,28 @@ def test_git_publish_refuses_duplicate_marker(tmp_path):
     transport.publish_bridge_marker("H-0001", "trigger_fetch_sent.json", content)
     with pytest.raises(wfb.BridgeError):
         transport.publish_bridge_marker("H-0001", "trigger_fetch_sent.json", content)
+
+
+def test_git_publish_fails_closed_if_review_published_raced_ahead(tmp_path):
+    """If chatgpt_review_published lands on origin/main before trigger_fetch_sent, the
+    later trigger would be a stale/order-violating append; must fail closed (hardened
+    concurrency: only expected append-only concurrency is retried)."""
+    import subprocess
+
+    repo = tmp_path / "repo"
+    remote = tmp_path / "remote"
+    _init_git_repo(repo, remote)
+    # Simulate the race: reviewer review_published lands ahead of bridge trigger.
+    rp = repo / "docs" / "web_bridge" / "H-0001" / "chatgpt_review_published.json"
+    rp.parent.mkdir(parents=True, exist_ok=True)
+    rp.write_text("{}", encoding="utf-8")
+    subprocess.run(["git", "add", "-A"], cwd=repo, check=True, stdout=subprocess.DEVNULL)
+    subprocess.run(["git", "commit", "-q", "-m", "review published"], cwd=repo, check=True,
+                   stdout=subprocess.DEVNULL)
+    subprocess.run(["git", "push", "-q", "origin", "main"], cwd=repo, check=True,
+                   stdout=subprocess.DEVNULL)
+    runtime = tmp_path / "runtime"
+    transport = wfb.GitTransport(repo, runtime, "origin", "main")
+    with pytest.raises(wfb.BridgeError) as exc:
+        transport.publish_bridge_marker("H-0001", "trigger_fetch_sent.json", "{}")
+    assert "order violated" in str(exc.value)
