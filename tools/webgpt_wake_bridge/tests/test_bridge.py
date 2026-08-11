@@ -61,6 +61,7 @@ def config(tmp_path):
         repo_root=tmp_path,
         marker_root=Path("docs/web_bridge"),
         remote="origin", branch="main",
+        review_repository="owner/demo",
         cdp_endpoint="http://127.0.0.1:9222",
         chrome_profile_path="C:/profile",
         target_conversation_url="https://chatgpt.com/c/x",
@@ -118,15 +119,11 @@ def test_crash_window_attempt_started_blocks_resend_and_ack_reconciles(tmp_path)
     sender = Sender()
     watcher = RemoteMarkerWatcher(config(tmp_path), t, sender, logging.getLogger("test"))
 
-    # Simulate process death after durable attempt_started but before completion was
-    # recorded. A restarted watcher must not touch the browser automatically.
     watcher._mark_started(h, trigger_marker_text(h, timestamp="2026-08-11T09:18:39+00:00"))
     restarted = RemoteMarkerWatcher(config(tmp_path), t, sender, logging.getLogger("test"))
     assert restarted.scan_once() == []
     assert sender.calls == 0
 
-    # If Web ACK later proves the browser submission actually arrived, recover by
-    # publishing only the missing trigger marker; still no browser resend.
     t.markers[(h, "chatgpt_fetch_ack.json")] = marker(h, "CHATGPT_FETCH_ACK")
     assert restarted.scan_once() == [f"{h}:RECONCILE_PUBLISHED"]
     assert sender.calls == 0
