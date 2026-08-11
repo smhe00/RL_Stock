@@ -1,9 +1,14 @@
 import json
+import subprocess
 import sys
 
+import pytest
+
 import webgpt_wake_bridge.cli as cli_module
+from webgpt_wake_bridge.bootstrap import write_initial_config
 from webgpt_wake_bridge.cli import main
 from webgpt_wake_bridge.config import load_config
+from webgpt_wake_bridge.errors import BridgeError
 
 
 def test_cli_init_then_check_and_marker_only_retry(tmp_path, monkeypatch, capsys):
@@ -58,3 +63,26 @@ def test_cli_init_then_check_and_marker_only_retry(tmp_path, monkeypatch, capsys
     assert main() == 0
     state = json.loads((runtime / "dedup.json").read_text(encoding="utf-8"))
     assert "H_RETRY" not in state["attempt_failed"]
+
+
+def test_local_only_remote_is_rejected_before_browser_sender_construction(tmp_path, monkeypatch):
+    repo = tmp_path / "repo"
+    remote = tmp_path / "origin.git"
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    subprocess.run(["git", "init", "-q", "--bare", str(remote)], check=True)
+    subprocess.run(["git", "-C", str(repo), "remote", "add", "origin", str(remote)], check=True)
+
+    config_path = write_initial_config(
+        repo,
+        config_path=tmp_path / "route.local.toml",
+        runtime_dir=tmp_path / "route_runtime",
+        review_repository="owner/demo",
+    )
+    cfg = load_config(config_path)
+
+    def browser_forbidden(*args, **kwargs):
+        raise AssertionError("browser sender must not be constructed for unroutable remote")
+
+    monkeypatch.setattr(cli_module, "CdpFetchSender", browser_forbidden)
+    with pytest.raises(BridgeError, match="Web-accessible github.com"):
+        cli_module._runtime(cfg, browser_enabled=True)
