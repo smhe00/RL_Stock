@@ -1,0 +1,8 @@
+{
+  "protocol": "web_fetch_bridge_v1",
+  "handoff_id": "WEBGPT_WAKE_BRIDGE_STANDALONE_0_9_RC1_REVISIONS_REQUIRED_001_001",
+  "event": "CHATGPT_REVIEW_PUBLISHED",
+  "timestamp": "2026-08-11T14:34:30+00:00",
+  "review_response_commit": "8cba836582c628dd33174f97aa6968f743fb8c95",
+  "review_state_commit": "61071187be6aa55178c88d4cd5b0281051422091"
+}
