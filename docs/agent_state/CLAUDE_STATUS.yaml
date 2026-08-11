@@ -1,29 +1,20 @@
 protocol_version: 3
 actor: claude
-handoff_id: WEB_FETCH_BRIDGE_V1_SINGLE_TRUE_E2E_FETCH_001_001
-state: BLOCKED
+handoff_id: WEB_FETCH_BRIDGE_V1_COMPOSER_LOCATOR_CORRECTION_AND_SINGLE_E2E_001_001
+state: RUNNING
 
 gate: LOCAL_PROTOCOL
-phase: WEB_FETCH_BRIDGE_V1_SINGLE_TRUE_E2E_FETCH_001
-code_commit: 31409eb
-packet: docs/review_packets/WEB_FETCH_BRIDGE_V1_SINGLE_TRUE_E2E_FETCH_001.md
+phase: WEB_FETCH_BRIDGE_V1_COMPOSER_LOCATOR_CORRECTION_AND_SINGLE_E2E_001
+code_commit: e7c0d1c
+packet: docs/review_packets/WEB_FETCH_BRIDGE_V1_COMPOSER_LOCATOR_CORRECTION_AND_SINGLE_E2E_001.md
 
 progress:
-  current_task: BLOCKED — authorized single E2E fetch attempted exactly once and FAIL-CLOSED on a NEW BLOCKER. Doorbell pushed LAST (e69fbd9); daemon auto-discovered and sent once via NON-OWNING CDP (no navigate/create/close/repair; no browser.close); sender failed at composer click (Locator.click Timeout 30s) because ChatGPT page exposes only hidden fallback <textarea class="wcDTda_fallbackTextarea"> (display:none, 0x0); real composer is not a visible textarea in the current page layout. Read-only DOM probe confirmed target URL/title preserved, readyState=complete, not login/CAPTCHA. No trigger_fetch_sent published; dedup.json SEND_FAILED terminal; daemon stopped (no auto-resend). Waiting for reviewer authorization to correct composer-location strategy; no code changed, no retry.
-
-blocker:
-  category: NEW_E2E_BLOCKER
-  summary: CdpFetchSender._find_composer locates only <textarea>; real ChatGPT composer is not a visible textarea on the current page layout (only hidden wcDTda_fallbackTextarea present)
-  failed_command: daemon fetch_send for WEB_FETCH_BRIDGE_V1_SINGLE_TRUE_E2E_FETCH_001_001
-  failed_test: Locator.click Timeout 30000ms exceeded (element not visible)
-  last_successful_commit: e69fbd9323ad66d0dca4982c0923c5e390d8cc36 (doorbell pushed)
-  worktree_state: clean
-  recovery_point: reviewer authorization to fix composer location strategy, then re-run one fresh E2E handoff
+  current_task: Consumed E2E_FAIL_CLOSED_ACCEPTED_COMPOSER_LOCATOR_CORRECTION_AUTHORIZED. Corrected composer locator to semantic visibility-aware editable lookup (prefer visible #prompt-textarea[contenteditable=true] -> lexical -> unique; exclude hidden wcDTda_fallbackTextarea/display:none/zero-size/disabled; exactly-one-visible-editable else fail closed), added submission confirmation (composer cleared after Enter + URL unchanged; unconfirmed withholds trigger_fetch_sent), 45 tests + --check PASSED. Executing the single fresh E2E: doorbell LAST push; daemon auto-discovers; exactly one browser-generated fetch via NON-OWNING CDP; success publishes trigger_fetch_sent then waits chatgpt_fetch_ack -> chatgpt_review_published -> claude_review_ack; any new blocker stops without retry.
 
 last_consumed_review:
-  handoff_id: WEB_FETCH_BRIDGE_V1_NOOP_LIFECYCLE_DIAGNOSTIC_AND_NONOWNING_CDP_001_001
-  decision: NOOP_LIFECYCLE_AND_NONOWNING_CDP_ACCEPTED_TRUE_E2E_FETCH_AUTHORIZED
-  state: REVIEW_COMPLETE
-  response: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_NOOP_LIFECYCLE_DIAGNOSTIC_AND_NONOWNING_CDP_001_REVIEWER_RESPONSE.md
+  handoff_id: WEB_FETCH_BRIDGE_V1_SINGLE_TRUE_E2E_FETCH_001_001
+  decision: E2E_FAIL_CLOSED_ACCEPTED_COMPOSER_LOCATOR_CORRECTION_AUTHORIZED
+  state: REVISIONS_REQUIRED
+  response: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_SINGLE_TRUE_E2E_FETCH_001_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-11T16:15:00+08:00
+updated_at: 2026-08-11T16:22:00+08:00
