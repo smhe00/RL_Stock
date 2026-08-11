@@ -34,6 +34,15 @@ class GitTransport:
         if (self.worktree / ".git").exists():
             return
         try:
+            # Refresh the consumer repository's remote-tracking ref before creating
+            # the detached bridge worktree. This never modifies the consumer worktree.
+            subprocess.run(
+                ["git", "fetch", self.remote, self.branch],
+                cwd=self.repo_root,
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
             subprocess.run(
                 ["git", "worktree", "add", "--detach", str(self.worktree), f"{self.remote}/{self.branch}"],
                 cwd=self.repo_root,
@@ -108,6 +117,7 @@ class GitTransport:
                 self._git("add", "--", rel.as_posix())
                 self._git("commit", "-m", f"bridge: {handoff_id} {name}")
                 self._git("push", self.remote, f"HEAD:{self.branch}")
+                self.fetch()  # remote-tracking ref is authoritative for subsequent checks
                 return
             except BridgeError as exc:
                 last_error = exc
