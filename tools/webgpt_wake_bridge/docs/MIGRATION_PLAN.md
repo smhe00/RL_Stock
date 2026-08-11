@@ -5,95 +5,60 @@
 ```text
 Phase 0  Freeze accepted embedded V1                    COMPLETE
 Phase 1  Standalone structural extraction               COMPLETE
-Phase 2  Standalone test suite / safety hardening        COMPLETE (execution pending validator)
+Phase 2  Standalone test suite / safety hardening        COMPLETE (fresh rc2 execution pending)
 Phase 3  Reusable CLI/bootstrap usability layer          COMPLETE
-Phase 4  Independent blank-repository Windows/CDP E2E    PENDING CLAUDE VALIDATION
-Phase 5  Promote to 1.0.0 / E2E VERIFIED                 BLOCKED ON PHASE 4
+Phase 4a rc1 blank local-repo validation                 COMPLETE -> REVISIONS_REQUIRED (routing gap)
+Phase 4b rc2 routed blank GitHub E2E                     PENDING CLAUDE VALIDATION
+Phase 5  Promote to 1.0.0 / E2E VERIFIED                 BLOCKED ON PHASE 4b
 Phase 6  Migrate RL_Stock to standalone consumer         NOT STARTED
 ```
 
-The standalone candidate is `0.9.0rc1` until Phase 4 passes.
+Current standalone candidate: `0.9.0rc2`.
 
-## Phase 0 — Freeze accepted source
+## rc1 finding and rc2 correction
 
-The embedded RL_Stock Web Fetch Bridge V1 remains the accepted behavioral/rollback reference until standalone acceptance. It is not refactored in place during extraction.
+rc1 proved the standalone core but exposed that `fetch <handoff_id>` had no repository identity outside the single known RL_Stock project. A local bare consumer remote also could not receive Web-owned ACK/review markers.
 
-Reference behavior lives primarily in:
-
-- `scripts/web_fetch_bridge.py`
-- `scripts/finalize_handoff.py`
-- `config/web_fetch_bridge.example.toml`
-- `docs/web_bridge/README.md`
-- `docs/HANDOFF_PROTOCOL.md`
-- `tests/test_web_fetch_bridge.py`
-- `tests/test_finalize_handoff.py`
-
-## Phase 1 — Structural extraction — COMPLETE
-
-Accepted behavior has been split into standalone modules:
+rc2 corrects this without introducing a hub:
 
 ```text
-bootstrap.py      clean per-consumer local bootstrap
-markers.py        marker schema, ownership, validation
-config.py         standalone TOML/config hardening
-browser.py        non-owning CDP sender + composer selection
-transport_git.py  remote marker discovery/publication
+fetch repo=<owner/repo> handoff=<handoff_id>
+```
+
+Before browser interaction, `once`/`daemon` require `[review].repository` and verify that the configured Git remote resolves to the same `github.com/owner/repo`. Local-only/non-GitHub remotes fail closed.
+
+A future hub/mirror for local-only/air-gapped projects is separate scope.
+
+## Standalone modules
+
+```text
+bootstrap.py      per-consumer local bootstrap
+markers.py        marker schema/ownership
+config.py         config/path/repository routing validation
+browser.py        non-owning CDP sender + routed wake payload
+transport_git.py  Git marker transport + GitHub remote identity guard
 bridge.py         marker-only daemon + crash-safe dedup/reconciliation
-finalize.py       agent-side doorbell finalization
-cli.py            init/check/daemon/finalize/retry/reconcile commands
+finalize.py       doorbell finalization
+cli.py            init/check/noop/once/daemon/finalize/retry/reconcile
 ```
 
-The implementation is project-state-agnostic and remains protocol-compatible with `web_fetch_bridge_v1`.
+## Phase 4b — routed blank GitHub demo
 
-## Phase 2 — Test suite / hardening — IMPLEMENTED, EXECUTION PENDING
+Claude remains test-only and follows `docs/FINAL_CLAUDE_TEST_PLAN.md`.
 
-Standalone tests now cover protocol, browser, transport, finalization, bootstrap, CLI and package-independence contracts under `tools/webgpt_wake_bridge/tests/`.
+The new smoke must use a fresh Web-accessible disposable GitHub repository containing no RL_Stock state. It must prove Web ChatGPT can resolve the repo solely from the routed wake payload, write ACK/review markers there, and that the daemon does not resend.
 
-The independent validator must execute the full suite from a fresh environment. Until that execution passes, this phase is not release evidence.
+Any defect => `REVISIONS_REQUIRED`, no validator code fixes.
 
-## Phase 3 — Reusable usability layer — COMPLETE
+## Phase 5 — 1.0.0
 
-Stable candidate commands:
+Only after accepted Phase 4b evidence:
 
-```text
-webgpt-bridge init --repo <consumer>
-webgpt-bridge check --config <local-config>
-webgpt-bridge noop --config <local-config>
-webgpt-bridge once --config <local-config>
-webgpt-bridge daemon --config <local-config>
-webgpt-bridge finalize --config <local-config> --handoff ... --code-commit ...
-webgpt-bridge retry --config <local-config> --handoff ...
-webgpt-bridge reconcile --config <local-config> --handoff ...
-```
-
-`init` defaults config/runtime outside the consumer repository and leaves the dedicated ChatGPT conversation URL blank for the operator to fill locally.
-
-## Phase 4 — Blank demo repository — NEXT
-
-Claude acts only as independent validator and follows:
-
-```text
-docs/FINAL_CLAUDE_TEST_PLAN.md
-```
-
-A clean demo consumer containing no RL_Stock state must prove the full standalone marker/browser/reviewer round trip without any user-typed `fetch`.
-
-If any defect is found, Claude reports `REVISIONS_REQUIRED` and does not edit candidate code.
-
-## Phase 5 — Freeze 1.0.0
-
-Only after Phase 4 returns accepted evidence:
-
-- Web ChatGPT reviews the validation packet;
-- version may be promoted from `0.9.0rc1` to `1.0.0`;
+- Web ChatGPT reviews evidence;
+- version may be promoted from `0.9.0rc2` to `1.0.0`;
 - README may be marked `E2E VERIFIED`;
-- exact test/E2E evidence is retained;
-- standalone package becomes the canonical reusable implementation.
+- standalone becomes canonical reusable implementation.
 
-Claude must not self-promote the version during validation.
+## Phase 6 — first consumer migration
 
-## Phase 6 — Consumer migration
-
-RL_Stock becomes the first consumer only after standalone `1.0.0` acceptance. Replace embedded execution with the installed/package command while preserving the existing marker protocol and historical evidence.
-
-Do not delete the embedded reference implementation until consumer migration has its own successful E2E smoke and rollback path.
+RL_Stock migrates only after standalone 1.0.0 acceptance. Preserve existing `web_fetch_bridge_v1` history and keep embedded V1 as rollback until migration has its own E2E smoke.
