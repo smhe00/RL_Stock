@@ -30,6 +30,7 @@ def cfg(repo: Path) -> BridgeConfig:
         repo_root=repo,
         marker_root=Path("docs/web_bridge"),
         remote="origin", branch="main",
+        review_repository=None,
         cdp_endpoint="http://127.0.0.1:9222",
         chrome_profile_path="C:/profile", target_conversation_url=None,
         poll_interval_s=5, fetch_ack_timeout_s=120,
@@ -74,7 +75,6 @@ def test_finalize_rejects_nonexistent_or_unrelated_code_commit(tmp_path):
     with pytest.raises(BridgeError):
         finalize_handoff(cfg(repo), "DEMO_003", "deadbee")
 
-    # Create a real commit on a side branch, then return to remote-confirmed main.
     subprocess.run(["git", "-C", str(repo), "checkout", "-q", "-b", "side"], check=True)
     (repo / "side.txt").write_text("side\n", encoding="utf-8")
     subprocess.run(["git", "-C", str(repo), "add", "side.txt"], check=True)
