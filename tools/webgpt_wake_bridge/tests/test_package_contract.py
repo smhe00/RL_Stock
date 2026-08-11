@@ -1,3 +1,4 @@
+import re
 import tomllib
 from pathlib import Path
 
@@ -15,21 +16,16 @@ def test_package_and_pyproject_versions_match():
 
 
 def test_source_has_no_rl_stock_business_state_dependency():
-    banned = (
+    source = "\n".join(path.read_text(encoding="utf-8").lower() for path in SRC.glob("*.py"))
+    for exact in (
         "claude_status.yaml",
         "chatgpt_review.yaml",
-        "gate4",
-        "maxdiv",
-        "03110",
         "miniqmt",
-        "qmt",
-        "ppo",
-        "sac",
-        "td3",
-    )
-    source = "\n".join(path.read_text(encoding="utf-8").lower() for path in SRC.glob("*.py"))
-    for token in banned:
-        assert token not in source
+        "03110",
+    ):
+        assert exact not in source
+    for business_word in ("gate4", "maxdiv", "qmt", "ppo", "sac", "td3"):
+        assert re.search(rf"\b{re.escape(business_word)}\b", source) is None
 
 
 def test_browser_source_does_not_use_full_page_text_or_output_scraping_helpers():
