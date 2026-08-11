@@ -51,7 +51,13 @@ def configure_logging(config: BridgeConfig) -> logging.Logger:
 
 
 class RemoteMarkerWatcher:
-    """Marker-only daemon. It never reads consumer-project research/status files."""
+    """Marker-only daemon. It never reads consumer-project research/status files.
+
+    Local dedup state is deliberately more conservative than the remote marker
+    protocol. `attempt_started` is persisted before touching the browser, closing the
+    crash window where a submitted message could otherwise be resent after restart.
+    An uncertain/failed attempt is never retried automatically.
+    """
 
     def __init__(self, config: BridgeConfig, transport: GitTransport, sender: FetchSender, logger: logging.Logger):
         self.config = config
@@ -61,7 +67,7 @@ class RemoteMarkerWatcher:
         self.dedup_path = config.runtime_dir / "dedup.json"
 
     def _load_state(self) -> dict:
-        state = {"fetch_sent": {}, "attempt_failed": {}}
+        state = {"attempt_started": {}, "fetch_sent": {}, "attempt_failed": {}}
         if not self.dedup_path.exists():
             return state
         try:
@@ -69,10 +75,9 @@ class RemoteMarkerWatcher:
         except (OSError, UnicodeError, json.JSONDecodeError):
             return state
         if isinstance(loaded, dict):
-            if isinstance(loaded.get("fetch_sent"), dict):
-                state["fetch_sent"] = loaded["fetch_sent"]
-            if isinstance(loaded.get("attempt_failed"), dict):
-                state["attempt_failed"] = loaded["attempt_failed"]
+            for key in state:
+                if isinstance(loaded.get(key), dict):
+                    state[key] = loaded[key]
         return state
 
     def _save_state(self, state: dict) -> None:
@@ -80,22 +85,40 @@ class RemoteMarkerWatcher:
 
     def _seen(self, handoff_id: str) -> bool:
         state = self._load_state()
-        return handoff_id in state["fetch_sent"] or handoff_id in state["attempt_failed"]
+        return any(handoff_id in state[key] for key in ("attempt_started", "fetch_sent", "attempt_failed"))
 
-    def _mark_failed(self, handoff_id: str, reason: str) -> None:
+    def _mark_started(self, handoff_id: str, marker_text: str) -> None:
         state = self._load_state()
-        state["attempt_failed"][handoff_id] = {"timestamp": utcnow_iso(), "reason": reason}
+        state["attempt_started"][handoff_id] = {
+            "timestamp": utcnow_iso(),
+            "marker": marker_text,
+        }
+        self._save_state(state)
+
+    def _mark_failed(self, handoff_id: str, reason: str, marker_text: str) -> None:
+        state = self._load_state()
+        state["attempt_started"].pop(handoff_id, None)
+        state["attempt_failed"][handoff_id] = {
+            "timestamp": utcnow_iso(),
+            "reason": reason,
+            "marker": marker_text,
+        }
         self._save_state(state)
 
     def _mark_sent(self, handoff_id: str, marker_text: str) -> None:
         state = self._load_state()
+        state["attempt_started"].pop(handoff_id, None)
+        state["attempt_failed"].pop(handoff_id, None)
         state["fetch_sent"][handoff_id] = {"timestamp": utcnow_iso(), "marker": marker_text}
         self._save_state(state)
 
     def clear_failure(self, handoff_id: str) -> bool:
+        """Explicit operator retry clears only uncertain/failed attempts, never sent ones."""
         validate_handoff_id(handoff_id)
         state = self._load_state()
-        removed = state["attempt_failed"].pop(handoff_id, None) is not None
+        removed = False
+        for key in ("attempt_started", "attempt_failed"):
+            removed = state[key].pop(handoff_id, None) is not None or removed
         if removed:
             self._save_state(state)
         return removed
@@ -108,8 +131,8 @@ class RemoteMarkerWatcher:
             marker = json.loads(text)
             validate_marker(Path(name), marker)
             return marker.get("handoff_id") == handoff_id
-        except (json.JSONDecodeError, BridgeError):
-            raise BridgeError(f"remote marker {name} is invalid for {handoff_id}")
+        except (json.JSONDecodeError, BridgeError) as exc:
+            raise BridgeError(f"remote marker {name} is invalid for {handoff_id}") from exc
 
     def discover_eligible_handoffs(self) -> list[str]:
         eligible: list[str] = []
@@ -129,20 +152,40 @@ class RemoteMarkerWatcher:
                 eligible.append(handoff_id)
         return eligible
 
-    def reconcile_missing_trigger(self, handoff_id: str) -> str:
-        validate_handoff_id(handoff_id)
-        # Manual reconciliation must start from fresh remote state too.
-        self.transport.fetch()
+    def _durable_attempt_marker(self, handoff_id: str) -> str | None:
         state = self._load_state()
-        sent = state["fetch_sent"].get(handoff_id)
-        if not isinstance(sent, dict) or not sent.get("marker"):
+        for key in ("fetch_sent", "attempt_started", "attempt_failed"):
+            record = state[key].get(handoff_id)
+            if isinstance(record, dict) and record.get("marker"):
+                return str(record["marker"])
+        return None
+
+    def _attempt_handoffs(self) -> list[str]:
+        state = self._load_state()
+        ids: set[str] = set()
+        for key in ("fetch_sent", "attempt_started", "attempt_failed"):
+            ids.update(state[key])
+        return sorted(ids)
+
+    def reconcile_missing_trigger(self, handoff_id: str) -> str:
+        """Publish only the missing trigger when a Web ACK proves browser receipt.
+
+        This works even after a crash/uncertain sender result because the trigger
+        marker text is persisted before the browser action. Reconciliation never
+        calls the browser.
+        """
+        validate_handoff_id(handoff_id)
+        self.transport.fetch()
+        marker_text = self._durable_attempt_marker(handoff_id)
+        if not marker_text:
             return "NOT_SENT_LOCALLY"
         if self.transport.marker_exists(handoff_id, "trigger_fetch_sent.json"):
             return "ALREADY_PUBLISHED"
         if not self.transport.marker_exists(handoff_id, "chatgpt_fetch_ack.json"):
             return "NO_MATCHING_ACK"
         self._remote_marker_valid(handoff_id, "chatgpt_fetch_ack.json")
-        self.transport.publish_bridge_marker(handoff_id, "trigger_fetch_sent.json", str(sent["marker"]))
+        self.transport.publish_bridge_marker(handoff_id, "trigger_fetch_sent.json", marker_text)
+        self._mark_sent(handoff_id, marker_text)
         return "RECONCILE_PUBLISHED"
 
     def scan_once(self) -> list[str]:
@@ -150,17 +193,19 @@ class RemoteMarkerWatcher:
         for handoff_id in self.discover_eligible_handoffs():
             if self._seen(handoff_id):
                 continue
+
+            # Precompute + persist the bridge marker before browser interaction. If the
+            # process dies at any later point, restart sees attempt_started and will not
+            # automatically submit the handoff again.
+            marker = trigger_marker_text(handoff_id)
+            self._mark_started(handoff_id, marker)
             try:
                 self.sender.send(handoff_id)
             except Exception as exc:  # noqa: BLE001
-                self._mark_failed(handoff_id, str(exc))
+                self._mark_failed(handoff_id, str(exc), marker)
                 outcomes.append(f"{handoff_id}:SEND_FAILED_FAIL_CLOSED")
                 continue
 
-            # Durable local send-success is written immediately after browser submit,
-            # before any Git publication. A crash/race after this point can never cause
-            # an automatic browser resend.
-            marker = trigger_marker_text(handoff_id)
             self._mark_sent(handoff_id, marker)
             try:
                 self.transport.publish_bridge_marker(handoff_id, "trigger_fetch_sent.json", marker)
@@ -169,8 +214,8 @@ class RemoteMarkerWatcher:
                 self.logger.warning("event=trigger_publish_failed handoff=%s reason=%s", handoff_id, exc)
                 outcomes.append(f"{handoff_id}:PUBLISH_FAILED_FAIL_CLOSED")
 
-        # ACK-before-trigger race recovery. This path never calls the browser.
-        for handoff_id in sorted(self._load_state()["fetch_sent"]):
+        # ACK-before-trigger or crash-window recovery. This path never calls browser.
+        for handoff_id in self._attempt_handoffs():
             if self.transport.marker_exists(handoff_id, "trigger_fetch_sent.json"):
                 continue
             if not self.transport.marker_exists(handoff_id, "chatgpt_fetch_ack.json"):
