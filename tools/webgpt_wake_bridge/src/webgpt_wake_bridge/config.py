@@ -3,6 +3,7 @@ from __future__ import annotations
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlparse
 
 from .errors import BridgeError
 
@@ -35,6 +36,47 @@ def _inside_repo(repo_root: Path, relative: str | Path) -> Path:
     except ValueError as exc:
         raise BridgeError(f"path escapes repository: {relative}") from exc
     return path
+
+
+def validate_cdp_endpoint(raw: str) -> str:
+    value = str(raw).strip().rstrip("/")
+    try:
+        parsed = urlparse(value)
+        port = parsed.port
+    except ValueError as exc:
+        raise BridgeError("CDP endpoint is not a valid URL") from exc
+    if (
+        parsed.scheme != "http"
+        or parsed.hostname != "127.0.0.1"
+        or port is None
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.query
+        or parsed.fragment
+        or parsed.path not in ("", "/")
+    ):
+        raise BridgeError("CDP endpoint must be exactly http://127.0.0.1:<port>")
+    return value
+
+
+def validate_target_conversation_url(raw: str | None, *, required: bool = False) -> str | None:
+    value = str(raw or "").strip().rstrip("/") or None
+    if value is None:
+        if required:
+            raise BridgeError("target_conversation_url is required in the ignored local config")
+        return None
+    parsed = urlparse(value)
+    if (
+        parsed.scheme != "https"
+        or parsed.hostname != "chatgpt.com"
+        or parsed.username is not None
+        or parsed.password is not None
+        or not parsed.path.startswith("/c/")
+        or len(parsed.path) <= 3
+        or parsed.fragment
+    ):
+        raise BridgeError("target_conversation_url must be a dedicated https://chatgpt.com/c/... conversation")
+    return value
 
 
 def load_config(path: Path, *, require_url: bool = False) -> BridgeConfig:
@@ -74,14 +116,10 @@ def load_config(path: Path, *, require_url: bool = False) -> BridgeConfig:
     if not remote or not branch:
         raise BridgeError("[project].remote and [project].branch must not be empty")
 
-    cdp = str(browser.get("cdp_endpoint", "http://127.0.0.1:9222")).strip()
-    if not cdp.lower().startswith("http://127.0.0.1"):
-        raise BridgeError("CDP endpoint must be localhost only")
-    url = str(browser.get("target_conversation_url", "")).strip().rstrip("/") or None
-    if require_url and not url:
-        raise BridgeError("target_conversation_url is required in the ignored local config")
-    if url and not url.startswith("https://chatgpt.com/c/"):
-        raise BridgeError("target_conversation_url must be a dedicated chatgpt.com/c/... conversation")
+    cdp = validate_cdp_endpoint(str(browser.get("cdp_endpoint", "http://127.0.0.1:9222")))
+    url = validate_target_conversation_url(
+        str(browser.get("target_conversation_url", "")), required=require_url
+    )
 
     return BridgeConfig(
         repo_root=repo_root,
