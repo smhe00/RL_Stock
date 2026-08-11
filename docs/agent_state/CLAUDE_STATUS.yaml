@@ -1,7 +1,7 @@
 protocol_version: 3
 actor: claude
 handoff_id: WEB_FETCH_BRIDGE_V1_MANDATORY_DOORBELL_FINALIZATION_AND_AUTOWAKE_SMOKE_001_001
-state: RUNNING
+state: REVIEW_COMPLETE
 
 gate: LOCAL_PROTOCOL
 phase: WEB_FETCH_BRIDGE_V1_MANDATORY_DOORBELL_FINALIZATION_AND_AUTOWAKE_SMOKE_001
@@ -9,12 +9,12 @@ code_commit: 0bef3b5
 packet: docs/review_packets/WEB_FETCH_BRIDGE_V1_MANDATORY_DOORBELL_FINALIZATION_AND_AUTOWAKE_SMOKE_001.md
 
 progress:
-  current_task: AUTOWAKE SMOKE TRIGGERED OK. Consumed ACK_TRIGGER_RACE_RECONCILIATION_ACCEPTED_MANDATORY_DOORBELL_FINALIZATION_REQUIRED. Implemented (0bef3b5): finalization helper (scripts/finalize_handoff.py) + HANDOFF_PROTOCOL 6a invariant + publish retry hardening; 58 tests + --check PASSED. Fresh autowake handoff: doorbell published LAST via helper (4b07247, tz-aware UTC); daemon auto-discovered from origin/main (marker-only, no research-YAML parse) and submitted exactly one browser-generated fetch (fetch_sent 17:18:58); trigger_fetch_sent published to origin/main (3cb5978) with no publish race failure. User did NOT type fetch. Now awaiting Web ChatGPT chatgpt_fetch_ack -> chatgpt_review_published, then consume review + publish claude_review_ack.
+  current_task: WEB FETCH BRIDGE V1 COMPLETE (accepted). Autowake chain proven end-to-end: Claude review-requesting handoff -> mandatory claude_work_complete doorbell LAST (helper, 4b07247) -> marker-only daemon auto-discovered from origin/main -> exactly one browser-generated fetch -> trigger_fetch_sent (3cb5978) -> Web ChatGPT immediate chatgpt_fetch_ack (a69d3a2) -> substantive review + chatgpt_review_published (5060afc/5eac999) -> Claude consumed review and published claude_review_ack (7336d94, V1 closeout, no doorbell). Decision CLAUDE_TO_WEB_AUTOWAKE_ACCEPTED_WEB_FETCH_BRIDGE_V1_COMPLETE. authorized_next: [].
 
 last_consumed_review:
-  handoff_id: WEB_FETCH_BRIDGE_V1_ACK_TRIGGER_RACE_RECONCILIATION_001_001
-  decision: ACK_TRIGGER_RACE_RECONCILIATION_ACCEPTED_MANDATORY_DOORBELL_FINALIZATION_REQUIRED
-  state: REVISIONS_REQUIRED
-  response: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_ACK_TRIGGER_RACE_RECONCILIATION_001_REVIEWER_RESPONSE.md
+  handoff_id: WEB_FETCH_BRIDGE_V1_MANDATORY_DOORBELL_FINALIZATION_AND_AUTOWAKE_SMOKE_001_001
+  decision: CLAUDE_TO_WEB_AUTOWAKE_ACCEPTED_WEB_FETCH_BRIDGE_V1_COMPLETE
+  state: REVIEW_COMPLETE
+  response: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_MANDATORY_DOORBELL_FINALIZATION_AND_AUTOWAKE_SMOKE_001_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-11T17:18:00+08:00
+updated_at: 2026-08-11T17:26:00+08:00
