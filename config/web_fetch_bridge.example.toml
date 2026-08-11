@@ -1,0 +1,27 @@
+# Web Fetch Bridge V1 — example configuration (safe to commit; no secrets).
+# Copy to config/web_fetch_bridge.local.toml (git-ignored) and fill the
+# dedicated ChatGPT conversation URL there. NEVER commit the URL/auth material.
+
+# Chrome DevTools Protocol endpoint (must be localhost only).
+cdp_endpoint = "http://127.0.0.1:9222"
+
+# Dedicated Chrome/Chromium profile that contains ONLY the ChatGPT session.
+chrome_profile_path = "C:\\ChatGPT_Automation_Profile"
+
+# Dedicated Web ChatGPT conversation URL. This file must NOT contain it.
+# Put it in the ignored local config only.
+target_conversation_url = ""
+
+# Wait for chatgpt_fetch_ack.json after a fetch send before failing closed.
+fetch_ack_timeout_s = 120.0
+
+# Poll interval for the scheduled trigger.
+poll_interval_s = 30.0
+
+# Operational logs / runtime state (git-ignored).
+runtime_dir = "runtime/web_fetch_bridge"
+max_log_bytes = 1048576
+log_backups = 3
+
+remote = "origin"
+remote_branch = "main"

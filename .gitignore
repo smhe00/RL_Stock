@@ -23,6 +23,10 @@ config.json
 # Local Codex reviewer runtime (operational logs/state/results never enter Git)
 /runtime/local_reviewer/
 
+# Web Fetch Bridge V1 runtime (logs/state never enter Git); local operator config
+# (dedicated ChatGPT conversation URL) is already ignored via *.local.toml.
+/runtime/web_fetch_bridge/
+
 # IDE / OS
 .idea/
 .vscode/
