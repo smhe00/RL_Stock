@@ -387,34 +387,26 @@ class CdpFetchSender:
         self.page_timeout_ms = page_timeout_ms
 
     def _resolve_page(self, browser):
-        """Pick the dedicated ChatGPT page: target URL if configured, else exactly one
-        already-open https://chatgpt.com/c/* conversation tab. 0 or >1 -> fail closed."""
+        """OBSERVE-ONLY: locate the configured target conversation tab.
+
+        Never navigates, never creates pages, never closes pages/contexts/browser.
+        The configured target URL must ALREADY exist and match exactly; otherwise
+        fail closed (missing/mismatch is terminal). Does NOT use the exact-one /c/*
+        discovery fallback for the sender path (that remains for diagnostic only).
+        """
+        if not self.target_url:
+            raise BridgeError("no dedicated target conversation URL configured (ignored local config required)")
         contexts = browser.contexts
         if not contexts:
             raise BridgeError("no browser context; dedicated Chrome profile not attached")
-        pages = [p for c in contexts for p in c.pages]
-        if self.target_url:
-            # Prefer the configured conversation URL. Navigate only if we don't
-            # already sit on it; otherwise reuse the tab.
-            page = pages[0] if pages else contexts[0].new_page()
-            page.set_default_timeout(self.page_timeout_ms)
-            if self.target_url not in (page.url or ""):
-                page.goto(self.target_url, wait_until="domcontentloaded")
-            return page
-        # Fallback: discover exactly one open chatgpt.com/c/* conversation tab.
-        chat_pages = [p for p in pages if (p.url or "").startswith("https://chatgpt.com/c/")]
-        if len(chat_pages) == 0:
-            raise BridgeError(
-                "no already-open ChatGPT conversation tab found in dedicated CDP profile; "
-                "provide target_conversation_url or open exactly one conversation"
-            )
-        if len(chat_pages) > 1:
-            raise BridgeError(
-                "multiple already-open ChatGPT conversation tabs; fail closed (never guess)"
-            )
-        page = chat_pages[0]
-        page.set_default_timeout(self.page_timeout_ms)
-        return page
+        for c in contexts:
+            for p in c.pages:
+                if p.url and p.url.startswith(self.target_url):
+                    return p
+        raise BridgeError(
+            f"configured target conversation {self.target_url} not found; "
+            "missing/mismatch is terminal fail closed (no navigation repair)"
+        )
 
     def send(self, handoff_id: str) -> None:
         if not HANDOFF_RE.fullmatch(handoff_id):
@@ -439,7 +431,7 @@ class CdpFetchSender:
             if composer is None:
                 raise BridgeError("ChatGPT composer not found; fail closed (wrong conversation?)")
 
-            # Input-only: do NOT navigate/close unrelated tabs; reuse the resolved tab.
+            # Input-only: inject exactly one fetch; never manage page/browser lifecycle.
             composer.click()
             composer.fill(f"fetch {handoff_id}")
             composer.press("Enter")
@@ -447,12 +439,9 @@ class CdpFetchSender:
         except Exception as exc:  # noqa: BLE001
             raise BridgeError(f"CDP fetch submit failed: {exc}") from exc
         finally:
-            # Disconnect the CDP Browser object (does not kill the externally managed
-            # Chrome session) and explicitly stop the Playwright driver.
-            try:
-                browser.close()
-            except Exception:  # noqa: BLE001
-                pass
+            # NON-OWNING guest: do NOT call browser.close(). Only stop the Playwright
+            # driver/process connection we own; the externally managed Chrome session
+            # and its tabs remain untouched.
             driver.stop()
 
     def target_tab_preserved_after_failed_attempt(self, target_url: str) -> bool:
@@ -468,7 +457,7 @@ class CdpFetchSender:
                 composer = self._find_composer(page)
                 return composer is not None
             finally:
-                browser.close()
+                pass  # NON-OWNING: never call browser.close()
         except Exception:  # noqa: BLE001
             return False
         finally:
@@ -476,7 +465,8 @@ class CdpFetchSender:
 
     def session_alive_after_disconnect(self) -> bool:
         """Prove the dedicated Chrome process/session remains usable after a send
-        disconnect: reconnect over CDP must succeed and see the same profile pages."""
+        disconnect: reconnect over CDP must succeed and see the same profile pages.
+        NON-OWNING: never calls browser.close(); only stops the driver."""
         pw = _import_playwright(self.playwright_module)
         driver = pw.sync_playwright().start()
         try:
@@ -485,7 +475,7 @@ class CdpFetchSender:
                 contexts = browser.contexts
                 return bool(contexts and (contexts[0].pages or True))
             finally:
-                browser.close()
+                pass  # non-owning: do not close the connected browser
         except Exception:  # noqa: BLE001
             return False
         finally:
@@ -777,6 +767,112 @@ class RemoteMarkerWatcher:
                 time.sleep(max(5.0, self.config.poll_interval_s))
 
 
+class CdpTargetMetadata:
+    """Read-only DevTools target list metadata via the local HTTP endpoint.
+
+    Records only target URL/title/type needed for diagnosis. Never reads ChatGPT
+    output/content. Used by the no-op lifecycle diagnostic before/after attachment.
+    """
+
+    def __init__(self, cdp_endpoint: str):
+        self.cdp_endpoint = cdp_endpoint
+
+    def list_targets(self) -> list[dict]:
+        import urllib.request
+
+        url = self.cdp_endpoint.rstrip("/") + "/json"
+        try:
+            with urllib.request.urlopen(url, timeout=10) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+        except Exception as exc:  # noqa: BLE001
+            raise BridgeError(f"cannot query DevTools target list at {url}") from exc
+        out = []
+        for t in data:
+            if isinstance(t, dict):
+                out.append({
+                    "type": t.get("type"),
+                    "url": t.get("url", ""),
+                    "title": t.get("title", ""),
+                })
+        return out
+
+    def find_target(self, url_prefix: str) -> dict | None:
+        for t in self.list_targets():
+            if t["url"].startswith(url_prefix):
+                return t
+        return None
+
+
+class NoopLifecycleDiagnostic:
+    """No-op lifecycle diagnostic (reviewer FAIL_CLOSED_AND_TRUE_E2E_RETRY finding).
+
+    Performs NO click, typing, navigation, page creation, page close, context close,
+    or browser close. Attaches connect_over_cdp for >=30 s without page mutation,
+    then proves the configured chatgpt.com/c/... target is still present and unchanged.
+    If the target became chatgpt.com home during a pure no-op probe -> STOP and report
+    an environment/CDP/session issue (no navigation repair).
+    """
+
+    def __init__(
+        self,
+        cdp_endpoint: str,
+        target_url: str,
+        hold_seconds: float = 30.0,
+        playwright_module: str = "playwright.sync_api",
+    ):
+        if not target_url:
+            raise BridgeError("no-op diagnostic requires the dedicated target conversation URL")
+        if target_url.rstrip("/") == "https://chatgpt.com":
+            raise BridgeError("target must be a conversation (chatgpt.com/c/...), not the home page")
+        self.cdp_endpoint = cdp_endpoint
+        self.target_url = target_url.rstrip("/")
+        self.hold_seconds = max(1.0, hold_seconds)
+        self.playwright_module = playwright_module
+
+    def run(self, logger: logging.Logger) -> dict:
+        meta = CdpTargetMetadata(self.cdp_endpoint)
+        before = meta.find_target(self.target_url)
+        if before is None:
+            raise BridgeError(
+                f"configured target {self.target_url} not present before no-op attach; "
+                "missing/mismatch is terminal fail closed (no navigation repair)"
+            )
+        if self.target_url == "https://chatgpt.com":
+            raise BridgeError("target is chatgpt.com home; environment/CDP/session issue")
+
+        pw = _import_playwright(self.playwright_module)
+        driver = pw.sync_playwright().start()
+        try:
+            browser = driver.chromium.connect_over_cdp(self.cdp_endpoint)
+            try:
+                # Hold without page mutation.
+                time.sleep(self.hold_seconds)
+            finally:
+                pass  # NON-OWNING: never call browser.close()
+        except Exception as exc:  # noqa: BLE001
+            raise BridgeError(f"no-op CDP attach failed: {exc}") from exc
+        finally:
+            driver.stop()
+
+        after = meta.find_target(self.target_url)
+        home = meta.find_target("https://chatgpt.com/")
+        if after is None:
+            raise BridgeError(
+                "configured target disappeared during pure no-op probe; "
+                "STOP: environment/CDP/session issue (no navigation repair)"
+            )
+        if after["url"] != before["url"] or after["title"] != before["title"]:
+            raise BridgeError(
+                "configured target changed during pure no-op probe; "
+                "STOP: environment/CDP/session issue"
+            )
+        if home and home["url"].startswith("https://chatgpt.com/") and not home["url"].startswith(self.target_url):
+            # Home present is normal; only a target->home fallback is the flagged issue.
+            pass
+        logger.info("event=noop_lifecycle_pass target=%s hold_s=%.0f", self.target_url, self.hold_seconds)
+        return {"before": before, "after": after, "hold_seconds": self.hold_seconds}
+
+
 def configure_logging(config: BridgeConfig) -> logging.Logger:
     log_dir = config.runtime_dir / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -833,6 +929,8 @@ def main() -> int:
     parser.add_argument("--wait-ack", action="store_true", help="block until chatgpt_fetch_ack or timeout")
     parser.add_argument("--daemon", action="store_true", help="autonomous marker-only watcher (origin/main only)")
     parser.add_argument("--retry-handoff", default="", help="explicit operator retry: clear a terminal send-failure once")
+    parser.add_argument("--noop-diagnostic", action="store_true",
+                        help="no-op lifecycle diagnostic: attach CDP 30s, no mutation, prove target unchanged")
     parser.add_argument("--check", action="store_true", help="validate marker protocol + fail-closed gates")
     args = parser.parse_args()
 
@@ -842,10 +940,18 @@ def main() -> int:
         config_path = repo_root / config_path
 
     try:
-        config = load_config(config_path.resolve(), repo_root, require_url=(args.handoff != ""))
+        config = load_config(config_path.resolve(), repo_root,
+                             require_url=(args.handoff != "" or args.noop_diagnostic))
         logger = configure_logging(config)
         if args.check:
             _run_check(config, logger)
+            return 0
+        if args.noop_diagnostic:
+            if not config.target_conversation_url:
+                raise BridgeError("no-op diagnostic requires target_conversation_url in ignored local config")
+            diag = NoopLifecycleDiagnostic(config.cdp_endpoint, config.target_conversation_url)
+            result = diag.run(logger)
+            print(f"noop lifecycle diagnostic: PASS target={result['before']['url']}")
             return 0
         if args.retry_handoff:
             if not HANDOFF_RE.fullmatch(args.retry_handoff):

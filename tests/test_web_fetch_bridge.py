@@ -511,3 +511,37 @@ def test_target_tab_preserved_probe():
     assert bad.target_tab_preserved_after_failed_attempt("https://chatgpt.com/c/x") is False
     result = s.target_tab_preserved_after_failed_attempt("https://chatgpt.com/c/x")
     assert isinstance(result, bool)
+
+
+# --- no-op lifecycle diagnostic + non-owning CDP (reviewer FAIL_CLOSED finding) ---
+
+def test_noop_diagnostic_requires_target_url():
+    """The no-op diagnostic must require the dedicated target conversation URL in
+    ignored local config (no exact-one discovery for the diagnostic)."""
+    with pytest.raises(wfb.BridgeError):
+        wfb.NoopLifecycleDiagnostic("http://127.0.0.1:9222", "")
+    with pytest.raises(wfb.BridgeError):
+        wfb.NoopLifecycleDiagnostic("http://127.0.0.1:9222", "https://chatgpt.com/")
+    # Valid target accepted (constructor only; run will fail closed without browser).
+    diag = wfb.NoopLifecycleDiagnostic("http://127.0.0.1:9222", "https://chatgpt.com/c/abc")
+    assert diag.target_url == "https://chatgpt.com/c/abc"
+
+
+def test_noop_diagnostic_no_target_before_attach_fail_closed():
+    """If the configured target is absent before attachment, STOP (no repair)."""
+    diag = wfb.NoopLifecycleDiagnostic("http://127.0.0.1:9222", "https://chatgpt.com/c/absent-xyz")
+    with pytest.raises(wfb.BridgeError) as exc:
+        diag.run(_Logger())
+    assert "not present before no-op attach" in str(exc.value)
+
+
+def test_sender_never_calls_browser_close():
+    """Sender and no-op paths must not call browser.close (non-owning guest)."""
+    src = Path(ROOT / "scripts" / "web_fetch_bridge.py").read_text(encoding="utf-8")
+    import re
+
+    code = src.split("class CdpTargetMetadata")[0]
+    # Check actual call statements only (not comments/docstrings).
+    for pattern in (r"^\s*browser\.close\(\)", r"^\s*page\.goto\(", r"^\s*new_page\(\)",
+                    r"^\s*page\.close\(\)", r"^\s*context\.close\(\)"):
+        assert not re.search(pattern, code, re.MULTILINE), f"non-owning path must not call {pattern}"
