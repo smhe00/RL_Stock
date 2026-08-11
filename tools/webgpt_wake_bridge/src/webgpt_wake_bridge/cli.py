@@ -23,15 +23,6 @@ class _MarkerOnlySender:
 
 def _runtime(config: BridgeConfig, *, browser_enabled: bool) -> tuple[RemoteMarkerWatcher, object]:
     logger = configure_logging(config)
-    if browser_enabled:
-        sender = CdpFetchSender(
-            config.cdp_endpoint,
-            config.target_conversation_url or "",
-            config.chrome_profile_path,
-            playwright_module=config.playwright_module,
-        )
-    else:
-        sender = _MarkerOnlySender()
     transport = GitTransport(
         config.repo_root,
         config.runtime_dir,
@@ -39,6 +30,22 @@ def _runtime(config: BridgeConfig, *, browser_enabled: bool) -> tuple[RemoteMark
         config.remote,
         config.branch,
     )
+    if browser_enabled:
+        if not config.review_repository:
+            raise BridgeError("[review].repository is required before browser send")
+        # The locator shown to Web ChatGPT must identify the same durable repository
+        # that actually contains the handoff markers. Local-only remotes are rejected
+        # before browser interaction.
+        transport.assert_review_repository(config.review_repository)
+        sender = CdpFetchSender(
+            config.cdp_endpoint,
+            config.target_conversation_url or "",
+            config.review_repository,
+            config.chrome_profile_path,
+            playwright_module=config.playwright_module,
+        )
+    else:
+        sender = _MarkerOnlySender()
     return RemoteMarkerWatcher(config, transport, sender, logger), logger
 
 
@@ -51,6 +58,7 @@ def _check(config: BridgeConfig) -> None:
     print("webgpt-bridge check: PASS (no browser action, no git mutation)")
     print(f"  repo: {config.repo_root}")
     print(f"  marker_root: {config.marker_root.as_posix()}")
+    print(f"  review_repository: {config.review_repository or '(not configured)'}")
     print(f"  runtime: {config.runtime_dir}")
 
 
@@ -66,6 +74,7 @@ def main() -> int:
     p_init.add_argument("--remote", default="origin")
     p_init.add_argument("--branch", default="main")
     p_init.add_argument("--marker-root", default="docs/web_bridge")
+    p_init.add_argument("--review-repository", default="")
 
     for name in ("check", "once", "daemon", "noop"):
         p = sub.add_parser(name)
@@ -96,13 +105,19 @@ def main() -> int:
                 remote=args.remote,
                 branch=args.branch,
                 marker_root=args.marker_root,
+                review_repository=args.review_repository,
             )
             print(f"local config created: {path}")
-            print("NEXT: edit target_conversation_url, keep the config untracked, then run `webgpt-bridge check`.")
+            print("NEXT: set [review].repository and target_conversation_url, keep config untracked, then run check.")
             return 0
 
         require_url = args.command in {"once", "daemon", "noop"}
-        config = load_config(args.config.resolve(), require_url=require_url)
+        require_repo = args.command in {"once", "daemon"}
+        config = load_config(
+            args.config.resolve(),
+            require_url=require_url,
+            require_review_repository=require_repo,
+        )
         if args.command == "check":
             _check(config)
             return 0
