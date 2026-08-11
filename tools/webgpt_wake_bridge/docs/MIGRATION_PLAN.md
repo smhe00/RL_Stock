@@ -1,10 +1,24 @@
 # Extraction / Migration Plan
 
+## Current status
+
+```text
+Phase 0  Freeze accepted embedded V1                    COMPLETE
+Phase 1  Standalone structural extraction               COMPLETE
+Phase 2  Standalone test suite / safety hardening        COMPLETE (execution pending validator)
+Phase 3  Reusable CLI/bootstrap usability layer          COMPLETE
+Phase 4  Independent blank-repository Windows/CDP E2E    PENDING CLAUDE VALIDATION
+Phase 5  Promote to 1.0.0 / E2E VERIFIED                 BLOCKED ON PHASE 4
+Phase 6  Migrate RL_Stock to standalone consumer         NOT STARTED
+```
+
+The standalone candidate is `0.9.0rc1` until Phase 4 passes.
+
 ## Phase 0 — Freeze accepted source
 
-The embedded RL_Stock Web Fetch Bridge V1 remains the behavioral reference until standalone acceptance. Do not refactor it in place during extraction.
+The embedded RL_Stock Web Fetch Bridge V1 remains the accepted behavioral/rollback reference until standalone acceptance. It is not refactored in place during extraction.
 
-Reference behavior currently lives primarily in:
+Reference behavior lives primarily in:
 
 - `scripts/web_fetch_bridge.py`
 - `scripts/finalize_handoff.py`
@@ -14,57 +28,72 @@ Reference behavior currently lives primarily in:
 - `tests/test_web_fetch_bridge.py`
 - `tests/test_finalize_handoff.py`
 
-## Phase 1 — Structural extraction
+## Phase 1 — Structural extraction — COMPLETE
 
-Split the accepted behavior into standalone modules:
+Accepted behavior has been split into standalone modules:
 
 ```text
+bootstrap.py      clean per-consumer local bootstrap
 markers.py        marker schema, ownership, validation
-config.py         standalone TOML loading
+config.py         standalone TOML/config hardening
 browser.py        non-owning CDP sender + composer selection
-transport_git.py  remote marker discovery/publication/reconciliation
-bridge.py         marker-only state machine + daemon
+transport_git.py  remote marker discovery/publication
+bridge.py         marker-only daemon + crash-safe dedup/reconciliation
 finalize.py       agent-side doorbell finalization
-cli.py            init/check/daemon/finalize/reconcile commands
+cli.py            init/check/daemon/finalize/retry/reconcile commands
 ```
 
-No behavior changes are allowed in this phase unless a copied test first demonstrates the need.
+The implementation is project-state-agnostic and remains protocol-compatible with `web_fetch_bridge_v1`.
 
-## Phase 2 — Test parity
+## Phase 2 — Test suite / hardening — IMPLEMENTED, EXECUTION PENDING
 
-Port the accepted V1 tests into `tools/webgpt_wake_bridge/tests/` and make them independent from the RL_Stock repository layout.
+Standalone tests now cover protocol, browser, transport, finalization, bootstrap, CLI and package-independence contracts under `tools/webgpt_wake_bridge/tests/`.
 
-Acceptance target: all standalone tests pass while the original embedded tests continue to pass unchanged.
+The independent validator must execute the full suite from a fresh environment. Until that execution passes, this phase is not release evidence.
 
-## Phase 3 — Usability layer
+## Phase 3 — Reusable usability layer — COMPLETE
 
-Add stable commands:
+Stable candidate commands:
 
 ```text
-webgpt-bridge init
-webgpt-bridge check
-webgpt-bridge daemon
-webgpt-bridge finalize --handoff ... --code-commit ...
-webgpt-bridge reconcile --handoff ...
+webgpt-bridge init --repo <consumer>
+webgpt-bridge check --config <local-config>
+webgpt-bridge noop --config <local-config>
+webgpt-bridge once --config <local-config>
+webgpt-bridge daemon --config <local-config>
+webgpt-bridge finalize --config <local-config> --handoff ... --code-commit ...
+webgpt-bridge retry --config <local-config> --handoff ...
+webgpt-bridge reconcile --config <local-config> --handoff ...
 ```
 
-`init` may create project-local templates, but must never write secrets or a ChatGPT conversation URL into tracked files.
+`init` defaults config/runtime outside the consumer repository and leaves the dedicated ChatGPT conversation URL blank for the operator to fill locally.
 
-## Phase 4 — Blank demo repository
+## Phase 4 — Blank demo repository — NEXT
 
-Create a clean demo consumer containing no RL_Stock state. Validate the full marker/browser/reviewer round trip using the standalone package.
+Claude acts only as independent validator and follows:
+
+```text
+docs/FINAL_CLAUDE_TEST_PLAN.md
+```
+
+A clean demo consumer containing no RL_Stock state must prove the full standalone marker/browser/reviewer round trip without any user-typed `fetch`.
+
+If any defect is found, Claude reports `REVISIONS_REQUIRED` and does not edit candidate code.
 
 ## Phase 5 — Freeze 1.0.0
 
-Only after blank-repo E2E acceptance:
+Only after Phase 4 returns accepted evidence:
 
-- set version `1.0.0`;
-- mark `E2E VERIFIED` in README;
-- record acceptance evidence;
-- treat the standalone package as the canonical bridge implementation.
+- Web ChatGPT reviews the validation packet;
+- version may be promoted from `0.9.0rc1` to `1.0.0`;
+- README may be marked `E2E VERIFIED`;
+- exact test/E2E evidence is retained;
+- standalone package becomes the canonical reusable implementation.
+
+Claude must not self-promote the version during validation.
 
 ## Phase 6 — Consumer migration
 
-Migrate RL_Stock as the first consumer. Replace embedded bridge execution with the installed/package command while preserving the existing marker protocol and historical evidence.
+RL_Stock becomes the first consumer only after standalone `1.0.0` acceptance. Replace embedded execution with the installed/package command while preserving the existing marker protocol and historical evidence.
 
-Do not delete the embedded reference implementation until the consumer migration has its own successful E2E smoke and rollback path.
+Do not delete the embedded reference implementation until consumer migration has its own successful E2E smoke and rollback path.
