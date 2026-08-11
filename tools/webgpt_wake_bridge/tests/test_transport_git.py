@@ -33,6 +33,23 @@ def trigger(handoff: str) -> str:
     }) + "\n"
 
 
+def test_github_repository_locator_and_mismatch_guard(tmp_path):
+    repo = init_repo(tmp_path)
+    transport = GitTransport(repo, repo / ".runtime_route", Path("docs/web_bridge"), "origin", "main")
+    assert transport.github_repository_locator() is None
+    with pytest.raises(BridgeError):
+        transport.assert_review_repository("owner/demo")
+
+    subprocess.run(
+        ["git", "-C", str(repo), "remote", "set-url", "origin", "https://github.com/Owner/Demo.git"],
+        check=True,
+    )
+    assert transport.github_repository_locator() == "Owner/Demo"
+    transport.assert_review_repository("owner/demo")
+    with pytest.raises(BridgeError):
+        transport.assert_review_repository("owner/other")
+
+
 def test_publish_marker_uses_isolated_worktree_and_is_append_only(tmp_path):
     repo = init_repo(tmp_path)
     transport = GitTransport(repo, repo / ".runtime", Path("docs/web_bridge"), "origin", "main")
