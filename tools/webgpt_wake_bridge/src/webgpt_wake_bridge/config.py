@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 import tomllib
 from dataclasses import dataclass
@@ -40,6 +41,14 @@ def _inside_repo(repo_root: Path, relative: str | Path) -> Path:
     except ValueError as exc:
         raise BridgeError(f"path escapes repository: {relative}") from exc
     return path
+
+
+def _resolve_runtime(repo_root: Path, raw: str) -> Path:
+    expanded = os.path.expandvars(str(raw).strip())
+    candidate = Path(expanded).expanduser()
+    if candidate.is_absolute():
+        return candidate.resolve()
+    return (repo_root / candidate).resolve()
 
 
 def _is_within(path: Path, parent: Path) -> bool:
@@ -127,10 +136,11 @@ def load_config(path: Path, *, require_url: bool = False) -> BridgeConfig:
     repo_raw = str(project.get("repo_root", "")).strip()
     if not repo_raw:
         raise BridgeError("[project].repo_root is required")
-    repo_root = Path(repo_raw).expanduser().resolve()
-    git_dir = (repo_root / ".git").resolve()
-    if not (repo_root / ".git").exists():
+    repo_root = Path(os.path.expandvars(repo_raw)).expanduser().resolve()
+    git_path = repo_root / ".git"
+    if not git_path.exists():
         raise BridgeError(f"repo_root is not a git worktree: {repo_root}")
+    git_dir = git_path.resolve()
 
     marker_raw = str(project.get("marker_root", "docs/web_bridge")).strip()
     if not marker_raw:
@@ -145,13 +155,16 @@ def load_config(path: Path, *, require_url: bool = False) -> BridgeConfig:
     runtime_raw = str(runtime.get("runtime_dir", ".runtime/webgpt_wake_bridge")).strip()
     if not runtime_raw:
         raise BridgeError("[runtime].runtime_dir must not be empty")
-    runtime_dir = _inside_repo(repo_root, runtime_raw)
-    if runtime_dir == repo_root:
-        raise BridgeError("runtime_dir must be a subdirectory of the consumer repository")
+    runtime_dir = _resolve_runtime(repo_root, runtime_raw)
+    if runtime_dir == repo_root or runtime_dir.parent == runtime_dir:
+        raise BridgeError("runtime_dir must not be the repository or filesystem root")
     if _is_within(runtime_dir, git_dir):
         raise BridgeError("runtime_dir must not be inside .git")
-    if _is_within(runtime_dir, marker_abs) or _is_within(marker_abs, runtime_dir):
-        raise BridgeError("runtime_dir and marker_root must not overlap")
+    # Runtime may intentionally live outside the repo. If it lives inside, it must
+    # remain disjoint from the durable marker tree.
+    if _is_within(runtime_dir, repo_root):
+        if _is_within(runtime_dir, marker_abs) or _is_within(marker_abs, runtime_dir):
+            raise BridgeError("runtime_dir and marker_root must not overlap")
 
     remote = validate_remote_name(str(project.get("remote", "origin")))
     branch = validate_branch_name(str(project.get("branch", "main")))
