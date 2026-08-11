@@ -1,0 +1,19 @@
+# Copy to bridge.local.toml and keep the local file ignored by Git.
+
+[project]
+repo_root = "C:\\path\\to\\your_project"
+remote = "origin"
+branch = "main"
+marker_root = "docs/web_bridge"
+
+[browser]
+cdp_endpoint = "http://127.0.0.1:9222"
+chrome_profile_path = "C:\\ChatGPT_Automation_Profile"
+target_conversation_url = ""
+
+[runtime]
+poll_interval_s = 5
+fetch_ack_timeout_s = 120
+runtime_dir = ".runtime/webgpt_wake_bridge"
+max_log_bytes = 1048576
+log_backups = 3
