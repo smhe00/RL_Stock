@@ -12,20 +12,20 @@ from .errors import BridgeError
 PROTOCOL = "web_fetch_bridge_v1"
 HANDOFF_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$")
 MARKER_OWNERS = {
-    "claude_review_ack.json": "claude",
     "claude_work_complete.json": "claude",
     "trigger_fetch_sent.json": "bridge_trigger",
     "chatgpt_fetch_ack.json": "web_chatgpt",
     "chatgpt_review_published.json": "web_chatgpt",
+    "claude_review_ack.json": "claude",
 }
 MARKER_ORDER = list(MARKER_OWNERS)
 BRIDGE_OWNED_MARKERS = {"trigger_fetch_sent.json"}
 EVENT_ALIASES = {
-    "CLAUDE_REVIEW_ACK": "claude_review_ack.json",
     "CLAUDE_WORK_COMPLETE": "claude_work_complete.json",
     "TRIGGER_FETCH_SENT": "trigger_fetch_sent.json",
     "CHATGPT_FETCH_ACK": "chatgpt_fetch_ack.json",
     "CHATGPT_REVIEW_PUBLISHED": "chatgpt_review_published.json",
+    "CLAUDE_REVIEW_ACK": "claude_review_ack.json",
 }
 REQUIRED_MARKER_FIELDS = ("protocol", "handoff_id", "event", "timestamp")
 FORBIDDEN_MARKER_FIELDS = ("api_key", "token", "cookie", "password", "secret")
@@ -66,6 +66,14 @@ def validate_timestamp(raw: object) -> None:
         raise BridgeError(f"marker timestamp must be timezone-aware: {raw}")
 
 
+def canonical_event(event: object) -> str | None:
+    if not isinstance(event, str):
+        return None
+    if event in MARKER_OWNERS:
+        return event
+    return EVENT_ALIASES.get(event)
+
+
 def validate_marker(path: Path, marker: dict, expected_owner: str | None = None) -> None:
     if not isinstance(marker, dict):
         raise BridgeError(f"marker {path.name} is not a JSON object")
@@ -79,9 +87,14 @@ def validate_marker(path: Path, marker: dict, expected_owner: str | None = None)
             raise BridgeError(f"marker {path.name} must not contain {field}")
     if marker.get("protocol") != PROTOCOL:
         raise BridgeError(f"marker {path.name} has wrong protocol")
-    event = marker.get("event")
-    if event not in MARKER_ORDER and event not in EVENT_ALIASES:
+    event_name = canonical_event(marker.get("event"))
+    if event_name is None:
         raise BridgeError(f"marker {path.name} has unknown event")
+    # Backward-compatible semantic aliases are allowed, but they must still describe
+    # the marker file they are stored in. A chatgpt_fetch_ack payload inside a
+    # claude_work_complete filename is an integrity failure and must fail closed.
+    if path.name in MARKER_OWNERS and event_name != path.name:
+        raise BridgeError(f"marker {path.name} event does not match filename")
     if expected_owner is not None and MARKER_OWNERS.get(path.name) != expected_owner:
         raise BridgeError(f"marker {path.name} is not owned by {expected_owner}")
     validate_timestamp(marker.get("timestamp"))
@@ -122,8 +135,15 @@ class MarkerStore:
     def ordered_markers(self, handoff_id: str) -> list[str]:
         directory = self.handoff_dir(handoff_id)
         present = [name for name in MARKER_ORDER if (directory / name).is_file()]
-        if "chatgpt_review_published.json" in present and "claude_work_complete.json" not in present:
-            raise BridgeError("chatgpt_review_published without claude_work_complete")
+        index = {name: i for i, name in enumerate(MARKER_ORDER)}
+        # A later marker may not exist without all protocol prerequisites that precede
+        # it, except claude_review_ack which is terminal acknowledgement after review.
+        for name in present:
+            if name == "claude_work_complete.json":
+                continue
+            required = MARKER_ORDER[: index[name]]
+            if any(req not in present for req in required):
+                raise BridgeError(f"marker order violated before {name}")
         return present
 
     def write_bridge_marker(self, handoff_id: str, name: str, extra: dict | None = None) -> Path:
