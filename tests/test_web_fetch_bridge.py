@@ -545,3 +545,117 @@ def test_sender_never_calls_browser_close():
     for pattern in (r"^\s*browser\.close\(\)", r"^\s*page\.goto\(", r"^\s*new_page\(\)",
                     r"^\s*page\.close\(\)", r"^\s*context\.close\(\)"):
         assert not re.search(pattern, code, re.MULTILINE), f"non-owning path must not call {pattern}"
+
+
+# --- composer locator correction (reviewer E2E_FAIL_CLOSED finding) ---
+
+def _meta(**kw):
+    base = {
+        "index": 0, "tag": "div", "id": None, "contenteditable": None,
+        "lexical": None, "role": None, "aria_label": None, "name": None,
+        "class_list": None, "display": "block", "visibility": "visible",
+        "width": 500, "height": 40, "disabled": False, "in_form": True,
+    }
+    base.update(kw)
+    return base
+
+
+def test_composer_locator_excludes_hidden_fallback_textarea():
+    """The hidden fallback <textarea class="wcDTda_fallbackTextarea"> (display:none,
+    zero-size) must be excluded; the visible #prompt-textarea contenteditable wins."""
+    meta = [
+        _meta(index=0, tag="textarea", id=None, contenteditable=None,
+              name="prompt-textarea", class_list="wcDTda_fallbackTextarea",
+              display="none", width=0, height=0),
+        _meta(index=1, tag="div", id="prompt-textarea", contenteditable="true",
+              role="textbox", aria_label="与 ChatGPT 聊天"),
+    ]
+    chosen = wfb.CdpFetchSender._choose_composer_candidate(meta)
+    assert chosen["id"] == "prompt-textarea"
+    assert chosen["contenteditable"] == "true"
+
+
+def test_composer_locator_only_hidden_fallback_fails_closed():
+    """Only a hidden fallback textarea -> no visible editable candidate -> fail closed."""
+    meta = [_meta(index=0, tag="textarea", id=None, contenteditable=None,
+                  name="prompt-textarea", class_list="wcDTda_fallbackTextarea",
+                  display="none", width=0, height=0)]
+    with pytest.raises(wfb.BridgeError):
+        wfb.CdpFetchSender._choose_composer_candidate(meta)
+
+
+def test_composer_locator_no_candidate_fails_closed():
+    """No visible editable candidate at all -> fail closed."""
+    meta = [_meta(index=0, tag="input", id="upload-files", width=1, height=1)]
+    with pytest.raises(wfb.BridgeError):
+        wfb.CdpFetchSender._choose_composer_candidate(meta)
+
+
+def test_composer_locator_unique_visible_contenteditable_selected():
+    """A unique visible [contenteditable=true] candidate is selected (no id/lexical)."""
+    meta = [
+        _meta(index=0, tag="div", id=None, contenteditable="true", width=555, height=42),
+    ]
+    chosen = wfb.CdpFetchSender._choose_composer_candidate(meta)
+    assert chosen["contenteditable"] == "true"
+
+
+def test_composer_locator_lexical_editor_preferred_over_generic():
+    """A visible [contenteditable][data-lexical-editor] wins over a generic visible one."""
+    meta = [
+        _meta(index=0, tag="div", id=None, contenteditable="true", width=200, height=20),
+        _meta(index=1, tag="div", id=None, contenteditable="true", lexical="true", width=555, height=42),
+    ]
+    chosen = wfb.CdpFetchSender._choose_composer_candidate(meta)
+    assert chosen["lexical"] == "true"
+
+
+def test_composer_locator_ambiguity_fails_closed():
+    """Two visible editable candidates at the same priority -> ambiguous -> fail closed."""
+    meta = [
+        _meta(index=0, tag="div", contenteditable="true", width=200, height=20),
+        _meta(index=1, tag="div", contenteditable="true", width=300, height=30),
+    ]
+    with pytest.raises(wfb.BridgeError):
+        wfb.CdpFetchSender._choose_composer_candidate(meta)
+
+
+def test_composer_locator_selector_for_candidate():
+    """_selector_for maps the chosen candidate to a stable semantic selector."""
+    assert wfb.CdpFetchSender._selector_for({"id": "prompt-textarea"}) == "#prompt-textarea"
+    assert wfb.CdpFetchSender._selector_for({"id": None, "tag": "div", "contenteditable": "true"}) == 'div[contenteditable="true"]'
+
+
+def test_submission_confirmation_pure_check():
+    """Submission is confirmed only when the composer held the prompt before Enter and
+    is cleared after Enter with URL unchanged (no assistant output read)."""
+    conf = wfb.CdpFetchSender._submission_confirmed
+    assert conf("fetch H-1", "", True) is True
+    # composer not cleared after Enter -> unconfirmed
+    assert conf("fetch H-1", "fetch H-1", True) is False
+    # composer empty before Enter -> no prompt injected -> unconfirmed
+    assert conf("", "", True) is False
+    # URL changed -> unconfirmed
+    assert conf("fetch H-1", "", False) is False
+    # unreadable composer state -> unconfirmed
+    assert conf(None, "", True) is False
+    assert conf("fetch H-1", None, True) is False
+
+
+def test_submission_unconfirmed_withholds_trigger_fetch_sent(repo_root, tmp_path):
+    """A sender whose submission is not positively confirmed must fail closed and the
+    daemon must NOT publish trigger_fetch_sent (no real fetch reached Web ChatGPT)."""
+    class _UnconfirmedSender:
+        def send(self, handoff_id: str) -> None:
+            raise wfb.BridgeError(
+                "submission not positively confirmed (composer not cleared after Enter); "
+                "fail closed; trigger_fetch_sent withheld"
+            )
+
+    t = FakeRemoteTransport()
+    t.remotes[("H-0001", "claude_work_complete.json")] = "{}"
+    daemon = _daemon_with_sender(repo_root, t, tmp_path, _UnconfirmedSender())
+    outcomes = daemon.scan_once()
+    assert outcomes == ["H-0001:SEND_FAILED_FAIL_CLOSED_NO_AUTO_RETRY"]
+    assert not t.marker_exists("H-0001", "trigger_fetch_sent.json")
+    assert not (repo_root / "docs" / "web_bridge" / "H-0001" / "trigger_fetch_sent.json").exists()

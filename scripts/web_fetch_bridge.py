@@ -427,15 +427,21 @@ class CdpFetchSender:
             if self._looks_like_login_or_challenge(page):
                 raise BridgeError("login screen or CAPTCHA/challenge detected; fail closed")
 
-            composer = self._find_composer(page)
-            if composer is None:
-                raise BridgeError("ChatGPT composer not found; fail closed (wrong conversation?)")
+            composer = self._locate_composer(page)
 
             # Input-only: inject exactly one fetch; never manage page/browser lifecycle.
-            composer.click()
+            # fill() is used on the chosen visible contenteditable; clicking is not
+            # required (fill focuses it reliably).
             composer.fill(f"fetch {handoff_id}")
+            before_text = self._composer_text(composer)
             composer.press("Enter")
-            time.sleep(0.5)
+            time.sleep(1.0)  # allow the local submit-state transition to settle
+            after_text = self._composer_text(composer)
+            if not self._submission_confirmed(before_text, after_text, self._url_is_target(page)):
+                raise BridgeError(
+                    "submission not positively confirmed (composer not cleared after Enter); "
+                    "fail closed; trigger_fetch_sent withheld"
+                )
         except Exception as exc:  # noqa: BLE001
             raise BridgeError(f"CDP fetch submit failed: {exc}") from exc
         finally:
@@ -443,6 +449,20 @@ class CdpFetchSender:
             # driver/process connection we own; the externally managed Chrome session
             # and its tabs remain untouched.
             driver.stop()
+
+    def _composer_text(self, composer) -> str | None:
+        """Read ONLY the composer input element's current text (input state), never
+        assistant output/content."""
+        try:
+            return composer.text_content() or ""
+        except Exception:  # noqa: BLE001
+            return None
+
+    def _url_is_target(self, page) -> bool:
+        try:
+            return bool(page.url) and page.url.startswith(self.target_url)
+        except Exception:  # noqa: BLE001
+            return False
 
     def target_tab_preserved_after_failed_attempt(self, target_url: str) -> bool:
         """Prove the dedicated Chrome session + target tab remain usable after a failed
@@ -454,8 +474,8 @@ class CdpFetchSender:
             browser = driver.chromium.connect_over_cdp(self.cdp_endpoint)
             try:
                 page = self._resolve_page(browser)
-                composer = self._find_composer(page)
-                return composer is not None
+                self._locate_composer(page)
+                return True
             finally:
                 pass  # NON-OWNING: never call browser.close()
         except Exception:  # noqa: BLE001
@@ -490,18 +510,138 @@ class CdpFetchSender:
                 pass
         return False
 
-    def _find_composer(self, page):
-        """Locate the current ChatGPT composer textarea. Fail closed on ambiguity.
-        Input-only: never inspects assistant output; only the composer input element."""
-        try:
-            textareas = page.locator("textarea").all()
-        except Exception:  # noqa: BLE001
-            return None
-        if len(textareas) == 0:
-            return None
-        if len(textareas) > 1:
-            return None
-        return textareas[0]
+    def _locate_composer(self, page):
+        """Semantic, visibility-aware editable-composer lookup.
+
+        Reviewer correction: the textarea-only lookup selected ChatGPT's hidden
+        fallback `<textarea class="wcDTda_fallbackTextarea">` (display:none) and then
+        timed out on click. Real composer is a visible contenteditable element.
+        Preference order (exactly one visible editable candidate, else fail closed):
+          1. visible #prompt-textarea[contenteditable="true"]
+          2. visible [contenteditable="true"][data-lexical-editor="true"]
+          3. unique composer-scoped visible [contenteditable="true"]
+        Hidden fallback textareas (display:none / zero-size / disabled / non-editable /
+        wcDTda_fallbackTextarea) are excluded. Never reads assistant output.
+        """
+        meta = self._composer_meta(page)
+        candidate = self._choose_composer_candidate(meta)
+        return page.locator(self._selector_for(candidate))
+
+    def _composer_meta(self, page) -> list[dict]:
+        """READ-ONLY DOM metadata probe limited to candidate composer/input elements.
+
+        Records only structural metadata needed for selection: tag, id, role,
+        contenteditable, data-lexical-editor, aria-label/name, visibility, bounding
+        box, form scope. Never reads ChatGPT output/content.
+        """
+        return page.evaluate(
+            """() => {
+                const els = [...document.querySelectorAll('textarea, [contenteditable]')];
+                return els.map((el, index) => {
+                    const r = el.getBoundingClientRect();
+                    const s = getComputedStyle(el);
+                    let inForm = false, depth = 0, a = el;
+                    while (a && depth < 8) {
+                        if (a.tagName === 'FORM') { inForm = true; break; }
+                        a = a.parentElement; depth += 1;
+                    }
+                    return {
+                        index: index,
+                        tag: el.tagName.toLowerCase(),
+                        id: el.id || null,
+                        contenteditable: el.getAttribute('contenteditable'),
+                        lexical: el.getAttribute('data-lexical-editor'),
+                        role: el.getAttribute('role'),
+                        aria_label: el.getAttribute('aria-label'),
+                        name: el.getAttribute('name'),
+                        class_list: (typeof el.className === 'string' && el.className) ? el.className : null,
+                        display: s.display,
+                        visibility: s.visibility,
+                        width: Math.round(r.width),
+                        height: Math.round(r.height),
+                        disabled: Boolean(el.disabled),
+                        in_form: inForm,
+                    };
+                });
+            }"""
+        )
+
+    @staticmethod
+    def _visible(m: dict) -> bool:
+        if m.get("disabled"):
+            return False
+        if m.get("display") == "none":
+            return False
+        if m.get("visibility") in ("hidden", "collapse"):
+            return False
+        if int(m.get("width") or 0) <= 0 or int(m.get("height") or 0) <= 0:
+            return False
+        return True
+
+    @staticmethod
+    def _editable_candidates(meta: list[dict]) -> list[dict]:
+        """Visible editable composer candidates. Excludes hidden fallback textareas:
+        display:none / zero-size / disabled / non-editable / wcDTda_fallbackTextarea."""
+        out = []
+        for m in meta:
+            if not CdpFetchSender._visible(m):
+                continue
+            ce = m.get("contenteditable")
+            if ce in ("true", "plaintext-only"):
+                out.append(m)
+                continue
+            if m.get("tag") == "textarea":
+                # A visible textarea is an editable composer only when it is not the
+                # known hidden fallback (defensive; visibility already excludes it).
+                if m.get("class_list") and "wcDTda_fallbackTextarea" in m["class_list"]:
+                    continue
+                out.append(m)
+        return out
+
+    @staticmethod
+    def _choose_composer_candidate(meta: list[dict]) -> dict:
+        """Select the unique visible editable composer by semantic preference.
+        Fails closed on zero candidates or on ambiguous (multiple) visible editable
+        candidates. Never relies on an opaque generated CSS class alone."""
+        editable = CdpFetchSender._editable_candidates(meta)
+        if not editable:
+            raise BridgeError("no visible editable composer candidate found; fail closed")
+
+        def rank(m: dict) -> int:
+            if m.get("id") == "prompt-textarea" and m.get("contenteditable") in ("true", "plaintext-only"):
+                return 0
+            if m.get("lexical") == "true" and m.get("contenteditable") in ("true", "plaintext-only"):
+                return 1
+            return 2
+
+        editable.sort(key=rank)
+        best = editable[0]
+        best_rank = rank(best)
+        if any(rank(m) == best_rank for m in editable[1:]):
+            raise BridgeError("multiple visible editable composer candidates; ambiguous, fail closed")
+        return best
+
+    @staticmethod
+    def _selector_for(candidate: dict) -> str:
+        if candidate.get("id"):
+            return f"#{candidate['id']}"
+        tag = candidate.get("tag") or "div"
+        ce = candidate.get("contenteditable")
+        if ce in ("true", "plaintext-only"):
+            return f'{tag}[contenteditable="{ce}"]'
+        return tag
+
+    @staticmethod
+    def _submission_confirmed(before_text: str | None, after_text: str | None, url_unchanged: bool) -> bool:
+        """Pure check that submission is positively confirmed WITHOUT reading assistant
+        output. Evidence: the composer held the injected prompt before Enter, and is
+        cleared/reset after Enter, while the page URL remains the configured
+        conversation. If any evidence is missing, submission is unconfirmed."""
+        if not url_unchanged:
+            return False
+        if before_text is None or after_text is None:
+            return False
+        return before_text.strip() != "" and after_text.strip() == ""
 
 
 class GitTransport:
