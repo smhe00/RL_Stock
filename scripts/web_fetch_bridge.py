@@ -72,6 +72,18 @@ FORBIDDEN_MARKER_FIELDS = ("api_key", "token", "cookie", "password", "secret")
 
 BRIDGE_OWNED_MARKERS = {"trigger_fetch_sent.json"}
 
+# Reviewer-side markers use semantic event values (e.g. CHATGPT_FETCH_ACK) while the
+# bridge historically wrote filename-style events (e.g. chatgpt_fetch_ack.json).
+# Marker filename/existence is authoritative for state; the event field is normalized
+# through this alias map without rewriting any immutable marker.
+EVENT_ALIASES = {
+    "CLAUDE_REVIEW_ACK": "claude_review_ack.json",
+    "CLAUDE_WORK_COMPLETE": "claude_work_complete.json",
+    "TRIGGER_FETCH_SENT": "trigger_fetch_sent.json",
+    "CHATGPT_FETCH_ACK": "chatgpt_fetch_ack.json",
+    "CHATGPT_REVIEW_PUBLISHED": "chatgpt_review_published.json",
+}
+
 
 class BridgeError(RuntimeError):
     """A fail-closed bridge error."""
@@ -125,7 +137,9 @@ def _validate_marker(path: Path, marker: dict, expected_owner: str | None = None
             raise BridgeError(f"marker {path.name} must not contain {f}")
     if marker.get("protocol") != "web_fetch_bridge_v1":
         raise BridgeError(f"marker {path.name} has wrong protocol")
-    if marker.get("event") not in MARKER_ORDER:
+    # Event field is backward-compatible: filename-style (chatgpt_fetch_ack.json) or
+    # a semantic alias (CHATGPT_FETCH_ACK). Filename/existence remains authoritative.
+    if marker.get("event") not in MARKER_ORDER and marker.get("event") not in EVENT_ALIASES:
         raise BridgeError(f"marker {path.name} has unknown event")
     if expected_owner is not None and MARKER_OWNERS.get(path.name) != expected_owner:
         raise BridgeError(f"marker {path.name} is not owned by {expected_owner}")
@@ -692,6 +706,16 @@ class GitTransport:
             except Exception as exc:  # noqa: BLE001
                 raise BridgeError(f"cannot create bridge worktree: {exc}") from exc
 
+    def _sync_worktree(self) -> None:
+        """Point the isolated worktree's detached HEAD at the latest remote branch.
+
+        The worktree only ever contains bridge-owned marker commits, which are
+        re-created on each publish; resetting to the freshly-fetched remote branch is
+        therefore safe and makes the next marker commit a fast-forward for push.
+        """
+        self.fetch()
+        self._git("reset", "--hard", f"{self.remote}/{self.branch}")
+
     def fetch(self) -> None:
         self._ensure_worktree()
         self._git("fetch", self.remote, self.branch)
@@ -735,30 +759,41 @@ class GitTransport:
     def publish_bridge_marker(self, handoff_id: str, name: str, content: str) -> None:
         """Append-only publish of a bridge-owned marker to origin/main.
 
-        Remote-head race -> STOP-WRITE (never force-push).
+        The worktree is synced to the latest remote branch before each attempt so the
+        marker commit is a fast-forward. An expected concurrent append-only reviewer
+        marker for the same handoff (e.g. chatgpt_fetch_ack) does NOT fail the publish:
+        we re-fetch, verify the bridge marker is still absent, and retry on the latest
+        remote state. Unexpected/conflicting remote changes or repeated push rejection
+        fail closed. Never force-push.
         """
         if name not in BRIDGE_OWNED_MARKERS:
             raise BridgeError(f"bridge may only publish {sorted(BRIDGE_OWNED_MARKERS)}")
-        self.fetch()
-        head_before = self._git("rev-parse", f"{self.remote}/{self.branch}")
         rel = Path("docs") / "web_bridge" / handoff_id / name
-        target = self.worktree / rel
-        target.parent.mkdir(parents=True, exist_ok=True)
-        if target.exists():
-            raise BridgeError(f"bridge marker {name} already exists; append-only")
-        _atomic_write_text(target, content)
-
-        # Stage only the marker path, commit, then verify remote-head unchanged before push.
-        try:
-            self._git("add", "--", rel.as_posix())
-            self._git("commit", "-m", f"bridge(local-protocol): {handoff_id} {name}")
-        finally:
-            target.unlink(missing_ok=True)  # never leave untracked marker in worktree
-        self.fetch()
-        head_after = self._git("rev-parse", f"{self.remote}/{self.branch}")
-        if head_after != head_before:
-            raise BridgeError("remote-head changed during bridge publish; STOP-WRITE (no force push)")
-        self._git("push", self.remote, f"HEAD:{self.branch}")
+        for _attempt in range(3):
+            self._sync_worktree()
+            target = self.worktree / rel
+            if target.exists() or self.marker_exists(handoff_id, name):
+                raise BridgeError(f"bridge marker {name} already exists on origin/main; append-only")
+            target.parent.mkdir(parents=True, exist_ok=True)
+            _atomic_write_text(target, content)
+            try:
+                self._git("add", "--", rel.as_posix())
+                self._git("commit", "-m", f"bridge(local-protocol): {handoff_id} {name}")
+            finally:
+                target.unlink(missing_ok=True)  # never leave untracked marker in worktree
+            # The worktree HEAD now descends from the freshly-synced remote; push. A
+            # rejection means a concurrent remote change -> retry on the latest state
+            # (no force-push). If the bridge marker appeared remotely meanwhile, the
+            # append-only check on the next attempt fails closed.
+            try:
+                self._git("push", self.remote, f"HEAD:{self.branch}")
+                return
+            except BridgeError:
+                continue
+        raise BridgeError(
+            f"bridge marker {name} publish failed after concurrent remote changes; "
+            "STOP-WRITE (no force push)"
+        )
 
 
 class RemoteMarkerWatcher:
@@ -859,6 +894,41 @@ class RemoteMarkerWatcher:
                 eligible.append(handoff_id)
         return eligible
 
+    def _fetch_sent_handoffs(self) -> list[str]:
+        """Handoff ids with durable local send-success (never resent)."""
+        return sorted(self._load_dedup().get("fetch_sent", {}))
+
+    def reconcile_missing_fetch_sent(self, handoff_id: str) -> str:
+        """Marker-only reconciliation (reviewer ACK-trigger race finding).
+
+        When the browser send already succeeded (durable local fetch_sent), Web
+        ChatGPT published a matching chatgpt_fetch_ack, and trigger_fetch_sent is
+        still missing on origin/main, publish only the missing bridge-owned marker.
+        NEVER touches the browser and NEVER sends. Returns an outcome string.
+        """
+        if handoff_id not in self._load_dedup().get("fetch_sent", {}):
+            return "NOT_SENT_LOCALLY"
+        if not self.transport.marker_exists(handoff_id, "chatgpt_fetch_ack.json"):
+            return "NO_MATCHING_ACK"  # wait for reviewer ACK before publishing
+        if self.transport.marker_exists(handoff_id, "trigger_fetch_sent.json"):
+            return "ALREADY_PUBLISHED"
+        marker_path = self.store._handoff_dir(handoff_id) / "trigger_fetch_sent.json"
+        if not marker_path.exists():
+            self.logger.warning(
+                "event=reconcile_missing_local_marker handoff=%s (no auto-publish)", handoff_id
+            )
+            return "NO_LOCAL_MARKER"
+        content = marker_path.read_text(encoding="utf-8")
+        try:
+            self.transport.publish_bridge_marker(handoff_id, "trigger_fetch_sent.json", content)
+        except BridgeError as exc:
+            self.logger.warning(
+                "event=reconcile_publish_failed handoff=%s reason=%s", handoff_id, str(exc)
+            )
+            return "RECONCILE_FAILED"
+        self.logger.info("event=reconcile_fetch_sent_published handoff=%s", handoff_id)
+        return "RECONCILE_PUBLISHED"
+
     def scan_once(self) -> list[str]:
         outcomes = []
         for handoff_id in self.discover_eligible_handoffs():
@@ -889,6 +959,12 @@ class RemoteMarkerWatcher:
                     str(exc),
                 )
                 outcomes.append(f"{handoff_id}:PUBLISH_FAILED_FAIL_CLOSED")
+        # Marker-only reconciliation: publish a missing trigger_fetch_sent for any
+        # handoff whose browser send already succeeded and whose ACK is present.
+        for handoff_id in self._fetch_sent_handoffs():
+            outcome = self.reconcile_missing_fetch_sent(handoff_id)
+            if outcome in ("RECONCILE_PUBLISHED", "RECONCILE_FAILED"):
+                outcomes.append(f"{handoff_id}:{outcome}")
         return outcomes
 
     def run_forever(self) -> None:
@@ -1069,6 +1145,9 @@ def main() -> int:
     parser.add_argument("--wait-ack", action="store_true", help="block until chatgpt_fetch_ack or timeout")
     parser.add_argument("--daemon", action="store_true", help="autonomous marker-only watcher (origin/main only)")
     parser.add_argument("--retry-handoff", default="", help="explicit operator retry: clear a terminal send-failure once")
+    parser.add_argument("--reconcile-fetch-sent", default="",
+                        help="marker-only: publish a missing trigger_fetch_sent for a handoff "
+                             "whose browser send already succeeded and whose Web ChatGPT ACK exists; never touches the browser")
     parser.add_argument("--noop-diagnostic", action="store_true",
                         help="no-op lifecycle diagnostic: attach CDP 30s, no mutation, prove target unchanged")
     parser.add_argument("--check", action="store_true", help="validate marker protocol + fail-closed gates")
@@ -1100,6 +1179,13 @@ def main() -> int:
             cleared = daemon.clear_failure(args.retry_handoff)
             print(f"operator retry cleared failure for {args.retry_handoff}: {cleared}")
             return 0 if cleared else 1
+        if args.reconcile_fetch_sent:
+            if not HANDOFF_RE.fullmatch(args.reconcile_fetch_sent):
+                raise BridgeError("handoff ID is unsafe")
+            daemon = build_daemon(config, logger)
+            outcome = daemon.reconcile_missing_fetch_sent(args.reconcile_fetch_sent)
+            print(f"reconcile outcome: {outcome}")
+            return 0 if outcome == "RECONCILE_PUBLISHED" else 1
         if args.daemon:
             daemon = build_daemon(config, logger)
             daemon.run_forever()

@@ -659,3 +659,204 @@ def test_submission_unconfirmed_withholds_trigger_fetch_sent(repo_root, tmp_path
     assert outcomes == ["H-0001:SEND_FAILED_FAIL_CLOSED_NO_AUTO_RETRY"]
     assert not t.marker_exists("H-0001", "trigger_fetch_sent.json")
     assert not (repo_root / "docs" / "web_bridge" / "H-0001" / "trigger_fetch_sent.json").exists()
+
+
+# --- ACK-trigger race reconciliation (reviewer ACK_TRIGGER_RACE finding) ---
+
+def test_marker_event_alias_compatible():
+    """A reviewer marker with semantic event value (CHATGPT_FETCH_ACK) must validate;
+    filename-style events must also still validate. Marker filename remains authoritative."""
+    import tempfile
+    from pathlib import Path as _Path
+
+    with tempfile.TemporaryDirectory() as td:
+        root = _Path(td)
+        store = wfb.MarkerStore(root)
+        d = root / "docs" / "web_bridge" / "H-0001"
+        d.mkdir(parents=True)
+        ack = {
+            "protocol": "web_fetch_bridge_v1",
+            "handoff_id": "H-0001",
+            "event": "CHATGPT_FETCH_ACK",  # semantic alias
+            "timestamp": "2026-08-11T16:21:00+08:00",
+        }
+        (d / "chatgpt_fetch_ack.json").write_text(
+            __import__("json").dumps(ack, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        # read must not raise: semantic alias accepted
+        wfb.MarkerStore(root).read("H-0001", "chatgpt_fetch_ack.json")
+        # filename-style event must still validate
+        old_style = dict(ack, event="chatgpt_fetch_ack.json")
+        (d / "chatgpt_fetch_ack.json").write_text(
+            __import__("json").dumps(old_style, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        wfb.MarkerStore(root).read("H-0001", "chatgpt_fetch_ack.json")
+        # unknown event still rejected
+        bad = dict(ack, event="SOMETHING_ELSE")
+        (d / "chatgpt_fetch_ack.json").write_text(
+            __import__("json").dumps(bad, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        with pytest.raises(wfb.BridgeError):
+            wfb.MarkerStore(root).read("H-0001", "chatgpt_fetch_ack.json")
+
+
+def test_reconcile_publishes_missing_trigger_when_ack_present(repo_root, tmp_path):
+    """Durable local send-success + remote chatgpt_fetch_ack + missing trigger
+    -> marker-only reconciliation publishes trigger_fetch_sent; sender never called."""
+    class _ProbeSender:
+        def __init__(self):
+            self.calls = []
+
+        def send(self, handoff_id: str) -> None:
+            self.calls.append(handoff_id)
+
+    t = FakeRemoteTransport()
+    t.remotes[("H-0001", "claude_work_complete.json")] = "{}"
+    t.remotes[("H-0001", "chatgpt_fetch_ack.json")] = "{}"
+    daemon = _daemon_with_sender(repo_root, t, tmp_path, _ProbeSender())
+    # durable local send-success + local marker file (as the daemon would have written)
+    daemon._mark_fetch_sent("H-0001")
+    d = repo_root / "docs" / "web_bridge" / "H-0001"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "trigger_fetch_sent.json").write_text(
+        json.dumps({"event": "trigger_fetch_sent.json", "handoff_id": "H-0001",
+                    "protocol": "web_fetch_bridge_v1",
+                    "timestamp": "2026-08-11T08:21:38.935396+00:00"}) + "\n", encoding="utf-8")
+    outcomes = daemon.scan_once()
+    assert "H-0001:RECONCILE_PUBLISHED" in outcomes
+    assert t.remotes.get(("H-0001", "trigger_fetch_sent.json"))
+    # sender (browser) must never be called during reconciliation
+    assert daemon.trigger.sender.calls == []
+
+
+def test_reconcile_without_ack_waits(repo_root, tmp_path):
+    """No matching remote ACK -> reconciliation waits; no publish, no browser call."""
+    class _ProbeSender:
+        def __init__(self):
+            self.calls = []
+
+        def send(self, handoff_id: str) -> None:
+            self.calls.append(handoff_id)
+
+    t = FakeRemoteTransport()
+    t.remotes[("H-0001", "claude_work_complete.json")] = "{}"
+    daemon = _daemon_with_sender(repo_root, t, tmp_path, _ProbeSender())
+    daemon._mark_fetch_sent("H-0001")
+    d = repo_root / "docs" / "web_bridge" / "H-0001"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "trigger_fetch_sent.json").write_text("{}", encoding="utf-8")
+    assert daemon.reconcile_missing_fetch_sent("H-0001") == "NO_MATCHING_ACK"
+    assert not t.remotes.get(("H-0001", "trigger_fetch_sent.json"))
+    assert daemon.trigger.sender.calls == []
+
+
+def test_reconcile_duplicate_safety_no_overwrite(repo_root, tmp_path):
+    """trigger_fetch_sent already on origin/main -> reconciliation must not overwrite."""
+    class _ProbeSender:
+        def __init__(self):
+            self.calls = []
+
+        def send(self, handoff_id: str) -> None:
+            self.calls.append(handoff_id)
+
+    t = FakeRemoteTransport()
+    t.remotes[("H-0001", "claude_work_complete.json")] = "{}"
+    t.remotes[("H-0001", "chatgpt_fetch_ack.json")] = "{}"
+    t.remotes[("H-0001", "trigger_fetch_sent.json")] = "{}"
+    daemon = _daemon_with_sender(repo_root, t, tmp_path, _ProbeSender())
+    daemon._mark_fetch_sent("H-0001")
+    assert daemon.reconcile_missing_fetch_sent("H-0001") == "ALREADY_PUBLISHED"
+    assert t.published == []
+    assert daemon.trigger.sender.calls == []
+
+
+def test_reconcile_never_resends_browser_for_failed_send(repo_root, tmp_path):
+    """A handoff that never had a local fetch_sent must NOT be reconciled (no browser)."""
+    class _ProbeSender:
+        def __init__(self):
+            self.calls = []
+
+        def send(self, handoff_id: str) -> None:
+            self.calls.append(handoff_id)
+
+    t = FakeRemoteTransport()
+    t.remotes[("H-0001", "claude_work_complete.json")] = "{}"
+    daemon = _daemon_with_sender(repo_root, t, tmp_path, _ProbeSender())
+    # no _mark_fetch_sent -> no local durable send-success
+    assert daemon.reconcile_missing_fetch_sent("H-0001") == "NOT_SENT_LOCALLY"
+    assert not t.remotes.get(("H-0001", "trigger_fetch_sent.json"))
+    assert daemon.trigger.sender.calls == []
+
+
+# --- GitTransport publish race: worktree sync + concurrent reviewer marker (reviewer finding) ---
+
+def _init_git_repo(repo: Path, remote: Path):
+    import subprocess
+
+    def run(*args, cwd=None):
+        subprocess.run([*args], cwd=cwd, check=True,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    repo.mkdir(parents=True, exist_ok=True)
+    remote.mkdir(parents=True, exist_ok=True)
+    # bare origin
+    run("git", "init", "-q", "--bare", str(remote))
+    # working clone of origin
+    run("git", "init", "-q", str(repo))
+    run("git", "config", "user.email", "t@t", cwd=repo)
+    run("git", "config", "user.name", "t", cwd=repo)
+    run("git", "remote", "add", "origin", str(remote), cwd=repo)
+    (repo / "seed").write_text("x", encoding="utf-8")
+    run("git", "add", "--", "seed", cwd=repo)
+    run("git", "commit", "-q", "-m", "seed", cwd=repo)
+    run("git", "branch", "-M", "main", cwd=repo)
+    run("git", "push", "-q", "-u", "origin", "main", cwd=repo)
+    # seed the claude_work_complete doorbell on origin/main
+    d = repo / "docs" / "web_bridge" / "H-0001"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "claude_work_complete.json").write_text("{}", encoding="utf-8")
+    run("git", "add", "--", "docs", cwd=repo)
+    run("git", "commit", "-q", "-m", "doorbell", cwd=repo)
+    run("git", "push", "-q", "origin", "main", cwd=repo)
+    # reviewer ACK lands concurrently BEFORE bridge publishes trigger (the race)
+    (repo / "docs" / "web_bridge" / "H-0001" / "chatgpt_fetch_ack.json").write_text("{}", encoding="utf-8")
+    run("git", "add", "--", "docs", cwd=repo)
+    run("git", "commit", "-q", "-m", "ack", cwd=repo)
+    run("git", "push", "-q", "origin", "main", cwd=repo)
+
+
+def test_git_publish_syncs_worktree_and_tolerates_reviewer_ack_race(tmp_path):
+    """GitTransport.publish_bridge_marker must sync the isolated worktree to the latest
+    origin/main (which now contains the reviewer ACK) and publish the missing bridge
+    marker as a fast-forward — no STOP-WRITE from a legitimate same-handoff ACK."""
+    import subprocess
+
+    repo = tmp_path / "repo"
+    remote = tmp_path / "remote"
+    _init_git_repo(repo, remote)
+    runtime = tmp_path / "runtime"
+    transport = wfb.GitTransport(repo, runtime, "origin", "main")
+    content = json.dumps({
+        "protocol": "web_fetch_bridge_v1",
+        "handoff_id": "H-0001",
+        "event": "trigger_fetch_sent.json",
+        "timestamp": "2026-08-11T08:21:38.935396+00:00",
+    }) + "\n"
+    # must NOT raise despite the concurrent reviewer ACK ahead of us
+    transport.publish_bridge_marker("H-0001", "trigger_fetch_sent.json", content)
+    # marker is now on origin/main (rev-parse of the path resolves)
+    transport.fetch()
+    sha = transport._git("rev-parse", "origin/main:docs/web_bridge/H-0001/trigger_fetch_sent.json")
+    assert sha
+
+
+def test_git_publish_refuses_duplicate_marker(tmp_path):
+    """A second publish of an already-present bridge marker must fail append-only."""
+    import subprocess
+
+    repo = tmp_path / "repo"
+    remote = tmp_path / "remote"
+    _init_git_repo(repo, remote)
+    runtime = tmp_path / "runtime"
+    transport = wfb.GitTransport(repo, runtime, "origin", "main")
+    content = "{}"
+    transport.publish_bridge_marker("H-0001", "trigger_fetch_sent.json", content)
+    with pytest.raises(wfb.BridgeError):
+        transport.publish_bridge_marker("H-0001", "trigger_fetch_sent.json", content)
