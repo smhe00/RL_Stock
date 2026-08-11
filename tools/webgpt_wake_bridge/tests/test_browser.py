@@ -1,4 +1,6 @@
+import ast
 import inspect
+import textwrap
 
 import pytest
 
@@ -30,7 +32,9 @@ def test_lexical_editor_preferred_over_generic():
         _meta(contenteditable="true", in_form=False),
         _meta(contenteditable="true", lexical="true"),
     ]
-    assert CdpFetchSender._choose_composer_candidate(meta)["lexical"] == "true"
+    chosen = CdpFetchSender._choose_composer_candidate(meta)
+    assert chosen["lexical"] == "true"
+    assert CdpFetchSender._selector_for(chosen) == 'div[contenteditable="true"][data-lexical-editor="true"]'
 
 
 def test_same_rank_ambiguity_fails_closed():
@@ -52,7 +56,18 @@ def test_selector_is_semantic():
     assert CdpFetchSender._selector_for({"tag": "div", "contenteditable": "true"}) == 'div[contenteditable="true"]'
 
 
-def test_normal_sender_source_is_non_owning():
-    src = inspect.getsource(CdpFetchSender.send)
-    for forbidden in ("browser.close(", "page.goto(", "new_page(", "page.close(", "context.close("):
-        assert forbidden not in src
+def test_constructor_rejects_spoofed_cdp_endpoint():
+    with pytest.raises(BridgeError):
+        CdpFetchSender("http://127.0.0.1.evil.example:9222", "https://chatgpt.com/c/demo")
+
+
+def test_normal_sender_ast_has_no_owning_browser_lifecycle_calls():
+    tree = ast.parse(textwrap.dedent(inspect.getsource(CdpFetchSender.send)))
+    forbidden_attrs = {"goto", "new_page"}
+    close_receivers = {"browser", "page", "context"}
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+            continue
+        assert node.func.attr not in forbidden_attrs
+        if node.func.attr == "close" and isinstance(node.func.value, ast.Name):
+            assert node.func.value.id not in close_receivers
