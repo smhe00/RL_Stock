@@ -1,90 +1,147 @@
 # WebGPT Wake Bridge
 
-Standalone, project-agnostic delivery package extracted from the accepted RL_Stock Web Fetch Bridge V1.
+Project-agnostic local infrastructure for waking a dedicated Web ChatGPT reviewer conversation from a Git handoff marker.
 
 ## Status
 
-- Package status: **STAGING / EXTRACTION IN PROGRESS**
-- Source implementation: accepted RL_Stock Web Fetch Bridge V1
-- Target release: `1.0.0`
-- Compatibility target: `web_fetch_bridge_v1`
-- Scope: local infrastructure only; no research/trading/business logic
+- Package: `0.2.0.dev0`
+- Protocol compatibility: `web_fetch_bridge_v1`
+- Extraction implementation: **complete enough for independent verification**
+- Real Windows/Chrome blank-repo E2E: **pending final Claude validation**
+- Accepted embedded RL_Stock V1 remains untouched and is still the production reference until standalone acceptance.
 
-## Goal
+## What it does
 
-Provide a reusable local bridge that lets a local agent (initially Claude Code) wake a dedicated Web ChatGPT reviewer conversation after publishing a durable Git handoff doorbell.
+A consumer project publishes one append-only review doorbell:
 
-The reusable package MUST remain independent from project-specific state machines. It must not understand or parse domain concepts such as research gates, trading states, backtests, RL models, or project-specific READY/BLOCKED semantics.
+```text
+<marker_root>/<handoff_id>/claude_work_complete.json
+```
 
-## Stable protocol contract
+The standalone daemon watches only Git markers, connects as a non-owning guest to an already-open dedicated Chrome/ChatGPT conversation, submits exactly one:
 
-Project repositories expose only append-only markers under a configurable marker root, defaulting to:
+```text
+fetch <handoff_id>
+```
+
+and publishes `trigger_fetch_sent.json`. Web ChatGPT then uses the same durable protocol for ACK/review markers.
+
+The bridge does **not** parse project status YAML, research gates, issue states, trading logic, or business-domain files.
+
+## Protocol
+
+Default marker root:
 
 ```text
 docs/web_bridge/<handoff_id>/
 ```
 
-Marker sequence:
+Sequence:
 
 ```text
 claude_work_complete.json
-    -> trigger_fetch_sent.json
-    -> chatgpt_fetch_ack.json
-    -> chatgpt_review_published.json
-    -> claude_review_ack.json
+  -> trigger_fetch_sent.json
+  -> chatgpt_fetch_ack.json
+  -> chatgpt_review_published.json
+  -> claude_review_ack.json
 ```
 
-The bridge itself is authoritative only for `trigger_fetch_sent.json`. Other markers are actor-owned and observed read-only.
+The bridge owns only `trigger_fetch_sent.json`.
 
-## Non-negotiable invariants inherited from accepted V1
+## Safety invariants
 
 - Git remote is the durable source of truth.
-- Trigger decisions are marker-only and project-state-agnostic.
-- `claude_work_complete.json` is the review-request doorbell and must be the final Claude push for a fresh handoff.
-- Exactly one automatic browser submission per handoff attempt.
-- No automatic resend after a sender failure or uncertain submission.
-- Browser operation is non-owning: no `goto`, `new_page`, page/context close, or browser close.
-- The exact dedicated ChatGPT conversation must already be open.
-- Composer targeting is semantic + visibility-aware; hidden fallback textarea is excluded.
-- Submission success is confirmed from local composer state only; assistant output is never scraped.
-- ACK/trigger marker races are reconciled marker-only; browser resend is forbidden when receipt is already proven.
-- Marker writes are append-only and fail closed on ambiguity/conflict.
-- No credentials, cookies, auth material, or conversation URL are committed.
+- Review triggering is marker-only and project-state-agnostic.
+- `claude_work_complete.json` is the mandatory review doorbell and is pushed LAST by the agent.
+- Browser submit is exactly-once per locally recorded attempt; sender failure is terminal until explicit retry.
+- Browser send-success is persisted locally **before** Git trigger publication, preventing crash/race-driven browser resend.
+- ACK-before-trigger races are reconciled marker-only; reconciliation never touches the browser.
+- CDP endpoint must be localhost.
+- Exact dedicated `https://chatgpt.com/c/...` tab must already be open.
+- No `goto`, `new_page`, page/context close, or `browser.close()`.
+- Hidden fallback textarea is excluded; ambiguous composer fails closed.
+- Submission confirmation reads composer state only; assistant output is never scraped.
+- Marker writes are append-only; no force push.
+- Conversation URL, cookies and credentials stay in ignored local config.
 
-## Target package layout
+## Layout
 
 ```text
 tools/webgpt_wake_bridge/
-├─ README.md
 ├─ pyproject.toml
-├─ config/
-│  └─ bridge.example.toml
+├─ config/bridge.example.toml
+├─ scripts/
+│  ├─ start_chrome_cdp.bat
+│  └─ run_daemon.bat
 ├─ docs/
 │  ├─ PROTOCOL.md
 │  ├─ ACCEPTANCE.md
-│  └─ MIGRATION_PLAN.md
-├─ src/
-│  └─ webgpt_wake_bridge/
-│     └─ __init__.py
+│  ├─ MIGRATION_PLAN.md
+│  ├─ INTEGRATION_CLAUDE.md
+│  └─ FINAL_CLAUDE_TEST_PLAN.md
+├─ src/webgpt_wake_bridge/
+│  ├─ markers.py
+│  ├─ config.py
+│  ├─ browser.py
+│  ├─ transport_git.py
+│  ├─ bridge.py
+│  ├─ finalize.py
+│  └─ cli.py
 └─ tests/
 ```
 
-## Extraction policy
+## Install for development
 
-1. Do **not** modify or delete the accepted RL_Stock V1 while extraction is in progress.
-2. Copy/refactor behavior into this subtree with no RL_Stock business dependencies.
-3. Preserve protocol compatibility first; cosmetic renaming is secondary.
-4. Reach unit-test parity with the accepted V1 before switching any consumer.
-5. Run a fresh end-to-end smoke in a blank/demo repository before declaring standalone `1.0.0`.
-6. Only after standalone acceptance may RL_Stock switch from embedded implementation to this package.
+From this directory:
 
-## Intended reuse model
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -U pip
+pip install -e ".[test]"
+```
 
-Install the bridge once on a workstation; each project supplies only:
+Chrome is externally managed; the bridge attaches to it over CDP.
 
-- repository root / Git remote / branch,
-- marker root,
-- ignored local browser config,
-- a short agent finalization instruction.
+## Configure one consumer project
 
-Browser/CDP fixes should then be upgraded once in the shared package rather than copied into every project.
+Copy:
+
+```text
+config/bridge.example.toml -> bridge.local.toml
+```
+
+Set `repo_root` to the consumer repository and put the exact dedicated reviewer conversation URL in the local file. Never commit that local TOML.
+
+Validate without browser action or Git mutation:
+
+```powershell
+webgpt-bridge check --config .\bridge.local.toml
+```
+
+Optional 30-second non-owning CDP lifecycle probe:
+
+```powershell
+webgpt-bridge noop --config .\bridge.local.toml --hold-seconds 30
+```
+
+Run one marker scan or the daemon:
+
+```powershell
+webgpt-bridge once --config .\bridge.local.toml
+webgpt-bridge daemon --config .\bridge.local.toml
+```
+
+## Agent finalization
+
+After packet/status work is committed, pushed and remote-confirmed:
+
+```powershell
+webgpt-bridge finalize --config .\bridge.local.toml --handoff <HANDOFF_ID> --code-commit <SHA>
+```
+
+This creates only `claude_work_complete.json` locally. The agent must commit/push that marker as the **FINAL push** of the review-requesting handoff.
+
+## Release rule
+
+Do not label this subtree `1.0.0 / E2E VERIFIED` and do not switch RL_Stock to it until `docs/FINAL_CLAUDE_TEST_PLAN.md` passes in a clean demo repository with no user-typed `fetch`.
