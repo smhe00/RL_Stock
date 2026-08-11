@@ -1,21 +1,20 @@
 protocol_version: 3
 actor: claude
-handoff_id: LOCAL_REVIEWER_COMMS_SMOKE_20260811_002
-state: REVIEW_COMPLETE
-status: COMMUNICATION_SMOKE_COMPLETE
+handoff_id: WEB_FETCH_BRIDGE_V1_IMPLEMENTATION_AND_SINGLE_E2E_SMOKE_001
+state: READY_FOR_REVIEW
 
 gate: LOCAL_PROTOCOL
-phase: LOCAL_REVIEWER_COMMS_SMOKE_ROUND_2
-code_commit: null
-packet: docs/review_packets/LOCAL_REVIEWER_COMMS_SMOKE_20260811_002.md
+phase: WEB_FETCH_BRIDGE_V1_IMPLEMENTATION_AND_SINGLE_E2E_SMOKE
+code_commit: 7c1985a
+packet: docs/review_packets/WEB_FETCH_BRIDGE_V1_IMPLEMENTATION_AND_SINGLE_E2E_SMOKE.md
 
 progress:
-  current_task: COMMUNICATION SMOKE COMPLETE. Reviewer: COMMUNICATION_SMOKE_TWO_ROUNDS_COMPLETE (REVIEW_COMPLETE, authorized_next=[]). Two-round reviewer<->Claude GitHub file transport confirmed working in both directions; unique handoff IDs + matching consumption; ownership boundaries preserved; heartbeat paused. Round 1 PASS + Round 2 PASS. No further protocol echo authorized. No research/backtest/execution/QMT/account/trading authorized. MaxDiv 120/0.5 + M2 canonical preserved; capital-efficiency research complete; 03110 STOP unresolved/in force; PPO/SAC/TD3 closed.
+  current_task: WEB_FETCH_BRIDGE_V1 implemented (LOCAL_PROTOCOL infrastructure only). User-authorized marker-driven Chrome CDP + Playwright wake-up bridge. Append-only markers docs/web_bridge/<handoff_id>/ (claude_review_ack/claude_work_complete/trigger_fetch_sent/chatgpt_fetch_ack/chatgpt_review_published); marker-only trigger state machine (never parses research states); CdpFetchSender via connect_over_cdp localhost-only, dedicated profile C:\ChatGPT_Automation_Profile, URL only in ignored local config; fail-closed 120s ack timeout no auto-resend, login/CAPTCHA/wrong-conversation/CDP gates; bridge writes only trigger_fetch_sent (append-only); default mode no codex exec. 18 unit tests + --check PASSED. E2E smoke FAIL_CLOSED (target_conversation_url missing in ignored local config); minimal manual prerequisite documented. Research/canonical artifacts and strategy logic unchanged; MaxDiv/M2/03110 STOP/RL untouched.
 
 last_consumed_review:
-  handoff_id: LOCAL_REVIEWER_COMMS_SMOKE_20260811_002
-  decision: COMMUNICATION_SMOKE_TWO_ROUNDS_COMPLETE
+  handoff_id: WEB_FETCH_BRIDGE_V1_USER_AUTH_20260811
+  decision: USER_AUTHORIZED_WEB_FETCH_BRIDGE_V1_IMPLEMENTATION_AND_SINGLE_E2E_SMOKE
   state: REVIEW_COMPLETE
-  response: docs/reviewer_responses/LOCAL_REVIEWER_COMMS_SMOKE_20260811_002_REVIEWER_RESPONSE.md
+  response: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_USER_AUTHORIZATION.md
 
-updated_at: 2026-08-11T04:55:00+08:00
+updated_at: 2026-08-11T14:40:00+08:00
