@@ -4,9 +4,10 @@ import argparse
 from pathlib import Path
 
 from . import __version__
+from .bootstrap import write_initial_config
 from .bridge import RemoteMarkerWatcher, configure_logging
 from .browser import CdpFetchSender, NoopLifecycleDiagnostic
-from .config import BridgeConfig, load_config
+from .config import BridgeConfig, load_config, validate_cdp_endpoint
 from .errors import BridgeError
 from .finalize import finalize_handoff
 from .markers import BRIDGE_OWNED_MARKERS, MARKER_ORDER, MARKER_OWNERS
@@ -32,19 +33,29 @@ def _runtime(config: BridgeConfig) -> tuple[RemoteMarkerWatcher, object]:
 
 
 def _check(config: BridgeConfig) -> None:
-    if set(MARKER_ORDER) != set(MARKER_OWNERS):
+    if MARKER_ORDER != list(MARKER_OWNERS):
         raise BridgeError("marker order/owner schema mismatch")
     if BRIDGE_OWNED_MARKERS != {"trigger_fetch_sent.json"}:
         raise BridgeError("bridge ownership schema changed unexpectedly")
-    if not config.cdp_endpoint.lower().startswith("http://127.0.0.1"):
-        raise BridgeError("CDP endpoint must be localhost only")
+    validate_cdp_endpoint(config.cdp_endpoint)
     print("webgpt-bridge check: PASS (no browser action, no git mutation)")
+    print(f"  repo: {config.repo_root}")
+    print(f"  marker_root: {config.marker_root.as_posix()}")
+    print(f"  runtime: {config.runtime_dir}")
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(prog="webgpt-bridge")
     parser.add_argument("--version", action="version", version=__version__)
     sub = parser.add_subparsers(dest="command", required=True)
+
+    p_init = sub.add_parser("init", help="create a local project config outside the consumer repo by default")
+    p_init.add_argument("--repo", type=Path, required=True)
+    p_init.add_argument("--config-path", type=Path)
+    p_init.add_argument("--runtime-dir", type=Path)
+    p_init.add_argument("--remote", default="origin")
+    p_init.add_argument("--branch", default="main")
+    p_init.add_argument("--marker-root", default="docs/web_bridge")
 
     for name in ("check", "once", "daemon", "noop"):
         p = sub.add_parser(name)
@@ -67,6 +78,19 @@ def main() -> int:
 
     args = parser.parse_args()
     try:
+        if args.command == "init":
+            path = write_initial_config(
+                args.repo,
+                config_path=args.config_path,
+                runtime_dir=args.runtime_dir,
+                remote=args.remote,
+                branch=args.branch,
+                marker_root=args.marker_root,
+            )
+            print(f"local config created: {path}")
+            print("NEXT: edit target_conversation_url, keep the config untracked, then run `webgpt-bridge check`.")
+            return 0
+
         require_url = args.command in {"once", "daemon", "noop"}
         config = load_config(args.config.resolve(), require_url=require_url)
         if args.command == "check":
@@ -87,7 +111,7 @@ def main() -> int:
             return 0
         if args.command == "retry":
             cleared = watcher.clear_failure(args.handoff)
-            print(f"retry failure cleared: {cleared}")
+            print(f"explicit retry cleared uncertain/failed attempt: {cleared}")
             return 0 if cleared else 1
         if args.command == "reconcile":
             result = watcher.reconcile_missing_trigger(args.handoff)
