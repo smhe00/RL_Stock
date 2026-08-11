@@ -22,8 +22,30 @@ def _git(repo: Path, *args: str) -> str:
         raise BridgeError(f"git command failed: {' '.join(args[:3])}") from exc
 
 
+def _is_ancestor(repo: Path, ancestor: str, descendant: str) -> bool:
+    try:
+        result = subprocess.run(
+            ["git", "merge-base", "--is-ancestor", ancestor, descendant],
+            cwd=repo,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except OSError as exc:
+        raise BridgeError("git merge-base failed") from exc
+    if result.returncode == 0:
+        return True
+    if result.returncode == 1:
+        return False
+    raise BridgeError("git merge-base failed")
+
+
 def finalize_handoff(config: BridgeConfig, handoff_id: str, code_commit: str, expect_head: str = "") -> Path:
-    """Create the Claude-owned review doorbell locally; caller commits/pushes it LAST."""
+    """Create the Claude-owned review doorbell locally; caller commits/pushes it LAST.
+
+    The referenced code commit must resolve to a real commit object and already be
+    contained in the configured remote branch. A doorbell must never advertise work
+    that exists only locally or on an unrelated branch.
+    """
     validate_handoff_id(handoff_id)
     if not GIT_SHA_RE.fullmatch(code_commit):
         raise BridgeError("code_commit must be a 7-40 character git SHA")
@@ -43,12 +65,27 @@ def finalize_handoff(config: BridgeConfig, handoff_id: str, code_commit: str, ex
     elif local_head != remote_head:
         raise BridgeError("local HEAD != remote HEAD; remote confirmation required before doorbell")
 
-    rel = config.marker_root / handoff_id / DOORBELL
+    # Resolve the supplied SHA specifically as a commit object, then require it to be
+    # part of the remote branch already confirmed above.
     try:
-        _git(config.repo_root, "cat-file", "-e", f"{remote_ref}:{rel.as_posix()}")
-    except BridgeError:
-        pass
-    else:
+        resolved_code_commit = _git(config.repo_root, "rev-parse", f"{code_commit}^{{commit}}")
+    except BridgeError as exc:
+        raise BridgeError("code_commit does not resolve to a commit object") from exc
+    if not _is_ancestor(config.repo_root, resolved_code_commit, remote_head):
+        raise BridgeError("code_commit is not contained in the configured remote branch")
+
+    rel = config.marker_root / handoff_id / DOORBELL
+    # `git ls-tree` distinguishes a genuinely absent path (empty output) from a Git
+    # failure. Remote query failures must not be treated as permission to duplicate.
+    remote_marker = _git(
+        config.repo_root,
+        "ls-tree",
+        "--name-only",
+        remote_ref,
+        "--",
+        rel.as_posix(),
+    )
+    if any(line.strip() == rel.as_posix() for line in remote_marker.splitlines()):
         raise BridgeError("doorbell already exists on remote; append-only fail closed")
 
     marker = {
@@ -56,7 +93,7 @@ def finalize_handoff(config: BridgeConfig, handoff_id: str, code_commit: str, ex
         "handoff_id": handoff_id,
         "event": DOORBELL,
         "timestamp": utcnow_iso(),
-        "code_commit": code_commit.lower(),
+        "code_commit": resolved_code_commit,
     }
     validate_marker(target, marker, expected_owner="claude")
     atomic_write_text(target, json.dumps(marker, ensure_ascii=False) + "\n")
