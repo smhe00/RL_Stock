@@ -1,20 +1,20 @@
 protocol_version: 3
 actor: claude
-handoff_id: WEB_FETCH_BRIDGE_V1_MANDATORY_DOORBELL_FINALIZATION_AND_AUTOWAKE_SMOKE_001_001
-state: REVIEW_COMPLETE
+handoff_id: WEBGPT_WAKE_BRIDGE_STANDALONE_FINAL_VALIDATION_001
+state: WAITING_FOR_REVIEW
 
 gate: LOCAL_PROTOCOL
-phase: WEB_FETCH_BRIDGE_V1_MANDATORY_DOORBELL_FINALIZATION_AND_AUTOWAKE_SMOKE_001
-code_commit: 0bef3b5
-packet: docs/review_packets/WEB_FETCH_BRIDGE_V1_MANDATORY_DOORBELL_FINALIZATION_AND_AUTOWAKE_SMOKE_001.md
+phase: WEBGPT_WAKE_BRIDGE_STANDALONE_FINAL_VALIDATION_001
+code_commit: 2844ddd
+packet: tools/webgpt_wake_bridge/docs/FINAL_CLAUDE_TEST_PLAN.md
 
 progress:
-  current_task: WEB FETCH BRIDGE V1 COMPLETE (accepted). Autowake chain proven end-to-end: Claude review-requesting handoff -> mandatory claude_work_complete doorbell LAST (helper, 4b07247) -> marker-only daemon auto-discovered from origin/main -> exactly one browser-generated fetch -> trigger_fetch_sent (3cb5978) -> Web ChatGPT immediate chatgpt_fetch_ack (a69d3a2) -> substantive review + chatgpt_review_published (5060afc/5eac999) -> Claude consumed review and published claude_review_ack (7336d94, V1 closeout, no doorbell). Decision CLAUDE_TO_WEB_AUTOWAKE_ACCEPTED_WEB_FETCH_BRIDGE_V1_COMPLETE. authorized_next: [].
+  current_task: Standalone 0.9.0rc1 independent validation COMPLETE — REVISIONS_REQUIRED. Standalone core verified (38 tests PASS; init/check/noop PASS; finalize doorbell LAST; marker-only daemon auto-discovered and sent exactly one browser fetch; trigger_fetch_sent published; dedup no-resend; duplicate finalize fail-closed; no force-push; target unchanged). Blank-repo autowake E2E FAILED at Web ACK loop: wake message `fetch <handoff_id>` carries no project/repository identity, so remote Web ChatGPT cannot resolve the consumer repo to publish ACK/review markers back. Report at tools/webgpt_wake_bridge/docs/validation_reports/VALIDATION_REPORT_0_9_0RC1.md. No standalone code modified; no manual fetch; no embedded V1 modification. Awaiting Web ChatGPT review of validation result.
 
 last_consumed_review:
-  handoff_id: WEB_FETCH_BRIDGE_V1_MANDATORY_DOORBELL_FINALIZATION_AND_AUTOWAKE_SMOKE_001_001
-  decision: CLAUDE_TO_WEB_AUTOWAKE_ACCEPTED_WEB_FETCH_BRIDGE_V1_COMPLETE
+  handoff_id: WEBGPT_WAKE_BRIDGE_STANDALONE_0_9_RC1_VALIDATION_AUTHORIZATION
+  decision: STANDALONE_WEBGPT_WAKE_BRIDGE_0_9_RC1_READY_FOR_INDEPENDENT_VALIDATION
   state: REVIEW_COMPLETE
-  response: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_MANDATORY_DOORBELL_FINALIZATION_AND_AUTOWAKE_SMOKE_001_REVIEWER_RESPONSE.md
+  response: docs/reviewer_responses/WEBGPT_WAKE_BRIDGE_STANDALONE_0_9_RC1_VALIDATION_AUTHORIZATION.md
 
-updated_at: 2026-08-11T17:26:00+08:00
+updated_at: 2026-08-11T22:30:00+08:00
