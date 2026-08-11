@@ -1,0 +1,6 @@
+{
+  "event": "trigger_fetch_sent.json",
+  "handoff_id": "WEBGPT_WAKE_BRIDGE_STANDALONE_0_9_RC1_REVISIONS_REQUIRED_001_001",
+  "protocol": "web_fetch_bridge_v1",
+  "timestamp": "2026-08-11T14:29:13.890307+00:00"
+}
