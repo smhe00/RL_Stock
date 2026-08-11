@@ -1,0 +1,27 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "webgpt-wake-bridge"
+version = "0.1.0.dev0"
+description = "Marker-driven local bridge that wakes a dedicated Web ChatGPT reviewer conversation via Chrome CDP."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "playwright>=1.50",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=8",
+]
+
+[project.scripts]
+webgpt-bridge = "webgpt_wake_bridge.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/webgpt_wake_bridge"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
