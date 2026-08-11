@@ -5,7 +5,11 @@ import json
 import time
 import urllib.request
 
-from .config import validate_cdp_endpoint, validate_target_conversation_url
+from .config import (
+    validate_cdp_endpoint,
+    validate_repository_locator,
+    validate_target_conversation_url,
+)
 from .errors import BridgeError
 from .markers import validate_handoff_id
 
@@ -24,14 +28,17 @@ class CdpFetchSender:
         self,
         cdp_endpoint: str,
         target_url: str,
+        repository_locator: str,
         profile_path: str = "",
         playwright_module: str = "playwright.sync_api",
         page_timeout_ms: int = 30_000,
     ):
         self.cdp_endpoint = validate_cdp_endpoint(cdp_endpoint)
         validated_target = validate_target_conversation_url(target_url, required=True)
-        assert validated_target is not None
+        validated_repo = validate_repository_locator(repository_locator, required=True)
+        assert validated_target is not None and validated_repo is not None
         self.target_url = validated_target
+        self.repository_locator = validated_repo
         self.profile_path = profile_path
         self.playwright_module = playwright_module
         self.page_timeout_ms = page_timeout_ms
@@ -43,11 +50,14 @@ class CdpFetchSender:
                     return page
         raise BridgeError("configured target conversation is not already open; fail closed")
 
+    def _wake_message(self, handoff_id: str) -> str:
+        validate_handoff_id(handoff_id)
+        return f"fetch repo={self.repository_locator} handoff={handoff_id}"
+
     def send(self, handoff_id: str) -> None:
         validate_handoff_id(handoff_id)
-        # Revalidate at the action boundary in case an instance was constructed or
-        # mutated outside the normal config loader.
         validate_cdp_endpoint(self.cdp_endpoint)
+        message = self._wake_message(handoff_id)
         pw = import_playwright(self.playwright_module)
         driver = pw.sync_playwright().start()
         try:
@@ -60,7 +70,7 @@ class CdpFetchSender:
             if self._looks_like_login_or_challenge(page):
                 raise BridgeError("login screen or challenge detected; fail closed")
             composer = self._locate_composer(page)
-            composer.fill(f"fetch {handoff_id}")
+            composer.fill(message)
             before = self._composer_text(composer)
             composer.press("Enter")
             time.sleep(1.0)
@@ -72,8 +82,6 @@ class CdpFetchSender:
         except Exception as exc:  # noqa: BLE001
             raise BridgeError(f"CDP fetch submit failed: {exc}") from exc
         finally:
-            # Only the Playwright driver connection is owned here. The external
-            # browser, its contexts, pages and navigation lifecycle are untouched.
             driver.stop()
 
     def _url_is_target(self, page) -> bool:
@@ -112,8 +120,6 @@ class CdpFetchSender:
                 if page.locator(selector).count() > 0:
                     return True
             except Exception:  # noqa: BLE001
-                # A probe failure alone is not success evidence; composer lookup below
-                # still fails closed if the page is not a usable conversation.
                 pass
         return False
 
