@@ -2,7 +2,11 @@ from pathlib import Path
 
 import pytest
 
-from webgpt_wake_bridge.config import load_config, validate_cdp_endpoint
+from webgpt_wake_bridge.config import (
+    load_config,
+    validate_cdp_endpoint,
+    validate_repository_locator,
+)
 from webgpt_wake_bridge.errors import BridgeError
 
 
@@ -17,13 +21,14 @@ def write_config(
     repo: Path,
     *,
     url: str = "",
+    review_repository: str = "",
     marker_root: str = "docs/web_bridge",
     runtime_dir: str = ".runtime/webgpt_wake_bridge",
     remote: str = "origin",
     branch: str = "main",
 ) -> Path:
     path = tmp_path / "bridge.local.toml"
-    path.write_text(f'''[project]\nrepo_root = "{repo.as_posix()}"\nremote = "{remote}"\nbranch = "{branch}"\nmarker_root = "{marker_root}"\n\n[browser]\ncdp_endpoint = "http://127.0.0.1:9222"\ntarget_conversation_url = "{url}"\n\n[runtime]\nruntime_dir = "{runtime_dir}"\n''', encoding="utf-8")
+    path.write_text(f'''[project]\nrepo_root = "{repo.as_posix()}"\nremote = "{remote}"\nbranch = "{branch}"\nmarker_root = "{marker_root}"\n\n[review]\nrepository = "{review_repository}"\n\n[browser]\ncdp_endpoint = "http://127.0.0.1:9222"\ntarget_conversation_url = "{url}"\n\n[runtime]\nruntime_dir = "{runtime_dir}"\n''', encoding="utf-8")
     return path
 
 
@@ -43,6 +48,20 @@ def test_live_commands_require_exact_conversation_url(tmp_path):
     assert cfg.target_conversation_url == "https://chatgpt.com/c/demo"
     with pytest.raises(BridgeError):
         load_config(write_config(tmp_path, repo, url="https://chatgpt.com.evil.example/c/demo"), require_url=True)
+
+
+def test_live_send_requires_owner_repo_locator(tmp_path):
+    repo = init_git_repo(tmp_path)
+    with pytest.raises(BridgeError):
+        load_config(write_config(tmp_path, repo), require_review_repository=True)
+    cfg = load_config(
+        write_config(tmp_path, repo, review_repository="owner/demo"),
+        require_review_repository=True,
+    )
+    assert cfg.review_repository == "owner/demo"
+    for bad in ("https://github.com/owner/demo", "owner", "owner/demo/extra", "../demo"):
+        with pytest.raises(BridgeError):
+            validate_repository_locator(bad, required=True)
 
 
 def test_non_localhost_or_spoofed_cdp_fails_closed(tmp_path):
