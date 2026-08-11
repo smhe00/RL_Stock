@@ -72,8 +72,8 @@ class CdpFetchSender:
         except Exception as exc:  # noqa: BLE001
             raise BridgeError(f"CDP fetch submit failed: {exc}") from exc
         finally:
-            # The external Chrome is not owned by this process. Never browser.close(),
-            # page.close(), context.close(), goto(), or new_page().
+            # Only the Playwright driver connection is owned here. The external
+            # browser, its contexts, pages and navigation lifecycle are untouched.
             driver.stop()
 
     def _url_is_target(self, page) -> bool:
@@ -84,6 +84,7 @@ class CdpFetchSender:
 
     @staticmethod
     def _composer_text(composer) -> str | None:
+        """Read only the input element's local state, never conversation output."""
         try:
             return composer.text_content() or ""
         except Exception:  # noqa: BLE001
@@ -95,11 +96,24 @@ class CdpFetchSender:
 
     @staticmethod
     def _looks_like_login_or_challenge(page) -> bool:
-        for probe in ("Email", "Continue with Google", "Sign in", "I'm a human"):
+        """Structural-only safety probe; never searches visible conversation text."""
+        selectors = (
+            'input[type="email"]',
+            'input[name*="email" i]',
+            'form[action*="auth" i]',
+            'iframe[src*="captcha" i]',
+            'iframe[src*="challenge" i]',
+            '[data-testid*="login" i]',
+            '[data-testid*="captcha" i]',
+            '[data-testid*="challenge" i]',
+        )
+        for selector in selectors:
             try:
-                if page.get_by_text(probe, exact=False).count() > 0:
+                if page.locator(selector).count() > 0:
                     return True
             except Exception:  # noqa: BLE001
+                # A probe failure alone is not success evidence; composer lookup below
+                # still fails closed if the page is not a usable conversation.
                 pass
         return False
 
@@ -117,6 +131,7 @@ class CdpFetchSender:
 
     @staticmethod
     def _composer_meta(page) -> list[dict]:
+        """Read only structural metadata for possible input/editor elements."""
         return page.evaluate(
             """() => [...document.querySelectorAll('textarea, [contenteditable]')].map((el, index) => {
                 const r = el.getBoundingClientRect(); const s = getComputedStyle(el);
@@ -184,6 +199,8 @@ class CdpFetchSender:
 
 
 class CdpTargetMetadata:
+    """Read only DevTools target URL/title/type metadata, never page content."""
+
     def __init__(self, cdp_endpoint: str):
         self.cdp_endpoint = validate_cdp_endpoint(cdp_endpoint)
 
