@@ -1,63 +1,52 @@
 protocol_version: 3
 actor: web_chatgpt_reviewer
-handoff_id: WEB_FETCH_BRIDGE_V1_ACK_TRIGGER_RACE_RECONCILIATION_001_001
-state: REVISIONS_REQUIRED
+handoff_id: WEB_FETCH_BRIDGE_V1_MANDATORY_DOORBELL_FINALIZATION_AND_AUTOWAKE_SMOKE_001_001
+state: REVIEW_COMPLETE
 
 reviewed_packet:
-  path: docs/review_packets/WEB_FETCH_BRIDGE_V1_ACK_TRIGGER_RACE_RECONCILIATION_001.md
-  commit: 334f9cf033229f4cc606a075a0a44d4e9bc9e8c2
+  path: docs/review_packets/WEB_FETCH_BRIDGE_V1_MANDATORY_DOORBELL_FINALIZATION_AND_AUTOWAKE_SMOKE_001.md
+  commit: 7aa3535391e457d211c13cf8df0e16994fa6e236
 
-reviewed_remote_head: 334f9cf033229f4cc606a075a0a44d4e9bc9e8c2
-code_commit: f5fc5f7435093c1bdc9a0f78c0137bb1cfb3c14d
+reviewed_remote_head: 62b99a11b0920a1eefd0f3798078decc60df8e4a
+code_commit: 0bef3b5c8c8dd9f584d097ae5b8c819df5778be1
 
-decision: ACK_TRIGGER_RACE_RECONCILIATION_ACCEPTED_MANDATORY_DOORBELL_FINALIZATION_REQUIRED
+decision: CLAUDE_TO_WEB_AUTOWAKE_ACCEPTED_WEB_FETCH_BRIDGE_V1_COMPLETE
 
 response:
-  path: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_ACK_TRIGGER_RACE_RECONCILIATION_001_REVIEWER_RESPONSE.md
+  path: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_MANDATORY_DOORBELL_FINALIZATION_AND_AUTOWAKE_SMOKE_001_REVIEWER_RESPONSE.md
 
 passed:
-  - ACK_TRIGGER_MARKER_ONLY_RECONCILIATION_ACCEPTED
-  - PREVIOUS_SUCCESSFUL_BROWSER_FETCH_PRESERVED_WITHOUT_RESEND
-  - MISSING_TRIGGER_FETCH_SENT_RECONCILED
-  - MATCHING_PRIOR_REVIEW_CONSUMED
-  - CLAUDE_REVIEW_ACK_PUBLISHED
-  - EVENT_FIELD_COMPATIBILITY_DIRECTION_ACCEPTED
-  - TESTS_52_AND_CHECK_REPORTED_PASS
+  - MANDATORY_CLAUDE_DOORBELL_FINALIZATION_INVARIANT_DOCUMENTED
+  - CLAUDE_FINALIZATION_HELPER_ACCEPTED
+  - PACKET_STATUS_PUSH_PRECEDED_DOORBELL
+  - CLAUDE_WORK_COMPLETE_PUBLISHED_LAST_FOR_FRESH_HANDOFF
+  - DAEMON_AUTODISCOVERED_DOORBELL_FROM_ORIGIN_MAIN
+  - FIRST_STABLE_MANDATORY_DOORBELL_AUTOWAKE_SMOKE_RECEIVED
+  - EXACTLY_ONE_BROWSER_GENERATED_FETCH
+  - TRIGGER_FETCH_SENT_PUBLISHED_WITHOUT_RACE_FAILURE
+  - IMMEDIATE_CHATGPT_FETCH_ACK_PUBLISHED
+  - NONOWNING_BROWSER_BEHAVIOR_PRESERVED
+  - NO_AUTOMATIC_RESEND
+  - MARKER_ONLY_RESEARCH_STATE_AGNOSTIC_DAEMON_PRESERVED
+  - TESTS_58_AND_CHECK_REPORTED_PASS
   - NO_FINANCIAL_RESEARCH_BACKTEST_EXECUTION_OR_CANONICAL_CHANGE
 
-revision_required:
-  - CURRENT_READY_FOR_REVIEW_HANDOFF_HAS_NO_CLAUDE_WORK_COMPLETE_DOORBELL
-  - CLAUDE_HANDOFF_FINALIZATION_DOES_NOT_ENFORCE_WAKEUP_MARKER
-  - DIRECT_CLAUDE_TO_WEB_AUTOWAKE_FAILED_AND_USER_HAD_TO_TYPE_FETCH
-  - PUBLISH_RETRY_CONCURRENCY_SCOPE_SHOULD_BE_VERIFIED_OR_HARDENED
+revision_required: []
 
-authorized_next:
-  - task: WEB_FETCH_BRIDGE_V1_MANDATORY_DOORBELL_FINALIZATION_AND_AUTOWAKE_SMOKE_001
-    scope: LOCAL_PROTOCOL_INFRASTRUCTURE_ONLY
-    authorization: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_ACK_TRIGGER_RACE_RECONCILIATION_001_REVIEWER_RESPONSE.md
-    requirements:
-      - do not create a late doorbell for WEB_FETCH_BRIDGE_V1_ACK_TRIGGER_RACE_RECONCILIATION_001_001 because it has already been manually surfaced and reviewed
-      - implement an explicit Claude-side mandatory handoff-finalization rule/helper for every fresh handoff requesting Web review
-      - finalization order must be packet/status complete -> commit/push -> remote confirmation -> claude_work_complete.json LAST for the exact handoff
-      - apply the rule to READY_FOR_REVIEW, BLOCKED, and TEST_FAILED review-requesting handoffs
-      - helper must take explicit handoff id and code commit, create only the Claude-owned doorbell, use timezone-aware timestamp, be append-only, and fail closed on duplicate or unexpected remote state
-      - document the invariant in Claude/handoff operating instructions so a fresh Claude session cannot omit it
-      - keep the Web Fetch Bridge daemon marker-only and research-state-agnostic; it must not parse CLAUDE_STATUS.yaml to infer review readiness
-      - verify or harden publish retry concurrency so expected append-only concurrency is safe without force push and unrelated/conflicting changes do not silently weaken ownership guarantees
-      - after correction create one fresh unique infrastructure-only smoke handoff and publish its claude_work_complete doorbell LAST
-      - running daemon must discover the fresh doorbell from origin/main and deliver exactly one browser-generated fetch to the dedicated Web ChatGPT conversation without the user typing fetch
-      - preserve non-owning browser behavior, no auto resend, append-only markers, immediate Web ACK, review_published-last, and default-local-Codex-disabled rules
-      - no financial research, backtest, data refresh, strategy change, canonical artifact/result change, trading, QMT, account, or order work
+authorized_next: []
+
+protocol_closeout:
+  allowed:
+    - consume this matching review after chatgpt_review_published exists
+    - publish Claude-owned claude_review_ack.json for this exact handoff
+  forbidden:
+    - create another claude_work_complete doorbell for this closeout
+    - send another browser fetch for this handoff
+    - start new implementation or research work without fresh authorization
 
 forbidden_next:
-  - LATE_DOORBELL_FOR_ALREADY_MANUALLY_REVIEWED_CURRENT_HANDOFF
-  - BROWSER_SELF_REPAIR_OR_AUTO_NAVIGATION
-  - PAGE_GOTO_IN_NORMAL_BRIDGE_OPERATION
-  - PAGE_OR_CONTEXT_CLOSE_IN_NORMAL_BRIDGE_OPERATION
-  - BROWSER_CLOSE_IN_NORMAL_BRIDGE_OPERATION
-  - AUTOMATIC_RESEND
-  - CHATGPT_OUTPUT_SCRAPING
-  - CAPTCHA_OR_PLATFORM_PROTECTION_BYPASS
+  - AUTOMATIC_CLAUDE_LAUNCH
+  - WEB_TO_CLAUDE_PROCESS_WAKE_IMPLEMENTATION_WITHOUT_FRESH_AUTHORIZATION
   - NEW_FINANCIAL_RESEARCH_BRANCH
   - FINANCIAL_BACKTEST
   - DATA_REFRESH
@@ -80,13 +69,15 @@ forbidden_next:
   - TD3
   - RL_RETRAINING
   - DEFAULT_LOCAL_CODEX_REVIEWER
-  - AUTOMATIC_CLAUDE_LAUNCH
+  - CHATGPT_OUTPUT_SCRAPING
+  - CAPTCHA_OR_PLATFORM_PROTECTION_BYPASS
 
 notes:
-  - The ACK/trigger race correction itself is accepted.
-  - The current handoff is READY_FOR_REVIEW but has no docs/web_bridge/<handoff_id>/claude_work_complete.json, so the daemon had no marker-only signal and Web ChatGPT was not automatically awakened.
-  - This review was manually triggered by the user's bare fetch; no synthetic chatgpt_fetch_ack marker is created for the current handoff.
-  - The already-proven browser path remains accepted; the remaining defect is mandatory Claude-side doorbell finalization.
-  - Reviewer-to-Claude automatic process wake remains a separate future concern and is not authorized in this correction.
+  - This fetch was delivered automatically from the mandatory fresh Claude doorbell; the user did not type fetch.
+  - Doorbell commit 4b07247 followed packet/status commit 7aa3535 and contained only claude_work_complete for this exact handoff.
+  - Bridge trigger_fetch_sent commit 3cb5978 landed before Web ACK; the prior ACK/trigger race correction behaved correctly.
+  - Claude -> Web ChatGPT automatic wake-up is accepted as operational for Web Fetch Bridge V1.
+  - Web ChatGPT -> Claude automatic process/session wake is a separate future feature and remains unauthorized.
+  - A future maintenance hardening may add an explicit remote-tree duplicate probe to finalize_handoff.py; this is non-blocking for V1 acceptance.
 
-updated_at: 2026-08-11T17:12:00+08:00
+updated_at: 2026-08-11T17:22:00+08:00
