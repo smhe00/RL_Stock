@@ -1,7 +1,7 @@
 protocol_version: 3
 actor: claude
 handoff_id: WEB_FETCH_BRIDGE_V1_COMPOSER_LOCATOR_CORRECTION_AND_SINGLE_E2E_001_001
-state: RUNNING
+state: BLOCKED
 
 gate: LOCAL_PROTOCOL
 phase: WEB_FETCH_BRIDGE_V1_COMPOSER_LOCATOR_CORRECTION_AND_SINGLE_E2E_001
@@ -9,7 +9,16 @@ code_commit: e7c0d1c
 packet: docs/review_packets/WEB_FETCH_BRIDGE_V1_COMPOSER_LOCATOR_CORRECTION_AND_SINGLE_E2E_001.md
 
 progress:
-  current_task: Consumed E2E_FAIL_CLOSED_ACCEPTED_COMPOSER_LOCATOR_CORRECTION_AUTHORIZED. Corrected composer locator to semantic visibility-aware editable lookup (prefer visible #prompt-textarea[contenteditable=true] -> lexical -> unique; exclude hidden wcDTda_fallbackTextarea/display:none/zero-size/disabled; exactly-one-visible-editable else fail closed), added submission confirmation (composer cleared after Enter + URL unchanged; unconfirmed withholds trigger_fetch_sent), 45 tests + --check PASSED. Executing the single fresh E2E: doorbell LAST push; daemon auto-discovers; exactly one browser-generated fetch via NON-OWNING CDP; success publishes trigger_fetch_sent then waits chatgpt_fetch_ack -> chatgpt_review_published -> claude_review_ack; any new blocker stops without retry.
+  current_task: BLOCKED — composer correction PROVEN (real browser-generated fetch SUBMITTED 16:21:38; fetch_sent event logged; submission confirmed), but trigger_fetch_sent PUBLISH FAILED: bridge GitTransport push origin rejected (non-fast-forward). Root cause: bridge worktree is a detached HEAD forked from old history (6026d08) that is never refreshed; origin/main is 8a44fc6, bridge HEAD 9c535f4 (parent cfc80e9) is not an ancestor. This is the first send-success path to reach publish, exposing GitTransport._ensure_worktree (creates once, never syncs). dedup.json correctly marked handoff fetch_sent -> daemon will not resend (no double submit). No trigger_fetch_sent on origin/main -> Web ChatGPT cannot auto-ACK this handoff. Daemon stopped; no manual publish (bridge-owned marker); no code change; awaiting reviewer authorization to fix worktree sync or authorize manual marker publication.
+
+blocker:
+  category: NEW_INFRASTRUCTURE_BLOCKER
+  summary: bridge GitTransport publish push rejected — detached worktree HEAD stale (non-fast-forward); trigger_fetch_sent NOT on origin/main despite real browser submission
+  failed_command: daemon publish_bridge_marker -> git push origin HEAD:main (rejected)
+  failed_test: git command failed: push origin (non-fast-forward; worktree HEAD 9c535f4 not descendant of origin/main 8a44fc6)
+  last_successful_commit: 8a44fc6736be7d3361268c25851c24fdae151795 (doorbell pushed)
+  worktree_state: clean
+  recovery_point: reviewer authorization to (a) refresh/sync bridge worktree to origin/main before publish, and (b) publish the already-submitted trigger_fetch_sent for this handoff, or authorize manual marker publication of the existing trigger_fetch_sent
 
 last_consumed_review:
   handoff_id: WEB_FETCH_BRIDGE_V1_SINGLE_TRUE_E2E_FETCH_001_001
@@ -17,4 +26,4 @@ last_consumed_review:
   state: REVISIONS_REQUIRED
   response: docs/reviewer_responses/WEB_FETCH_BRIDGE_V1_SINGLE_TRUE_E2E_FETCH_001_REVIEWER_RESPONSE.md
 
-updated_at: 2026-08-11T16:22:00+08:00
+updated_at: 2026-08-11T16:25:00+08:00

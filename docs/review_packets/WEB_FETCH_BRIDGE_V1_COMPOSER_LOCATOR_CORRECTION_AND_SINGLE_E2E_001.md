@@ -56,6 +56,33 @@ python scripts/web_fetch_bridge.py --config config/web_fetch_bridge.example.toml
 结果：<SMOKE_RESULT>
 ```
 
+## 3b. E2E 执行结果 — SUBMIT OK, PUBLISH FAILED (NEW INFRASTRUCTURE BLOCKER)
+
+```text
+状态: 授权执行一次。composer 修正 PROVEN：真实 browser-generated fetch 已于
+  16:21:38 提交（event=fetch_sent；submission 正向确认：composer 清空 + URL 不变）。
+  但 trigger_fetch_sent 发布到 origin/main 失败（git push 被拒，non-fast-forward）。
+序列:
+  doorbell WEB_FETCH_BRIDGE_V1_COMPOSER_LOCATOR_CORRECTION_AND_SINGLE_E2E_001_001
+    pushed LAST (tz-aware UTC, commit 8a44fc6)
+  daemon 自动发现 -> fetch_send_start 16:21:36
+  恰好一次 CDP 提交 -> fetch_sent 16:21:38（真实提交成功；修正生效）
+  发布 trigger_fetch_sent -> PUBLISH_FAILED_FAIL_CLOSED 16:21:43
+失败原因: git command failed: push origin（non-fast-forward）
+  bridge worktree = detached HEAD 从旧历史 6026d08 fork，从不刷新；
+  origin/main 8a44fc6 不是 worktree HEAD 9c535f4 (parent cfc80e9) 的祖先
+  -> GitTransport._ensure_worktree 只在首次创建时 add，从不同步到 origin/main
+  （此前所有 send 均 SEND_FAILED，从未走到 publish，故该缺陷首次暴露）
+后果:
+  dedup.json 正确将 handoff 标记为 fetch_sent -> daemon 不重发（无重复提交）✓
+  trigger_fetch_sent 不在 origin/main -> Web ChatGPT 无法自动 ACK 本 handoff
+  daemon 已由 operator 停止；不手动发布 bridge-owned marker；不改代码；不重试
+恢复点: reviewer 授权 (a) 刷新/同步 bridge worktree 到 origin/main 后再发布，
+  及/或 (b) 对已提交的 trigger_fetch_sent 授权手动 marker 发布
+```
+
+## 4. 所有权 / 边界
+
 ## 4. 所有权 / 边界
 
 ```text
@@ -115,10 +142,18 @@ tests: 45 passed; --check PASSED
 fresh_handoff: true            # new unique handoff; no reuse of prior SEND_FAILED ids
 doorbell_pushed_last: true
 daemon_discovers_from_origin_main: true
-exactly_one_browser_fetch: true
+exactly_one_browser_fetch: true   # real browser submission SUCCEEDED 16:21:38
 nonowning_no_navigation_close_repair: true
 no_browser_close: true
 fail_closed_no_auto_resend: true
+
+e2e_smoke:
+  submit: SUCCEEDED   # composer correction proven; fetch_sent logged 16:21:38
+  publish: FAILED     # trigger_fetch_sent push non-fast-forward (stale detached worktree)
+  trigger_fetch_sent_on_origin_main: false
+  dedup_fetch_sent_marked: true   # daemon will not resend
+  new_blocker: GITTRANSPORT_WORKTREE_NEVER_SYNCED
+  await_review: not reached (no trigger_fetch_sent marker for Web ChatGPT to ACK)
 
 no_new_research: true
 canonical_artifacts_unchanged: true
