@@ -53,6 +53,13 @@ def test_finalize_creates_tz_aware_append_only_doorbell(tmp_path):
         finalize_handoff(cfg(repo), "DEMO_001", expected[:7])
 
 
+def test_finalize_rejects_dirty_worktree_even_when_head_matches_remote(tmp_path):
+    repo = init_repo(tmp_path)
+    (repo / "uncommitted.txt").write_text("not committed\n", encoding="utf-8")
+    with pytest.raises(BridgeError):
+        finalize_handoff(cfg(repo), "DEMO_DIRTY", head(repo))
+
+
 def test_finalize_fails_when_local_not_remote_confirmed(tmp_path):
     repo = init_repo(tmp_path)
     (repo / "local.txt").write_text("local\n", encoding="utf-8")
