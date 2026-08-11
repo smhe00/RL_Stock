@@ -6,105 +6,105 @@ The standalone package may be labeled `1.0.0 / E2E VERIFIED` only after all item
 
 - No import from RL_Stock strategy/research modules.
 - No parsing of project-specific reviewer/agent state.
-- No domain vocabulary required for operation.
-- Repository root, branch, remote and marker root are configurable.
-- `webgpt-bridge init` can bootstrap a new consumer without changing consumer project files or Git state.
-- Local config/runtime can live outside the consumer repository by default.
+- Repository root, branch, remote, marker root and Web review repository locator are configurable.
+- `webgpt-bridge init` can bootstrap a new consumer without modifying consumer project files or Git state.
+- Local config/runtime can live outside the consumer repository.
 
-## B. Protocol compatibility
+## B. Protocol compatibility and routing
 
-- Existing `web_fetch_bridge_v1` marker files remain readable.
-- Marker ownership and append-only behavior are preserved.
-- Filename-style and accepted semantic event aliases are supported only when the normalized event matches the marker filename.
-- Existing projects can adopt the package without rewriting historical markers.
+- Historical `web_fetch_bridge_v1` markers remain readable and are never rewritten.
+- Marker ownership/append-only behavior is preserved.
+- Standalone live wake uses `fetch repo=<owner/repo> handoff=<id>`.
+- `[review].repository` is a strict GitHub `owner/repo` locator.
+- Before browser interaction, the configured Git remote must resolve to the same `github.com/owner/repo`.
+- Missing/mismatched/local-only remote must fail closed before browser interaction.
+- Web reviewer must use the locator to resolve the exact repository before ACK.
 
 ## C. Browser safety
 
 - Dedicated exact target conversation required.
-- CDP endpoint must be exact loopback `http://127.0.0.1:<port>`.
-- Non-owning CDP lifecycle.
-- No navigation, page creation/close, context close, or browser close.
-- Hidden fallback textarea excluded.
-- Semantic composer selector itself must resolve uniquely.
-- Submission is positively confirmed from composer/input state without reading assistant output.
-- Login/challenge detection uses structural DOM metadata, not visible conversation text.
-- Sender failure or uncertain submission is terminal for that attempt; no automatic resend.
+- CDP endpoint exact loopback `http://127.0.0.1:<port>`.
+- Non-owning CDP lifecycle: no navigation, page creation/close, context close, or browser close.
+- Hidden fallback textarea excluded; semantic composer selector must resolve uniquely.
+- Submission positively confirmed from local composer/input state only.
+- No assistant-output scraping.
+- Sender failure/uncertain submission is terminal until explicit retry.
 
 ## D. Crash-safe exactly-once behavior
 
 - Durable local `attempt_started` state is written before browser interaction.
-- Restart after an `attempt_started` crash cannot automatically touch the browser again for that handoff.
-- Browser-positive send is promoted to durable `fetch_sent` before Git trigger publication.
-- If a Web ACK proves an uncertain/crashed attempt arrived, only the missing trigger marker may be reconciled; no second browser action.
-- Explicit operator retry is the only way to clear an uncertain/failed attempt.
+- Restart after an uncertain/crash-interrupted attempt cannot automatically touch the browser again.
+- Positive send is promoted to `fetch_sent` before trigger publication races.
+- ACK-proven uncertain receipt may reconcile only the missing trigger marker.
 
 ## E. Git transport safety
 
 - Remote is source of truth.
-- Bridge-owned marker publication is append-only.
-- Isolated bridge worktree must not reset/repair the consumer worktree.
+- Bridge marker publication is append-only using isolated worktree.
 - No force push.
-- Expected append-only race can reconcile safely.
-- Unexpected/conflicting remote change fails closed.
-- Git command/ref failures are not silently interpreted as marker absence.
-- ACK-before-trigger race is repaired marker-only, never by browser resend.
-- A late trigger is refused once `chatgpt_review_published.json` already exists.
+- Git failure is not interpreted as marker absence.
+- ACK-before-trigger race is marker-only reconciled.
+- Late trigger is refused after `chatgpt_review_published.json`.
 
 ## F. Agent finalization
 
-- Reusable finalization command/helper accepts explicit handoff ID and code commit.
-- `code_commit` resolves to a real commit already contained in the configured remote branch.
-- Timezone-aware timestamp.
+- Finalization accepts explicit handoff ID and code commit.
+- Worktree must be clean.
+- Code commit must be real and contained in the configured remote branch.
 - Duplicate doorbell fails closed.
-- Remote state is confirmed before doorbell creation.
-- Doorbell is published as the final review-request push.
+- Doorbell is the final review-requesting push.
 
 ## G. Test coverage
 
 Standalone tests must cover at minimum:
 
-- marker schema/ownership/cycle dependencies and event-file identity;
+- marker schema/ownership/event identity;
 - timestamp validation;
-- project/config path hardening;
+- config/path hardening;
+- `owner/repo` locator validation;
+- GitHub remote locator parsing/mismatch rejection;
+- routed wake payload formatting;
 - bootstrap `init` round-trip;
 - crash-safe attempt persistence;
-- sender fail-closed deduplication;
-- ACK-before-trigger / uncertain-attempt marker-only reconciliation;
-- semantic composer selection and unique locator requirement;
-- non-owning CDP lifecycle;
-- submission confirmation;
-- Git marker absence vs Git failure distinction;
-- mandatory doorbell finalization and remote code-commit durability;
-- package version consistency and project-independence contract.
+- sender dedup/no auto-resend;
+- ACK-before-trigger marker-only reconciliation;
+- composer selection and non-owning CDP;
+- Git failure vs marker absence;
+- finalization durability;
+- package version/project-independence contract.
 
-## H. Blank-repository E2E
+## H. Fresh Web-accessible blank GitHub repository E2E
 
-A clean demo repository, with no RL_Stock files or states, must prove:
+A clean disposable GitHub repository containing no RL_Stock project/reviewer state must prove:
 
 ```text
-agent finalization
-  -> claude_work_complete LAST on remote
+blank project work pushed
+  -> claude_work_complete LAST
   -> standalone daemon discovers marker
-  -> exactly one browser-generated fetch reaches Web ChatGPT
-  -> chatgpt_fetch_ack
-  -> reviewer publishes review_published
-  -> agent can consume and acknowledge
+  -> pre-browser repo locator == actual GitHub remote
+  -> exactly one browser message:
+       fetch repo=<owner/repo> handoff=<id>
+  -> Web ChatGPT resolves that repository
+  -> immediate chatgpt_fetch_ack in that repository
+  -> substantive review / chatgpt_review_published
+  -> later daemon scan/restart does not resend
 ```
 
-No user-typed `fetch` is permitted during this acceptance smoke.
+No user-typed `fetch` is permitted.
 
-After success, restarting/scanning the standalone daemon must not submit the same handoff again.
+A local bare remote is **not** an acceptable full Web E2E target for rc2; a future hub/mirror is separate work.
 
 ## I. Release evidence
 
 Before `1.0.0`, retain:
 
-- exact package commit tested;
-- exact install/test commands and pytest count;
-- blank demo repo HEAD;
+- exact package commit;
+- install/test commands and pytest count;
+- disposable GitHub repository identity + HEAD;
 - E2E handoff ID;
 - marker sequence/commit evidence;
-- proof no user-typed `fetch` was used;
+- routed wake payload evidence;
+- proof no manual fetch;
 - platform/Python/Chrome/Playwright versions;
-- warnings/defects, if any;
-- accepted limitation that reverse Web-to-agent process wake is out of scope.
+- any limitations/defects;
+- accepted limitation that reverse Web-to-agent process wake remains out of scope.
