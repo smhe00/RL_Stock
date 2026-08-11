@@ -1,74 +1,51 @@
 protocol_version: 3
 actor: web_chatgpt_reviewer
-handoff_id: WEBGPT_WAKE_BRIDGE_STANDALONE_0_9_RC1_VALIDATION_AUTHORIZATION
-state: REVIEW_COMPLETE
+handoff_id: WEBGPT_WAKE_BRIDGE_STANDALONE_0_9_RC1_REVISIONS_REQUIRED_001_001
+state: REVISIONS_REQUIRED
 
 reviewed_packet:
-  path: tools/webgpt_wake_bridge/docs/FINAL_CLAUDE_TEST_PLAN.md
-  commit: 37b3976f3b270cc246961263b364087e6a7ee7ea
+  path: tools/webgpt_wake_bridge/docs/validation_reports/VALIDATION_REPORT_0_9_0RC1.md
+  commit: b23414c138c591b4209eea81dc239bf4f3a63a75
 
-reviewed_remote_head: 0fb2a344626f099df4456949962302ec3a8cc65d
-code_commit: 0fb2a344626f099df4456949962302ec3a8cc65d
+reviewed_remote_head: ef6bd008dacb0a41bd3f9970291491228c2caf38
+code_commit: 2844ddd4750265321136b866d2ecb973d3eb9011
 
-decision: STANDALONE_WEBGPT_WAKE_BRIDGE_0_9_RC1_READY_FOR_INDEPENDENT_VALIDATION
+decision: STANDALONE_0_9_RC1_VALIDATION_ACCEPTED_REPOSITORY_ROUTING_CORRECTION_REQUIRED
 
 response:
-  path: docs/reviewer_responses/WEBGPT_WAKE_BRIDGE_STANDALONE_0_9_RC1_VALIDATION_AUTHORIZATION.md
+  path: docs/reviewer_responses/WEBGPT_WAKE_BRIDGE_STANDALONE_0_9_RC1_REVISIONS_REQUIRED_001_001_REVIEWER_RESPONSE.md
 
 passed:
-  - STANDALONE_IMPLEMENTATION_ISOLATED_UNDER_TOOLS_SUBTREE
-  - EMBEDDED_ACCEPTED_V1_UNCHANGED_SINCE_CLOSEOUT
-  - PACKAGE_VERSION_FROZEN_AT_0_9_0RC1
-  - PROTOCOL_COMPATIBILITY_WEB_FETCH_BRIDGE_V1_PRESERVED
-  - PROJECT_STATE_AGNOSTIC_MARKER_ONLY_DESIGN
-  - CRASH_SAFE_PRE_BROWSER_ATTEMPT_PERSISTENCE_IMPLEMENTED
-  - ACK_BEFORE_TRIGGER_MARKER_ONLY_RECONCILIATION_IMPLEMENTED
-  - EXACT_LOOPBACK_CDP_AND_EXACT_TARGET_VALIDATION_IMPLEMENTED
-  - NONOWNING_BROWSER_AND_NO_OUTPUT_SCRAPING_CONTRACT_IMPLEMENTED
-  - GIT_FAILURE_NOT_TREATED_AS_MARKER_ABSENCE
-  - APPEND_ONLY_NO_FORCE_PUSH_TRANSPORT_IMPLEMENTED
-  - CLEAN_WORKTREE_REMOTE_CONTAINED_CODE_COMMIT_FINALIZATION_IMPLEMENTED
-  - REUSABLE_INIT_AND_EXTERNAL_LOCAL_RUNTIME_IMPLEMENTED
-  - STATIC_REVIEW_COMPLETE
+  - INDEPENDENT_VALIDATOR_DID_NOT_MODIFY_STANDALONE_IMPLEMENTATION
+  - FRESH_ENVIRONMENT_38_TESTS_PASS
+  - INIT_CHECK_NOOP_PASS
+  - NONOWNING_CDP_AND_TARGET_PRESERVATION_PASS
+  - FINALIZE_DOORBELL_LAST_PASS
+  - MARKER_ONLY_AUTODISCOVERY_PASS
+  - EXACTLY_ONE_BROWSER_FETCH_PASS
+  - TRIGGER_FETCH_SENT_PASS
+  - DUPLICATE_NO_RESEND_PASS
+  - DUPLICATE_FINALIZE_FAIL_CLOSED_PASS
+  - NO_FORCE_PUSH_PASS
+  - BLANK_CONSUMER_HAS_NO_RL_STOCK_STATE
+  - NO_USER_MANUAL_FETCH_DURING_BLANK_SMOKE
 
-revision_required: []
+revision_required:
+  - STANDALONE_WAKE_PAYLOAD_LACKS_EXPLICIT_WEB_REVIEW_REPOSITORY_LOCATOR
+  - LOCAL_ONLY_CONSUMER_REMOTE_CANNOT_RECEIVE_WEB_OWNED_ACK_REVIEW_MARKERS
+  - FULL_WEB_E2E_REQUIRES_WEB_ACCESSIBLE_REPOSITORY_OR_SEPARATE_HUB_MIRROR_TRANSPORT
 
-authorized_next:
-  - task: WEBGPT_WAKE_BRIDGE_STANDALONE_FINAL_VALIDATION_001
-    scope: LOCAL_PROTOCOL_INFRASTRUCTURE_VALIDATION_ONLY
-    authorization: docs/reviewer_responses/WEBGPT_WAKE_BRIDGE_STANDALONE_0_9_RC1_VALIDATION_AUTHORIZATION.md
-    requirements:
-      - fetch origin/main and begin from a clean synchronized repository
-      - validate only tools/webgpt_wake_bridge as the standalone 0.9.0rc1 release candidate
-      - follow tools/webgpt_wake_bridge/docs/FINAL_CLAUDE_TEST_PLAN.md exactly
-      - act as independent test-only validator; do not modify standalone implementation code
-      - record exact candidate HEAD, Python, Playwright, Chrome and Windows versions
-      - create fresh venv, install package with test extras, require webgpt-bridge --version == 0.9.0rc1
-      - run full standalone pytest and record exact pass/fail count
-      - independently inspect project-independence, nonowning browser, no output scraping, no auto resend, exact loopback, and Git fail-closed properties
-      - create a disposable blank consumer repository containing no RL_Stock research/reviewer state
-      - bootstrap blank consumer with standalone webgpt-bridge init
-      - keep local config/runtime outside the blank consumer repo by default
-      - use the already-open exact dedicated Web ChatGPT reviewer conversation in the dedicated Chrome CDP profile
-      - run standalone check and >=30 second noop before any live send
-      - if noop mutates/displaces target, stop with REVISIONS_REQUIRED and do not repair/navigate browser
-      - start the standalone daemon and create exactly one fresh unique blank-demo E2E handoff
-      - use standalone finalize with a real remote-contained demo code commit and publish claude_work_complete LAST
-      - user must not type fetch during blank-repo E2E
-      - standalone daemon must deliver exactly one browser-generated fetch for the fresh demo handoff
-      - verify trigger_fetch_sent, Web chatgpt_fetch_ack, Web chatgpt_review_published, duplicate no-resend, and duplicate-finalize fail-closed evidence
-      - write one report under tools/webgpt_wake_bridge/docs/validation_reports with recommendation ACCEPT_1_0_0 or REVISIONS_REQUIRED
-      - if any defect occurs do not fix candidate code; report smallest reproducible defect and stop
-      - if all tests pass do not bump package to 1.0.0 and do not migrate RL_Stock
-      - after report/status are pushed, use accepted embedded V1 only as transport to wake Web ChatGPT with the validation result
-      - no financial research, backtest, data refresh, strategy/canonical result change, QMT, account, order, paper/live, or RL work
+authorized_next: []
+
+implementation_owner:
+  actor: web_chatgpt_reviewer
+  note: Web ChatGPT will implement the next standalone correction; Claude remains test-only until a fresh validation authorization is published.
 
 forbidden_next:
-  - STANDALONE_IMPLEMENTATION_CODE_FIX_DURING_VALIDATION
-  - EMBEDDED_WEB_FETCH_BRIDGE_V1_MODIFICATION
+  - STANDALONE_IMPLEMENTATION_CODE_FIX_BY_CLAUDE
+  - PACKAGE_1_0_0_PROMOTION
   - RL_STOCK_CONSUMER_MIGRATION
-  - PACKAGE_1_0_0_SELF_PROMOTION
-  - USER_MANUAL_FETCH_DURING_BLANK_E2E
+  - USER_MANUAL_FETCH_DURING_NEXT_BLANK_E2E
   - BROWSER_SELF_REPAIR_OR_AUTO_NAVIGATION
   - PAGE_GOTO_IN_NORMAL_BRIDGE_OPERATION
   - PAGE_OR_CONTEXT_CLOSE_IN_NORMAL_BRIDGE_OPERATION
@@ -98,9 +75,10 @@ forbidden_next:
   - RL_RETRAINING
 
 notes:
-  - The standalone candidate remains 0.9.0rc1 until independent Windows/Chrome/CDP blank-repository evidence is reviewed.
-  - Static implementation review is complete, but this state deliberately does not claim pytest or standalone E2E success.
-  - Claude is authorized only as independent validator for this task.
-  - Existing embedded V1 remains accepted and may be used only to return the final validation handoff to Web ChatGPT.
+  - The rc1 validation report is accepted.
+  - The defect is a real single-project-to-multi-project routing gap, not a CDP/composer/daemon/finalize regression.
+  - Historical web_fetch_bridge_v1 markers remain valid and must not be rewritten.
+  - The next full blank-repository E2E must use a Web-accessible repository unless a separately designed Web-accessible hub/mirror is implemented.
+  - Claude has no authorized implementation work from this state.
 
-updated_at: 2026-08-11T21:16:00+08:00
+updated_at: 2026-08-11T22:32:00+08:00
