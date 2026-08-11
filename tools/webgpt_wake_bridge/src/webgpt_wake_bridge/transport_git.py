@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 from pathlib import Path
+from urllib.parse import urlparse
 
 from .errors import BridgeError
 from .markers import (
@@ -11,6 +13,8 @@ from .markers import (
     validate_handoff_id,
     validate_marker,
 )
+
+GITHUB_SCP_RE = re.compile(r"^(?:[^@]+@)?github\.com:(?P<repo>[^/]+/[^/]+?)(?:\.git)?$")
 
 
 class GitTransport:
@@ -34,6 +38,34 @@ class GitTransport:
             ).strip()
         except (OSError, UnicodeError, subprocess.CalledProcessError) as exc:
             raise BridgeError(f"git command failed: {' '.join(args[:3])}") from exc
+
+    def github_repository_locator(self) -> str | None:
+        """Return owner/repo only when the configured Git remote is github.com."""
+        raw = self._git("remote", "get-url", self.remote).strip()
+        scp = GITHUB_SCP_RE.fullmatch(raw)
+        if scp:
+            return scp.group("repo").removesuffix(".git")
+        try:
+            parsed = urlparse(raw)
+        except ValueError:
+            return None
+        if parsed.hostname != "github.com":
+            return None
+        repo = parsed.path.strip("/").removesuffix(".git")
+        if repo.count("/") != 1:
+            return None
+        return repo
+
+    def assert_review_repository(self, expected: str) -> None:
+        actual = self.github_repository_locator()
+        if actual is None:
+            raise BridgeError(
+                "live Web review requires the configured consumer remote to be a Web-accessible github.com repository"
+            )
+        if actual.lower() != expected.lower():
+            raise BridgeError(
+                f"[review].repository {expected} does not match Git remote {actual}"
+            )
 
     def _ensure_worktree(self) -> None:
         self.runtime_dir.mkdir(parents=True, exist_ok=True)
@@ -132,9 +164,6 @@ class GitTransport:
                 self._git("add", "--", rel.as_posix())
                 self._git("commit", "-m", f"bridge: {handoff_id} {name}")
                 self._git("push", self.remote, f"HEAD:{self.branch}")
-                # Push success is the durable publication boundary. A later refresh is
-                # best-effort only; failure here must not turn a successful push into an
-                # apparent send/publication failure.
                 try:
                     self.fetch()
                 except BridgeError:
