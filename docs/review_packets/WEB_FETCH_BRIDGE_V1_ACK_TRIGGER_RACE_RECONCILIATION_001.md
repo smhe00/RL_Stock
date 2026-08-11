@@ -49,7 +49,7 @@ pytest tests/test_web_fetch_bridge.py -q: 52 passed（新增 7 项）：
 python scripts/web_fetch_bridge.py --config config/web_fetch_bridge.example.toml --check: PASSED
 ```
 
-## 4. Reconciliation 执行（当前 handoff）
+## 4. Reconciliation 执行（当前 handoff）— DONE
 
 ```text
 handoff: WEB_FETCH_BRIDGE_V1_COMPOSER_LOCATOR_CORRECTION_AND_SINGLE_E2E_001_001
@@ -57,7 +57,9 @@ handoff: WEB_FETCH_BRIDGE_V1_COMPOSER_LOCATOR_CORRECTION_AND_SINGLE_E2E_001_001
        matching chatgpt_fetch_ack on origin/main (bbd3070) ✓
        trigger_fetch_sent missing on origin/main ✓
 动作:  publish 缺失 trigger_fetch_sent（仅 marker，无浏览器）
-结果:  <RECONCILE_RESULT>
+结果:  RECONCILE_PUBLISHED（16:56:44；marker 现在在 origin/main，commit ef962f2）
+       未触碰浏览器；未重发任何 fetch
+后续:  claude_review_ack 已发布（commit 9f990e9）确认消费 COMPOSER 评审
 ```
 
 ## 5. 所有权 / 边界
@@ -120,7 +122,8 @@ event_field:
 tests: 52 passed; --check PASSED
 
 reconcile_handoff: WEB_FETCH_BRIDGE_V1_COMPOSER_LOCATOR_CORRECTION_AND_SINGLE_E2E_001_001
-reconcile_result: <RECONCILE_RESULT>
+reconcile_result: RECONCILE_PUBLISHED   # trigger_fetch_sent now on origin/main (ef962f2), no browser
+claude_review_ack: published            # 9f990e9, confirms consumed COMPOSER review
 
 no_new_research: true
 canonical_artifacts_unchanged: true
