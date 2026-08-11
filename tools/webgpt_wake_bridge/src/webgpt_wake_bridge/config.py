@@ -25,7 +25,11 @@ class BridgeConfig:
 
 
 def _inside_repo(repo_root: Path, relative: str | Path) -> Path:
-    path = (repo_root / relative).resolve()
+    candidate = Path(relative)
+    if candidate.is_absolute():
+        path = candidate.resolve()
+    else:
+        path = (repo_root / candidate).resolve()
     try:
         path.relative_to(repo_root.resolve())
     except ValueError as exc:
@@ -52,13 +56,28 @@ def load_config(path: Path, *, require_url: bool = False) -> BridgeConfig:
     if not (repo_root / ".git").exists():
         raise BridgeError(f"repo_root is not a git worktree: {repo_root}")
 
-    marker_root = Path(str(project.get("marker_root", "docs/web_bridge")))
-    _inside_repo(repo_root, marker_root)
-    runtime_dir = _inside_repo(repo_root, str(runtime.get("runtime_dir", ".runtime/webgpt_wake_bridge")))
-    cdp = str(browser.get("cdp_endpoint", "http://127.0.0.1:9222"))
+    marker_raw = str(project.get("marker_root", "docs/web_bridge")).strip()
+    if not marker_raw:
+        raise BridgeError("[project].marker_root must not be empty")
+    marker_abs = _inside_repo(repo_root, marker_raw)
+    marker_root = marker_abs.relative_to(repo_root)
+    if marker_root == Path("."):
+        raise BridgeError("marker_root must be a subdirectory of the consumer repository")
+
+    runtime_raw = str(runtime.get("runtime_dir", ".runtime/webgpt_wake_bridge")).strip()
+    if not runtime_raw:
+        raise BridgeError("[runtime].runtime_dir must not be empty")
+    runtime_dir = _inside_repo(repo_root, runtime_raw)
+
+    remote = str(project.get("remote", "origin")).strip()
+    branch = str(project.get("branch", "main")).strip()
+    if not remote or not branch:
+        raise BridgeError("[project].remote and [project].branch must not be empty")
+
+    cdp = str(browser.get("cdp_endpoint", "http://127.0.0.1:9222")).strip()
     if not cdp.lower().startswith("http://127.0.0.1"):
         raise BridgeError("CDP endpoint must be localhost only")
-    url = str(browser.get("target_conversation_url", "")).strip() or None
+    url = str(browser.get("target_conversation_url", "")).strip().rstrip("/") or None
     if require_url and not url:
         raise BridgeError("target_conversation_url is required in the ignored local config")
     if url and not url.startswith("https://chatgpt.com/c/"):
@@ -67,8 +86,8 @@ def load_config(path: Path, *, require_url: bool = False) -> BridgeConfig:
     return BridgeConfig(
         repo_root=repo_root,
         marker_root=marker_root,
-        remote=str(project.get("remote", "origin")),
-        branch=str(project.get("branch", "main")),
+        remote=remote,
+        branch=branch,
         cdp_endpoint=cdp,
         chrome_profile_path=str(browser.get("chrome_profile_path", r"C:\ChatGPT_Automation_Profile")),
         target_conversation_url=url,
