@@ -54,6 +54,22 @@ python scripts/web_fetch_bridge.py --config config/web_fetch_bridge.example.toml
 结果：<SMOKE_RESULT>
 ```
 
+## 3b. 自动唤醒 smoke 结果 — AUTOWAKE OK, AWAITING WEB ACK
+
+```text
+序列（严格按 finalization invariant，全部执行）:
+  Claude push packet/status (7aa3535)
+  Claude 用 helper 创建 claude_work_complete.json doorbell LAST (4b07247, tz-aware UTC 09:18:39)
+  running daemon 从 origin/main 自动发现 doorbell（marker-only）   <- 用户未输入 fetch
+  daemon 经 CDP 提交恰好一次 fetch <handoff>（NON-OWNING）          <- fetch_sent 17:18:58
+  daemon 发布 trigger_fetch_sent to origin/main (3cb5978)          <- 无 publish 竞态失败（硬化生效）
+  等待 Web ChatGPT chatgpt_fetch_ack -> chatgpt_review_published    <- 进行中
+
+结论: 自动唤醒链路（Claude doorbell LAST -> daemon marker-only 自动发现 -> 恰好一次
+      browser-generated fetch -> trigger_fetch_sent 发布）已完整走通，无需用户输入 fetch。
+```
+
+
 ## 4. 明确声明
 
 ```text
@@ -106,7 +122,8 @@ autowake_smoke:
   daemon_auto_discover_from_origin_main: true
   user_does_not_type_fetch: true
   exactly_one_browser_fetch: true
-  result: <SMOKE_RESULT>
+  fetch_sent_published: true      # trigger_fetch_sent on origin/main (3cb5978)
+  awaiting_web_ack: true          # chatgpt_fetch_ack / review_published pending
 
 no_new_research: true
 canonical_artifacts_unchanged: true
