@@ -1,61 +1,68 @@
 # Claude Code integration
 
-The bridge is intentionally independent from Claude's project state machine. Claude needs only the durable review-request finalization invariant.
+The bridge is independent from Claude's project state machine. Claude needs only project setup plus the durable review-request finalization invariant.
 
 ## One-time project setup
 
-Prefer operator/bootstrap setup outside the consumer repository:
+For a project whose configured Git remote is a Web-accessible GitHub repository:
 
 ```powershell
-webgpt-bridge init --repo <PROJECT_REPO>
+webgpt-bridge init --repo <PROJECT_REPO> --review-repository <OWNER/REPO>
 ```
 
-Edit the generated local config and set the exact dedicated reviewer conversation URL. Keep the config/runtime local; only protocol markers belong in the project Git history.
+Edit the generated local config and set the exact dedicated reviewer conversation URL. Keep config/runtime local; only protocol markers belong in project Git history.
+
+`[review].repository` must match the configured `github.com` Git remote. `once`/`daemon` verify this before browser interaction. A local-only/non-GitHub remote fails closed; hub/mirror mode is not part of rc2.
+
+Standalone wake payload:
+
+```text
+fetch repo=<OWNER/REPO> handoff=<HANDOFF_ID>
+```
+
+This explicit repository identity is mandatory for multi-project Web routing.
 
 ## Required agent rule
 
 For every fresh handoff that requests Web ChatGPT review:
 
 ```text
-1. finish project work and tests
-2. write/update the project's own review packet/status if that project uses them
+1. finish project work/tests
+2. update the project's own review packet/status if applicable
 3. commit and push all work
-4. require worktree clean
+4. require clean worktree
 5. confirm local HEAD == configured remote branch HEAD
-6. choose a real code commit already contained in that remote branch
+6. choose a real code commit contained in that remote branch
 7. run `webgpt-bridge finalize ...`
-8. verify the only newly created review-request artifact is claude_work_complete.json
-9. commit and push that doorbell as the FINAL push
-10. stop and wait for chatgpt_review_published.json
+8. commit/push only claude_work_complete.json as the FINAL review-request push
+9. stop and wait for chatgpt_review_published.json
 ```
 
-The standalone daemon does not know or care whether the project calls its state READY/BLOCKED/TEST_FAILED, uses issues, packets, gates, or something else. It wakes Web ChatGPT only from the doorbell marker.
+The daemon never infers readiness from READY/BLOCKED/TEST_FAILED or project YAML.
 
 ## Suggested CLAUDE.md snippet
 
 ```text
 WEBGPT REVIEW WAKE-UP (mandatory):
-When a fresh handoff needs Web ChatGPT review, all project work/status/packet commits must already be committed and pushed. The worktree must be clean and local HEAD must match the configured remote branch. Then run:
+The local bridge config must contain the correct [review].repository = "owner/repo", matching the configured GitHub remote. Before requesting review, all project work/status/packet commits must be pushed, the worktree must be clean, and local HEAD must match the configured remote branch. Then run:
 
   webgpt-bridge finalize --config <LOCAL_CONFIG> --handoff <HANDOFF_ID> --code-commit <REMOTE_CONTAINED_CODE_SHA>
 
-The finalizer must pass. Commit/push only the generated <marker_root>/<HANDOFF_ID>/claude_work_complete.json as the FINAL review-request push. Never create a late doorbell for an already manually surfaced/reviewed handoff. Never automatically resend a failed/uncertain handoff. Wait for chatgpt_review_published.json before consuming the review.
+Commit/push only the generated <marker_root>/<HANDOFF_ID>/claude_work_complete.json as the FINAL review-request push. Never create a late doorbell for an already reviewed handoff. Never automatically resend a failed/uncertain handoff. Wait for chatgpt_review_published.json before consuming review.
 ```
 
-## What Claude must not do
+## Must not
 
-- Do not type `fetch` into ChatGPT manually during an autowake acceptance smoke.
+- Do not manually type `fetch` during an autowake smoke.
 - Do not edit bridge-owned `trigger_fetch_sent.json`.
-- Do not edit Web ChatGPT-owned ACK/review markers.
+- Do not edit Web-owned ACK/review markers.
 - Do not create a second doorbell for the same handoff.
-- Do not use project YAML/status as a substitute for the doorbell.
-- Do not call browser repair/navigation/lifecycle actions through the bridge.
-- Do not interpret missing Git state after a Git error as permission to send.
+- Do not substitute project state for the doorbell.
+- Do not repair/navigate/close browser state through the bridge.
+- Do not use a local-only remote for full Web E2E and then treat missing ACK as success.
 
 ## Review consumption
 
-After matching `chatgpt_review_published.json` appears, the project may consume its own review artifacts according to its own protocol and publish `claude_review_ack.json` for that handoff.
+After matching `chatgpt_review_published.json`, consume the project review and publish `claude_review_ack.json`. Do not create a new work-complete doorbell merely to acknowledge a completed review.
 
-Do **not** create another work-complete doorbell merely to acknowledge a completed review when there is no new review-requesting work; that would create a wake loop.
-
-Reverse Web-to-Claude process launch/restart is not provided by Protocol V1.
+Reverse Web-to-Claude process launch/restart remains out of scope.
