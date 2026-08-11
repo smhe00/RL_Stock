@@ -5,7 +5,7 @@ state: READY_FOR_REVIEW
 
 gate: LOCAL_PROTOCOL
 phase: WEB_FETCH_BRIDGE_V1_IMPLEMENTATION_AND_SINGLE_E2E_SMOKE
-code_commit: 7c1985a
+code_commit: e343ab5
 packet: docs/review_packets/WEB_FETCH_BRIDGE_V1_IMPLEMENTATION_AND_SINGLE_E2E_SMOKE.md
 
 progress:

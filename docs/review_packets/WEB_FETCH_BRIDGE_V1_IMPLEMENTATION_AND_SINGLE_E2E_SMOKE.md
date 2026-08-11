@@ -6,7 +6,7 @@
 > handoff_id = **WEB_FETCH_BRIDGE_V1_IMPLEMENTATION_AND_SINGLE_E2E_SMOKE_001**。
 
 ```yaml
-implementation_commit: 7c1985a
+implementation_commit: e343ab5
 scope: LOCAL_PROTOCOL_INFRASTRUCTURE_ONLY
 supersedes: prior local-Codex-as-default-reviewer direction (Codex stays optional,
             bridge default mode MUST NOT invoke codex exec)
@@ -125,7 +125,7 @@ packet: WEB_FETCH_BRIDGE_V1_IMPLEMENTATION_AND_SINGLE_E2E_SMOKE
 status: READY_FOR_REVIEW
 scope: LOCAL_PROTOCOL_INFRASTRUCTURE_ONLY
 
-implementation_commit: 7c1985a
+implementation_commit: e343ab5
 changed_files: [scripts/web_fetch_bridge.py, scripts/web_fetch_bridge.bat,
                 config/web_fetch_bridge.example.toml, docs/web_bridge/README.md,
                 tests/test_web_fetch_bridge.py, .gitignore]
